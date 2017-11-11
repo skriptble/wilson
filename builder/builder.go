@@ -4,14 +4,28 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
+
+	"github.com/skriptble/wilson/elements"
 )
 
 var ErrTooShort = errors.New("builder: The provided slice's length is too short")
 var ErrInvalidWriter = errors.New("builder: Invalid writer provided")
 
+// Elementer is the interface implemented by types that can serialize
+// themselves into a BSON element.
+type Elementer interface {
+	Element() (size uint, ew ElementWriter)
+}
+
+type ElementFunc func() (size uint, ew ElementWriter)
+
+func (ef ElementFunc) Element() (uint, ElementWriter) {
+	return ef()
+}
+
 // Element is a function type used to insert BSON element values into a BSON
 // document using a DocumentBuilder.
-type Element func() (length uint, ep ElementWriter)
+// type Element func() (length uint, ew ElementWriter)
 
 // ElementWriter handles writing an element's BSON representation to a writer.
 //
@@ -30,14 +44,11 @@ type ElementWriter func(start uint, writer interface{}) (n int, err error)
 // appending then writing and then appending and writing again is a valid usage
 // pattern.
 type DocumentBuilder struct {
+	Key         string
 	funcs       []ElementWriter
 	starts      []uint
 	required    uint // number of required bytes. Should start at 4
 	initialized bool
-}
-
-func NewDocumentBuilder() *DocumentBuilder {
-	return new(DocumentBuilder)
 }
 
 func (db *DocumentBuilder) Init() {
@@ -52,14 +63,15 @@ func (db *DocumentBuilder) Init() {
 }
 
 // Append adds the given elements to the BSON document.
-func (db *DocumentBuilder) Append(elems ...Element) {
+func (db *DocumentBuilder) Append(elems ...Elementer) *DocumentBuilder {
 	db.Init()
 	for _, elem := range elems {
-		length, f := elem()
+		length, f := elem.Element()
 		db.funcs = append(db.funcs, f)
 		db.starts = append(db.starts, db.required)
 		db.required += length
 	}
+	return db
 }
 
 func (db *DocumentBuilder) documentHeader() (length uint, ep ElementWriter) {
@@ -103,13 +115,17 @@ func (db *DocumentBuilder) RequiredBytes() uint {
 }
 
 func (db *DocumentBuilder) WriteDocument(writer interface{}) (total int64, err error) {
+	return db.writeDocument(0, writer)
+}
+
+func (db *DocumentBuilder) writeDocument(start uint, writer interface{}) (total int64, err error) {
 	db.Init()
 	if b, ok := writer.([]byte); ok {
-		if uint(len(b)) < db.required+1 {
+		if uint(len(b)) < start+db.required+1 {
 			return 0, ErrTooShort
 		}
 	}
-	n, err := db.writeElements(writer)
+	n, err := db.writeElements(start, writer)
 	if err != nil {
 		return n, err
 	}
@@ -134,13 +150,33 @@ func (db *DocumentBuilder) WriteDocument(writer interface{}) (total int64, err e
 	return n + 1, nil
 }
 
-func (db *DocumentBuilder) writeElements(writer interface{}) (total int64, err error) {
+func (db *DocumentBuilder) writeElements(start uint, writer interface{}) (total int64, err error) {
 	for idx := range db.funcs {
-		n, err := db.funcs[idx](uint(db.starts[idx]), writer)
+		n, err := db.funcs[idx](uint(db.starts[idx])+start, writer)
 		total += int64(n)
 		if err != nil {
 			return total, err
 		}
 	}
 	return total, nil
+}
+
+func (db *DocumentBuilder) Element() (size uint, ew ElementWriter) {
+	return db.RequiredBytes(), func(start uint, writer interface{}) (n int, err error) {
+		written, err := db.writeDocument(start, writer)
+		return int(written), err
+	}
+}
+
+func (DocumentBuilder) SubDocument(key string, elems ...Elementer) *DocumentBuilder {
+	return &DocumentBuilder{}
+}
+
+func (DocumentBuilder) Double(key string, f float64) ElementFunc {
+	return func() (size uint, ew ElementWriter) {
+		// A double will always take 1 + key length + 1 + 8 bytes
+		return uint(10 + len(key)), func(start uint, writer interface{}) (n int, err error) {
+			return elements.Double.Encode(int(start), writer, f)
+		}
+	}
 }
