@@ -1,9 +1,7 @@
 package builder
 
 import (
-	"encoding/binary"
 	"errors"
-	"io"
 
 	"github.com/skriptble/wilson/elements"
 )
@@ -11,15 +9,19 @@ import (
 var ErrTooShort = errors.New("builder: The provided slice's length is too short")
 var ErrInvalidWriter = errors.New("builder: Invalid writer provided")
 
+var C Constructor
+
+type Constructor struct{}
+
 // Elementer is the interface implemented by types that can serialize
 // themselves into a BSON element.
 type Elementer interface {
-	Element() (size uint, ew ElementWriter)
+	Element() (ElementSizer, ElementWriter)
 }
 
-type ElementFunc func() (size uint, ew ElementWriter)
+type ElementFunc func() (ElementSizer, ElementWriter)
 
-func (ef ElementFunc) Element() (uint, ElementWriter) {
+func (ef ElementFunc) Element() (ElementSizer, ElementWriter) {
 	return ef()
 }
 
@@ -39,6 +41,9 @@ func (ef ElementFunc) Element() (uint, ElementWriter) {
 // If it is not one of these values, the implementations should panic.
 type ElementWriter func(start uint, writer interface{}) (n int, err error)
 
+// ElementSizer handles retrieving the size of an element's BSON representation.
+type ElementSizer func() (size uint)
+
 // DocumentBuilder allows the creation of a BSON document by appending elements
 // and then writing the document. The document can be written multiple times so
 // appending then writing and then appending and writing again is a valid usage
@@ -46,6 +51,7 @@ type ElementWriter func(start uint, writer interface{}) (n int, err error)
 type DocumentBuilder struct {
 	Key         string
 	funcs       []ElementWriter
+	sizers      []ElementSizer
 	starts      []uint
 	required    uint // number of required bytes. Should start at 4
 	initialized bool
@@ -55,105 +61,111 @@ func (db *DocumentBuilder) Init() {
 	if db.initialized {
 		return
 	}
-	l, f := db.documentHeader()
+	sizer, f := db.documentHeader()
 	db.funcs = append(db.funcs, f)
-	db.starts = append(db.starts, db.required)
-	db.required += l
-
+	db.sizers = append(db.sizers, sizer)
+	db.initialized = true
 }
 
 // Append adds the given elements to the BSON document.
 func (db *DocumentBuilder) Append(elems ...Elementer) *DocumentBuilder {
 	db.Init()
 	for _, elem := range elems {
-		length, f := elem.Element()
+		sizer, f := elem.Element()
 		db.funcs = append(db.funcs, f)
-		db.starts = append(db.starts, db.required)
-		db.required += length
+		db.sizers = append(db.sizers, sizer)
 	}
 	return db
 }
 
-func (db *DocumentBuilder) documentHeader() (length uint, ep ElementWriter) {
-	return 4, func(start uint, writer interface{}) (n int, err error) {
-		switch w := writer.(type) {
-		case []byte:
-			if len(w) < int(start+4) {
-				return 0, ErrTooShort
-			}
-			binary.LittleEndian.PutUint32(w[start:start+4], uint32(db.required+1))
-			return 4, nil
-		case io.WriterAt:
-			var b [4]byte
-			binary.LittleEndian.PutUint32(b[:], uint32(db.required+1))
-			return w.WriteAt(b[:], int64(start))
-		case io.WriteSeeker:
-			var b [4]byte
-			binary.LittleEndian.PutUint32(b[:], uint32(db.required+1))
-			_, err = w.Seek(int64(start), io.SeekStart)
-			if err != nil {
-				return 0, err
-			}
-			return w.Write(b[:])
-		case io.Writer:
-			var b [4]byte
-			binary.LittleEndian.PutUint32(b[:], uint32(db.required+1))
-			return w.Write(b[:])
-		default:
-			return 0, ErrInvalidWriter
+func (db *DocumentBuilder) documentHeader() (ElementSizer, ElementWriter) {
+	return func() uint { return 4 },
+		func(start uint, writer interface{}) (n int, err error) {
+			return elements.Int32.Encode(start, writer, int32(db.RequiredBytes()))
 		}
+}
+
+func (db *DocumentBuilder) calculateStarts() {
+	// TODO(skriptble): This method should cache it's results and Append should
+	// invalidate the cache.
+	db.required = 0
+	db.starts = db.starts[:0]
+	for _, sizer := range db.sizers {
+		db.starts = append(db.starts, db.required)
+		db.required += sizer()
 	}
 }
 
 // RequireBytes returns the number of bytes required to write the entire BSON
 // document.
 func (db *DocumentBuilder) RequiredBytes() uint {
+	return db.requiredSize(false)
+}
+
+func (db *DocumentBuilder) embeddedSize() uint {
+	return db.requiredSize(true)
+}
+
+func (db *DocumentBuilder) requiredSize(embedded bool) uint {
+	db.calculateStarts()
 	if db.required < 5 {
 		return 5
 	}
+	if embedded {
+		return db.required + 3 + uint(len(db.Key)) // 1 byte for type, 1 byte for '\x00', 1 byte for doc '\x00'
+	}
 	return db.required + 1 // We add 1 because we don't include the ending null byte for the document
+
 }
 
-func (db *DocumentBuilder) WriteDocument(writer interface{}) (total int64, err error) {
-	return db.writeDocument(0, writer)
+func (db *DocumentBuilder) WriteDocument(writer interface{}) (int64, error) {
+	n, err := db.writeDocument(0, writer, false)
+	return int64(n), err
 }
 
-func (db *DocumentBuilder) writeDocument(start uint, writer interface{}) (total int64, err error) {
+func (db *DocumentBuilder) writeDocument(start uint, writer interface{}, embedded bool) (int, error) {
 	db.Init()
+	db.calculateStarts()
+
+	var total, n int
+	var err error
+
+	if embedded {
+		n, err = elements.Byte.Encode(start, writer, '\x02')
+		start += uint(n)
+		total += n
+		if err != nil {
+			return total, err
+		}
+		n, err = elements.CString.Encode(start, writer, db.Key)
+		start += uint(n)
+		total += n
+		if err != nil {
+			return total, err
+		}
+	}
 	if b, ok := writer.([]byte); ok {
 		if uint(len(b)) < start+db.required+1 {
 			return 0, ErrTooShort
 		}
 	}
-	n, err := db.writeElements(start, writer)
+
+	n, err = db.writeElements(start, writer)
+	start += uint(n)
+	total += n
 	if err != nil {
 		return n, err
 	}
 
-	switch w := writer.(type) {
-	case []byte:
-		w[len(w)-1] = '\x00'
-	case io.WriterAt:
-		_, err = w.WriteAt([]byte{'\x00'}, int64(db.required-1))
-	case io.WriteSeeker:
-		_, err = w.Seek(int64(db.required-1), io.SeekStart)
-		if err != nil {
-			return n, err
-		}
-		_, err = w.Write([]byte{'\x00'})
-	case io.Writer:
-		_, err = w.Write([]byte{'\x00'})
-	default:
-		return 0, ErrInvalidWriter
-	}
-
-	return n + 1, nil
+	n, err = elements.Byte.Encode(start, writer, '\x00')
+	total += n
+	return total, err
 }
 
-func (db *DocumentBuilder) writeElements(start uint, writer interface{}) (total int64, err error) {
+func (db *DocumentBuilder) writeElements(start uint, writer interface{}) (total int, err error) {
 	for idx := range db.funcs {
 		n, err := db.funcs[idx](uint(db.starts[idx])+start, writer)
-		total += int64(n)
+		total += n
 		if err != nil {
 			return total, err
 		}
@@ -161,22 +173,42 @@ func (db *DocumentBuilder) writeElements(start uint, writer interface{}) (total 
 	return total, nil
 }
 
-func (db *DocumentBuilder) Element() (size uint, ew ElementWriter) {
-	return db.RequiredBytes(), func(start uint, writer interface{}) (n int, err error) {
-		written, err := db.writeDocument(start, writer)
-		return int(written), err
+func (db *DocumentBuilder) Element() (ElementSizer, ElementWriter) {
+	return db.embeddedSize, func(start uint, writer interface{}) (n int, err error) {
+		return db.writeDocument(start, writer, true)
 	}
 }
 
-func (DocumentBuilder) SubDocument(key string, elems ...Elementer) *DocumentBuilder {
-	return &DocumentBuilder{}
+func (Constructor) SubDocument(key string, elems ...Elementer) *DocumentBuilder {
+	return (&DocumentBuilder{Key: key}).Append(elems...)
 }
 
-func (DocumentBuilder) Double(key string, f float64) ElementFunc {
-	return func() (size uint, ew ElementWriter) {
+func (Constructor) Double(key string, f float64) ElementFunc {
+	return func() (ElementSizer, ElementWriter) {
 		// A double will always take 1 + key length + 1 + 8 bytes
-		return uint(10 + len(key)), func(start uint, writer interface{}) (n int, err error) {
-			return elements.Double.Encode(int(start), writer, f)
-		}
+		return func() uint {
+				return uint(10 + len(key))
+			},
+			func(start uint, writer interface{}) (int, error) {
+				var total int
+				n, err := elements.Byte.Encode(start, writer, '\x01')
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+				n, err = elements.CString.Encode(start, writer, key)
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+				n, err = elements.Double.Encode(start, writer, f)
+				total += n
+				if err != nil {
+					return total, err
+				}
+				return total, nil
+			}
 	}
 }
