@@ -20,7 +20,7 @@ import (
 	"io"
 	"math"
 
-	"github.com/skriptble/wilson/ast"
+	"github.com/skriptble/wilson/parser/ast"
 )
 
 var ErrInvalidWriter = errors.New("element: Invalid writer provided")

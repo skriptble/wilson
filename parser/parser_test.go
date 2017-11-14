@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/skriptble/wilson/ast"
+	"github.com/skriptble/wilson/parser/ast"
 )
 
 func TestBSONParser(t *testing.T) {
