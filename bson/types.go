@@ -1,4 +1,4 @@
-package compact
+package bson
 
 type BSONType byte
 

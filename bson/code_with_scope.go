@@ -1,4 +1,4 @@
-package compact
+package bson
 
 type CodeWithScope struct {
 	start uint32 // includes the int32 length
