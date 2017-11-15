@@ -115,6 +115,28 @@ func (double) Decode(start uint, reader interface{}) (float64, error) {
 	}
 }
 
+func (double) Element(start uint, writer interface{}, key string, f float64) (int, error) {
+	var total int
+	n, err := Byte.Encode(start, writer, '\x01')
+	start += uint(n)
+	total += n
+	if err != nil {
+		return total, err
+	}
+	n, err = CString.Encode(start, writer, key)
+	start += uint(n)
+	total += n
+	if err != nil {
+		return total, err
+	}
+	n, err = Double.Encode(start, writer, f)
+	total += n
+	if err != nil {
+		return total, err
+	}
+	return total, nil
+}
+
 func (str) Encode(start uint, writer interface{}, s string) error {
 	return nil
 }

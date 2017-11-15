@@ -71,7 +71,11 @@ func (d *Document) Less(i, j int) bool {
 
 func (d *Document) Swap(i, j int) { d.n[i], d.n[j] = d.n[j], d.n[i] }
 
-func (d *Document) Validate() error {
+func (d *Document) Validate(shallow bool) error {
+	return nil
+}
+
+func (d *Document) Index(shallow bool) error {
 	return nil
 }
 
@@ -93,6 +97,14 @@ type Element struct {
 	value uint32
 
 	data []byte
+}
+
+func NewElement(start, value uint32, data []byte) *Element {
+	return &Element{start: start, value: value, data: data}
+}
+
+func (e *Element) Recycle(start, value uint32, data []byte) {
+	e.start, e.value, e.data = start, value, data
 }
 
 func (e *Element) Validate() error {
