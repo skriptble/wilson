@@ -6,6 +6,8 @@ import (
 	"errors"
 	"math"
 	"time"
+
+	"github.com/skriptble/wilson/parser/ast"
 )
 
 // ErrUninitializedElement is returned whenever any method is invoked on an unintialized Element.
@@ -40,11 +42,12 @@ type node [2]uint32
 type Document struct {
 	data    []byte
 	n       []node
+	start   uint32
 	current *Element
 }
 
 func (d *Document) Length() int32 {
-	return int32(binary.LittleEndian.Uint32(d.data[0:4]))
+	return int32(binary.LittleEndian.Uint32(d.data[d.start : d.start+4]))
 }
 
 func (d *Document) ElementList() []*Element {
@@ -162,9 +165,9 @@ func (e *Element) Document() *Document {
 	if e.data[e.start] != '\x03' {
 		panic(ElementTypeError{"compact.Element.Document", BSONType(e.data[e.start])})
 	}
-	l := int32(binary.LittleEndian.Uint32(e.data[e.value : e.value+4]))
 	d := &Document{
-		data: e.data[e.value : int32(e.value)+l+1],
+		start: e.value,
+		data:  e.data,
 	}
 	return d
 }
@@ -176,9 +179,9 @@ func (e *Element) Array() *Document {
 	if e.data[e.start] != '\x04' {
 		panic(ElementTypeError{"compact.Element.Array", BSONType(e.data[e.start])})
 	}
-	l := int32(binary.LittleEndian.Uint32(e.data[e.value : e.value+4]))
 	d := &Document{
-		data: e.data[e.value : int32(e.value)+l+1],
+		start: e.value,
+		data:  e.data,
 	}
 	return d
 }
@@ -305,4 +308,34 @@ func (e *Element) Int32() int32 {
 	return int32(binary.LittleEndian.Uint32(e.data[e.value : e.value+4]))
 }
 
-// func (e *Element) Timestamp() uint64
+func (e *Element) Uint64() uint64 {
+	if e == nil || e.start == 0 || e.value == 0 {
+		panic(ErrUninitializedElement)
+	}
+	if e.data[e.start] != '\x11' {
+		panic(ElementTypeError{"compact.Element.Uint64", BSONType(e.data[e.start])})
+	}
+	return binary.LittleEndian.Uint64(e.data[e.value : e.value+8])
+}
+
+func (e *Element) Int64() int64 {
+	if e == nil || e.start == 0 || e.value == 0 {
+		panic(ErrUninitializedElement)
+	}
+	if e.data[e.start] != '\x12' {
+		panic(ElementTypeError{"compact.Element.Int64", BSONType(e.data[e.start])})
+	}
+	return int64(binary.LittleEndian.Uint64(e.data[e.value : e.value+8]))
+}
+
+func (e *Element) Decimal128() ast.Decimal128 {
+	if e == nil || e.start == 0 || e.value == 0 {
+		panic(ErrUninitializedElement)
+	}
+	if e.data[e.start] != '\x12' {
+		panic(ElementTypeError{"compact.Element.Decimal", BSONType(e.data[e.start])})
+	}
+	l := binary.LittleEndian.Uint64(e.data[e.value : e.value+8])
+	h := binary.LittleEndian.Uint64(e.data[e.value+8 : e.value+16])
+	return ast.NewDecimal128(h, l)
+}
