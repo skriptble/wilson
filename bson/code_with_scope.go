@@ -5,7 +5,7 @@ type CodeWithScope struct {
 	data  []byte
 }
 
-func (cws *CodeWithScope) Javascropt() string {
+func (cws *CodeWithScope) Javascript() string {
 	return ""
 }
 

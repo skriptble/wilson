@@ -2,46 +2,46 @@ package bson
 
 import "github.com/skriptble/wilson/parser/ast"
 
-type RWConstructor struct{}
-type RWModifierConstructor struct{}
+type Constructor struct{}
+type ModifierConstructor struct{}
 
-func (RWConstructor) Double(key string, f float64) *RWElement                           { return nil }
-func (RWConstructor) String(key string, val string) *RWElement                          { return nil }
-func (RWConstructor) Document(key string, elems ...*RWElement) *RWElement               { return nil }
-func (RWConstructor) Array(key string, elemens ...*RWElement) *RWElement                { return nil }
-func (RWConstructor) Binary(key string, b []byte, btype uint) *RWElement                { return nil }
-func (RWConstructor) ObjectID(key string, obj [12]byte) *RWElement                      { return nil }
-func (RWConstructor) Boolean(key string, b bool) *RWElement                             { return nil }
-func (RWConstructor) DateTime(key string, dt int64) *RWElement                          { return nil }
-func (RWConstructor) Regex(key string, pattern, options string) *RWElement              { return nil }
-func (RWConstructor) DBPointer(key string, dbpointer [12]byte) *RWElement               { return nil }
-func (RWConstructor) Javascript(key string, js string) *RWElement                       { return nil }
-func (RWConstructor) Symbol(key string, symbol string) *RWElement                       { return nil }
-func (RWConstructor) CodeWithScope(key string, js string, scope *RWDocument) *RWElement { return nil }
-func (RWConstructor) Int32(key string, i int32) *RWElement                              { return nil }
-func (RWConstructor) Uint64(key string, u uint64) *RWElement                            { return nil }
-func (RWConstructor) Int64(key string, i int64) *RWElement                              { return nil }
-func (RWConstructor) Decimal128(key string, d ast.Decimal128) *RWElement                { return nil }
+func (Constructor) Double(key string, f float64) *Element                         { return nil }
+func (Constructor) String(key string, val string) *Element                        { return nil }
+func (Constructor) Document(key string, elems ...*Element) *Element               { return nil }
+func (Constructor) Array(key string, elemens ...*Element) *Element                { return nil }
+func (Constructor) Binary(key string, b []byte, btype uint) *Element              { return nil }
+func (Constructor) ObjectID(key string, obj [12]byte) *Element                    { return nil }
+func (Constructor) Boolean(key string, b bool) *Element                           { return nil }
+func (Constructor) DateTime(key string, dt int64) *Element                        { return nil }
+func (Constructor) Regex(key string, pattern, options string) *Element            { return nil }
+func (Constructor) DBPointer(key string, dbpointer [12]byte) *Element             { return nil }
+func (Constructor) Javascript(key string, js string) *Element                     { return nil }
+func (Constructor) Symbol(key string, symbol string) *Element                     { return nil }
+func (Constructor) CodeWithScope(key string, js string, scope *Document) *Element { return nil }
+func (Constructor) Int32(key string, i int32) *Element                            { return nil }
+func (Constructor) Uint64(key string, u uint64) *Element                          { return nil }
+func (Constructor) Int64(key string, i int64) *Element                            { return nil }
+func (Constructor) Decimal128(key string, d ast.Decimal128) *Element              { return nil }
 
-func (RWModifierConstructor) UpdateKey(key string) RWModifier                  { return nil }
-func (RWModifierConstructor) ConvertToDouble(f float64) RWModifier             { return nil }
-func (RWModifierConstructor) ConvertToString(val string) RWModifier            { return nil }
-func (RWModifierConstructor) ConvertToDocument(elems ...*RWElement) RWModifier { return nil }
-func (RWModifierConstructor) ConvertToArray(elemens ...*RWElement) RWModifier  { return nil }
-func (RWModifierConstructor) ConvertToBinary(b []byte, btype uint) RWModifier  { return nil }
-func (RWModifierConstructor) ConvertToObjectID(obj [12]byte) RWModifier        { return nil }
-func (RWModifierConstructor) ConvertToBoolean(b bool) RWModifier               { return nil }
-func (RWModifierConstructor) ConvertToDateTime(dt int64) RWModifier            { return nil }
-func (RWModifierConstructor) ConvertToRegex(pattern, options string) RWModifier {
+func (ModifierConstructor) UpdateKey(key string) Modifier                 { return nil }
+func (ModifierConstructor) ConvertToDouble(f float64) Modifier            { return nil }
+func (ModifierConstructor) ConvertToString(val string) Modifier           { return nil }
+func (ModifierConstructor) ConvertToDocument(elems ...*Element) Modifier  { return nil }
+func (ModifierConstructor) ConvertToArray(elemens ...*Element) Modifier   { return nil }
+func (ModifierConstructor) ConvertToBinary(b []byte, btype uint) Modifier { return nil }
+func (ModifierConstructor) ConvertToObjectID(obj [12]byte) Modifier       { return nil }
+func (ModifierConstructor) ConvertToBoolean(b bool) Modifier              { return nil }
+func (ModifierConstructor) ConvertToDateTime(dt int64) Modifier           { return nil }
+func (ModifierConstructor) ConvertToRegex(pattern, options string) Modifier {
 	return nil
 }
-func (RWModifierConstructor) ConvertToDBPointer(dbpointer [12]byte) RWModifier { return nil }
-func (RWModifierConstructor) ConvertToJavascript(js string) RWModifier         { return nil }
-func (RWModifierConstructor) ConvertToSymbol(symbol string) RWModifier         { return nil }
-func (RWModifierConstructor) ConvertToCodeWithScope(js string, scope *RWDocument) RWModifier {
+func (ModifierConstructor) ConvertToDBPointer(dbpointer [12]byte) Modifier { return nil }
+func (ModifierConstructor) ConvertToJavascript(js string) Modifier         { return nil }
+func (ModifierConstructor) ConvertToSymbol(symbol string) Modifier         { return nil }
+func (ModifierConstructor) ConvertToCodeWithScope(js string, scope *Document) Modifier {
 	return nil
 }
-func (RWModifierConstructor) ConvertToInt32(i int32) RWModifier               { return nil }
-func (RWModifierConstructor) ConvertToUint64(u uint64) RWModifier             { return nil }
-func (RWModifierConstructor) ConvertToInt64(i int64) RWModifier               { return nil }
-func (RWModifierConstructor) ConvertToDecimal128(d ast.Decimal128) RWModifier { return nil }
+func (ModifierConstructor) ConvertToInt32(i int32) Modifier               { return nil }
+func (ModifierConstructor) ConvertToUint64(u uint64) Modifier             { return nil }
+func (ModifierConstructor) ConvertToInt64(i int64) Modifier               { return nil }
+func (ModifierConstructor) ConvertToDecimal128(d ast.Decimal128) Modifier { return nil }
