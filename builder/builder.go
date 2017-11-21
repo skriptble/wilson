@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/skriptble/wilson/elements"
+	"github.com/skriptble/wilson/parser/ast"
 )
 
 var ErrTooShort = errors.New("builder: The provided slice's length is too short")
@@ -185,29 +186,640 @@ func (Constructor) SubDocument(key string, elems ...Elementer) *DocumentBuilder 
 
 func (Constructor) Double(key string, f float64) ElementFunc {
 	return func() (ElementSizer, ElementWriter) {
-		// A double will always take 1 + key length + 1 + 8 bytes
+		// A double will always take (1 + key length + 1) + 8 bytes
 		return func() uint {
 				return uint(10 + len(key))
 			},
 			func(start uint, writer interface{}) (int, error) {
 				var total int
+
 				n, err := elements.Byte.Encode(start, writer, '\x01')
 				start += uint(n)
 				total += n
 				if err != nil {
 					return total, err
 				}
+
 				n, err = elements.CString.Encode(start, writer, key)
 				start += uint(n)
 				total += n
 				if err != nil {
 					return total, err
 				}
+
 				n, err = elements.Double.Encode(start, writer, f)
 				total += n
 				if err != nil {
 					return total, err
 				}
+
+				return total, nil
+			}
+	}
+}
+
+func (Constructor) String(key string, value string) ElementFunc {
+	return func() (ElementSizer, ElementWriter) {
+		// A string's length is (1 + key length + 1) + (4 + value length + 1)
+		return func() uint {
+				return uint(7 + len(key) + len(value))
+			},
+			func(start uint, writer interface{}) (int, error) {
+				var total int
+
+				n, err := elements.Byte.Encode(start, writer, '\x02')
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				n, err = elements.CString.Encode(start, writer, key)
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				n, err = elements.String.Encode(start, writer, value)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				return total, nil
+			}
+	}
+}
+
+func (c Constructor) Binary(key string, b []byte) ElementFunc {
+	return c.BinaryWithSubtype(key, b, 0)
+}
+
+func (Constructor) BinaryWithSubtype(key string, b []byte, btype uint) ElementFunc {
+	return func() (ElementSizer, ElementWriter) {
+		// A binary's length is (1 + key length + 1) + (4 + 1 + b length)
+		return func() uint {
+				return uint(7 + len(key) + len(b))
+			},
+			func(start uint, writer interface{}) (int, error) {
+				var total int
+
+				n, err := elements.Byte.Encode(start, writer, '\x05')
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				n, err = elements.CString.Encode(start, writer, key)
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				n, err = elements.Binary.Encode(start, writer, b, btype)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				return total, nil
+			}
+	}
+}
+
+func (Constructor) Undefined(key string) ElementFunc {
+	return func() (ElementSizer, ElementWriter) {
+		// Undefined's length is 1 + key length + 1
+		return func() uint {
+				return uint(2 + len(key))
+			},
+			func(start uint, writer interface{}) (int, error) {
+				var total int
+
+				n, err := elements.Byte.Encode(start, writer, '\x06')
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				n, err = elements.CString.Encode(start, writer, key)
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				return total, nil
+			}
+	}
+}
+
+func (Constructor) ObjectID(key string, oid [12]byte) ElementFunc {
+	return func() (ElementSizer, ElementWriter) {
+		// An ObjectID's length is (1 + key length + 1) + 12
+		return func() uint {
+				return uint(14 + len(key))
+			},
+			func(start uint, writer interface{}) (int, error) {
+				var total int
+
+				n, err := elements.Byte.Encode(start, writer, '\x07')
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				n, err = elements.CString.Encode(start, writer, key)
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				n, err = elements.ObjectID.Encode(start, writer, oid)
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				return total, nil
+			}
+	}
+}
+
+func (Constructor) Boolean(key string, b bool) ElementFunc {
+	return func() (ElementSizer, ElementWriter) {
+		// An ObjectID's length is (1 + key length + 1) + 1
+		return func() uint {
+				return uint(3 + len(key))
+			},
+			func(start uint, writer interface{}) (int, error) {
+				var total int
+
+				n, err := elements.Byte.Encode(start, writer, '\x08')
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				n, err = elements.CString.Encode(start, writer, key)
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				n, err = elements.Boolean.Encode(start, writer, b)
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				return total, nil
+			}
+	}
+}
+
+func (Constructor) Datetime(key string, dt int64) ElementFunc {
+	return func() (ElementSizer, ElementWriter) {
+		// Datetime's length is (1 + key length + 1) + 8
+		return func() uint {
+				return uint(10 + len(key))
+			},
+			func(start uint, writer interface{}) (int, error) {
+				var total int
+
+				n, err := elements.Byte.Encode(start, writer, '\x09')
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				n, err = elements.CString.Encode(start, writer, key)
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				n, err = elements.DateTime.Encode(start, writer, dt)
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				return total, nil
+			}
+	}
+}
+
+func (Constructor) Null(key string) ElementFunc {
+	return func() (ElementSizer, ElementWriter) {
+		// Null's length is 1 + key length + 1
+		return func() uint {
+				return uint(2 + len(key))
+			},
+			func(start uint, writer interface{}) (int, error) {
+				var total int
+
+				n, err := elements.Byte.Encode(start, writer, '\x0A')
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				n, err = elements.CString.Encode(start, writer, key)
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				return total, nil
+			}
+	}
+}
+
+func (Constructor) Regex(key string, pattern, options string) ElementFunc {
+	return func() (ElementSizer, ElementWriter) {
+		// Null's length is (1 + key length + 1) + (pattern length + 1) + (options length + 1)
+		return func() uint {
+				return uint(4 + len(key) + len(pattern) + len(options))
+			},
+			func(start uint, writer interface{}) (int, error) {
+				var total int
+
+				n, err := elements.Byte.Encode(start, writer, '\x0B')
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				n, err = elements.CString.Encode(start, writer, key)
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				n, err = elements.CString.Encode(start, writer, pattern)
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				n, err = elements.CString.Encode(start, writer, options)
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				return total, nil
+			}
+	}
+}
+
+func (Constructor) DBPointer(key string, dbpointer [12]byte) ElementFunc {
+	return func() (ElementSizer, ElementWriter) {
+		// An dbpointer's length is (1 + key length + 1) + 12
+		return func() uint {
+				return uint(14 + len(key))
+			},
+			func(start uint, writer interface{}) (int, error) {
+				var total int
+
+				n, err := elements.Byte.Encode(start, writer, '\x0C')
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				n, err = elements.CString.Encode(start, writer, key)
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				n, err = elements.DBPointer.Encode(start, writer, dbpointer)
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				return total, nil
+			}
+	}
+}
+
+func (Constructor) JavaScriptCode(key string, js string) ElementFunc {
+	return func() (ElementSizer, ElementWriter) {
+		// JavaScript code's length is (1 + key length + 1) + (4 + js length + 1)
+		return func() uint {
+				return uint(7 + len(key) + len(js))
+			},
+			func(start uint, writer interface{}) (int, error) {
+				var total int
+
+				n, err := elements.Byte.Encode(start, writer, '\x0D')
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				n, err = elements.CString.Encode(start, writer, key)
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				n, err = elements.Javascript.Encode(start, writer, js)
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				return total, nil
+			}
+	}
+}
+
+func (Constructor) Symbol(key string, symbol string) ElementFunc {
+	return func() (ElementSizer, ElementWriter) {
+		// A symbol's length is (1 + key length + 1) + (4 + symbol length + 1)
+		return func() uint {
+				return uint(7 + len(key) + len(symbol))
+			},
+			func(start uint, writer interface{}) (int, error) {
+				var total int
+
+				n, err := elements.Byte.Encode(start, writer, '\x0E')
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				n, err = elements.CString.Encode(start, writer, key)
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				n, err = elements.Symbol.Encode(start, writer, symbol)
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				return total, nil
+			}
+	}
+}
+
+func (Constructor) JavaScriptCodeWithScope(key string, js string, scope []byte) ElementFunc {
+	return func() (ElementSizer, ElementWriter) {
+		// JavaScript code with scope's length is (1 + key length + 1) + (4 + len key + 1) + len(scope)
+		return func() uint {
+				return uint(7 + len(key) + len(js) + len(scope))
+			},
+			func(start uint, writer interface{}) (int, error) {
+				var total int
+
+				n, err := elements.Byte.Encode(start, writer, '\x0F')
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				n, err = elements.CString.Encode(start, writer, key)
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				n, err = elements.CodeWithScope.Encode(start, writer, js, scope)
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				return total, nil
+			}
+	}
+}
+
+func (Constructor) Int32(key string, i int32) ElementFunc {
+	return func() (ElementSizer, ElementWriter) {
+		// An int32's length is (1 + key length + 1) + 4 bytes
+		return func() uint {
+				return uint(6 + len(key))
+			},
+			func(start uint, writer interface{}) (int, error) {
+				var total int
+
+				n, err := elements.Byte.Encode(start, writer, '\x10')
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				n, err = elements.CString.Encode(start, writer, key)
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				n, err = elements.Int32.Encode(start, writer, i)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				return total, nil
+			}
+	}
+}
+
+func (Constructor) Timestamp(key string, t uint64) ElementFunc {
+	return func() (ElementSizer, ElementWriter) {
+		// An decimal's length is (1 + key length + 1) + 8 bytes
+		return func() uint {
+				return uint(10 + len(key))
+			},
+			func(start uint, writer interface{}) (int, error) {
+				var total int
+
+				n, err := elements.Byte.Encode(start, writer, '\x11')
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				n, err = elements.CString.Encode(start, writer, key)
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				n, err = elements.Uint64.Encode(start, writer, t)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				return total, nil
+			}
+	}
+}
+
+func (Constructor) Int64(key string, i int64) ElementFunc {
+	return func() (ElementSizer, ElementWriter) {
+		// An int64's length is (1 + key length + 1) + 8 bytes
+		return func() uint {
+				return uint(10 + len(key))
+			},
+			func(start uint, writer interface{}) (int, error) {
+				var total int
+
+				n, err := elements.Byte.Encode(start, writer, '\x12')
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				n, err = elements.CString.Encode(start, writer, key)
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				n, err = elements.Int64.Encode(start, writer, i)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				return total, nil
+			}
+	}
+}
+
+func (Constructor) Decimal(key string, d ast.Decimal128) ElementFunc {
+	return func() (ElementSizer, ElementWriter) {
+		// An decimal's length is (1 + key length + 1) + 16 bytes
+		return func() uint {
+				return uint(18 + len(key))
+			},
+			func(start uint, writer interface{}) (int, error) {
+				var total int
+
+				n, err := elements.Byte.Encode(start, writer, '\x13')
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				n, err = elements.CString.Encode(start, writer, key)
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				n, err = elements.Decimal128.Encode(start, writer, d)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				return total, nil
+			}
+	}
+}
+
+func (Constructor) MinKey(key string) ElementFunc {
+	return func() (ElementSizer, ElementWriter) {
+		// An min key's length is (1 + key length + 1)
+		return func() uint {
+				return uint(2 + len(key))
+			},
+			func(start uint, writer interface{}) (int, error) {
+				var total int
+
+				n, err := elements.Byte.Encode(start, writer, '\xFF')
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				n, err = elements.CString.Encode(start, writer, key)
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				return total, nil
+			}
+	}
+}
+
+func (Constructor) MaxKey(key string) ElementFunc {
+	return func() (ElementSizer, ElementWriter) {
+		// An max key's length is (1 + key length + 1)
+		return func() uint {
+				return uint(2 + len(key))
+			},
+			func(start uint, writer interface{}) (int, error) {
+				var total int
+
+				n, err := elements.Byte.Encode(start, writer, '\x7F')
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
+				n, err = elements.CString.Encode(start, writer, key)
+				start += uint(n)
+				total += n
+				if err != nil {
+					return total, err
+				}
+
 				return total, nil
 			}
 	}

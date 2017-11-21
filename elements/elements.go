@@ -137,40 +137,40 @@ func (double) Element(start uint, writer interface{}, key string, f float64) (in
 	return total, nil
 }
 
-func (str) Encode(start uint, writer interface{}, s string) error {
-	return nil
+func (str) Encode(start uint, writer interface{}, s string) (int, error) {
+	return 0, nil
 }
 
 func (str) Decode(start uint, reader interface{}) (string, error) {
 	return "", nil
 }
 
-func (document) Encode(start uint, writer interface{}, doc []byte) error {
-	return nil
+func (document) Encode(start uint, writer interface{}, doc []byte) (int, error) {
+	return 0, nil
 }
 
 func (document) Decode(start uint, reader interface{}) ([]byte, error) {
 	return nil, nil
 }
 
-func (array) Encode(start uint, writer interface{}, arr []byte) error {
-	return nil
+func (array) Encode(start uint, writer interface{}, arr []byte) (int, error) {
+	return 0, nil
 }
 
 func (array) Decode(start uint, reader interface{}) ([]byte, error) {
 	return nil, nil
 }
 
-func (bin) Encode(start uint, writer interface{}, b []byte, btype uint) error {
-	return nil
+func (bin) Encode(start uint, writer interface{}, b []byte, btype uint) (int, error) {
+	return 0, nil
 }
 
 func (bin) Decode(start uint, reader interface{}) (b []byte, btype uint, err error) {
 	return nil, 0, nil
 }
 
-func (objectid) Encode(start uint, writer interface{}, obj [12]byte) error {
-	return nil
+func (objectid) Encode(start uint, writer interface{}, obj [12]byte) (int, error) {
+	return 0, nil
 }
 
 func (objectid) Decode(start uint, reader interface{}) ([12]byte, error) {
@@ -178,32 +178,32 @@ func (objectid) Decode(start uint, reader interface{}) ([12]byte, error) {
 	return obj, nil
 }
 
-func (boolean) Encode(start uint, writer interface{}, b bool) error {
-	return nil
+func (boolean) Encode(start uint, writer interface{}, b bool) (int, error) {
+	return 0, nil
 }
 
 func (boolean) Decode(start uint, reader interface{}) (bool, error) {
 	return false, nil
 }
 
-func (datetime) Encode(start uint, writer interface{}, dt int64) error {
-	return nil
+func (datetime) Encode(start uint, writer interface{}, dt int64) (int, error) {
+	return 0, nil
 }
 
 func (datetime) Decode(start uint, reader interface{}) (int64, error) {
 	return 0, nil
 }
 
-func (regex) Encode(start uint, writer interface{}, pattern, options string) error {
-	return nil
+func (regex) Encode(start uint, writer interface{}, pattern, options string) (int, error) {
+	return 0, nil
 }
 
 func (regex) Decode(start uint, reader interface{}) (string, string, error) {
 	return "", "", nil
 }
 
-func (dbpointer) Encode(start uint, writer interface{}, dbpointer [12]byte) error {
-	return nil
+func (dbpointer) Encode(start uint, writer interface{}, dbpointer [12]byte) (int, error) {
+	return 0, nil
 }
 
 func (dbpointer) Decode(start uint, reader interface{}) ([12]byte, error) {
@@ -211,24 +211,24 @@ func (dbpointer) Decode(start uint, reader interface{}) ([12]byte, error) {
 	return dbpointer, nil
 }
 
-func (javascript) Encode(start uint, writer interface{}, js string) error {
-	return nil
+func (javascript) Encode(start uint, writer interface{}, js string) (int, error) {
+	return 0, nil
 }
 
 func (javascript) Decode(start uint, reader interface{}) (string, error) {
 	return "", nil
 }
 
-func (symbol) Encode(start uint, writer interface{}, symbol string) error {
-	return nil
+func (symbol) Encode(start uint, writer interface{}, symbol string) (int, error) {
+	return 0, nil
 }
 
 func (symbol) Decode(start uint, reader interface{}) (string, error) {
 	return "", nil
 }
 
-func (codewithscope) Encode(start uint, writer interface{}, js string, doc []byte) error {
-	return nil
+func (codewithscope) Encode(start uint, writer interface{}, js string, doc []byte) (int, error) {
+	return 0, nil
 }
 
 func (codewithscope) Decode(start uint, reader interface{}) (string, []byte, error) {
@@ -268,24 +268,24 @@ func (i32) Deocde(start uint, reader interface{}) (int32, error) {
 	return 0, nil
 }
 
-func (u64) Encode(start uint, writer interface{}, u uint64) error {
-	return nil
+func (u64) Encode(start uint, writer interface{}, u uint64) (int, error) {
+	return 0, nil
 }
 
 func (u64) Decode(start uint, reader interface{}) (uint64, error) {
 	return 0, nil
 }
 
-func (i64) Encode(start uint, writer interface{}, i int64) error {
-	return nil
+func (i64) Encode(start uint, writer interface{}, i int64) (int, error) {
+	return 0, nil
 }
 
 func (i64) Decode(start uint, reader interface{}) (int64, error) {
 	return 0, nil
 }
 
-func (decimal128) Encode(start uint, writer interface{}, d ast.Decimal128) error {
-	return nil
+func (decimal128) Encode(start uint, writer interface{}, d ast.Decimal128) (int, error) {
+	return 0, nil
 }
 
 func (decimal128) Decode(start uint, reader interface{}) (ast.Decimal128, error) {
