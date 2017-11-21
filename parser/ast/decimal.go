@@ -42,6 +42,10 @@ func NewDecimal128(h, l uint64) Decimal128 {
 	return Decimal128{h: h, l: l}
 }
 
+func (d Decimal128) GetBytes() (uint64, uint64) {
+	return d.h, d.l
+}
+
 func (d Decimal128) String() string {
 	var pos int     // positive sign
 	var e int       // exponent
