@@ -8,10 +8,10 @@ func (a *Array) Validate(recursive bool) (uint32, error) {
 	return 0, nil
 }
 
-func (a *Array) Walk(recursive bool, f func(prefix []string, e *Element)) {
+func (a *Array) Walk(recursive bool, f func(prefix []string, e *ReaderElement)) {
 }
 
-func (a *Array) Lookup(index int) (*Element, error) {
+func (a *Array) Lookup(index int) (*ReaderElement, error) {
 	return nil, nil
 }
 

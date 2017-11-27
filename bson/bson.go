@@ -11,4 +11,4 @@ package bson
 // could result in parsing errors.
 type node [2]uint32
 
-type Modifier func(elem *Element)
+type Modifier func(elem *ReaderElement,)
