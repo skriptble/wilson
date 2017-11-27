@@ -1155,7 +1155,7 @@ func TestDocumentBuilder(t *testing.T) {
 }
 
 func ExampleDocumentBuilder_ClientDoc() {
-	internalVersion = "1234567"
+	internalVersion := "1234567"
 
 	/*
 		func createClientDoc(appName string) bson.M {
