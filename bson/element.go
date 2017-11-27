@@ -257,7 +257,7 @@ func (e *Element) Document() *Document {
 	return e.d
 }
 
-func (e *Element) Array() *Document {
+func (e *Element) Array() *Array {
 	if e == nil || e.start == 0 || e.value == 0 {
 		panic(ErrUninitializedElement)
 	}
@@ -270,7 +270,7 @@ func (e *Element) Array() *Document {
 			data:  e.data,
 		}
 	}
-	return e.d
+	return &Array{e.d}
 }
 
 func (e *Element) Binary() (subtype byte, data []byte) {

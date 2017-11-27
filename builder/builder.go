@@ -11,8 +11,10 @@ var ErrTooShort = errors.New("builder: The provided slice's length is too short"
 var ErrInvalidWriter = errors.New("builder: Invalid writer provided")
 
 var C Constructor
+var AC ArrayConstructor
 
 type Constructor struct{}
+type ArrayConstructor struct{}
 
 // Elementer is the interface implemented by types that can serialize
 // themselves into a BSON element.
@@ -20,10 +22,20 @@ type Elementer interface {
 	Element() (ElementSizer, ElementWriter)
 }
 
+type ArrayElementer interface {
+	ArrayElement(pos uint) Elementer
+}
+
 type ElementFunc func() (ElementSizer, ElementWriter)
 
 func (ef ElementFunc) Element() (ElementSizer, ElementWriter) {
 	return ef()
+}
+
+type ArrayElementFunc func(pos uint) Elementer
+
+func (aef ArrayElementFunc) ArrayElement(pos uint) Elementer {
+	return aef(pos)
 }
 
 // Element is a function type used to insert BSON element values into a BSON

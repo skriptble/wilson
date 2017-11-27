@@ -3,6 +3,7 @@ package bson
 import "github.com/skriptble/wilson/parser/ast"
 
 type Constructor struct{}
+type ArrayConstructor struct{}
 type ModifierConstructor struct{}
 
 func (Constructor) Double(key string, f float64) *Element                         { return nil }
@@ -22,6 +23,24 @@ func (Constructor) Int32(key string, i int32) *Element                          
 func (Constructor) Uint64(key string, u uint64) *Element                          { return nil }
 func (Constructor) Int64(key string, i int64) *Element                            { return nil }
 func (Constructor) Decimal128(key string, d ast.Decimal128) *Element              { return nil }
+
+func (ArrayConstructor) Double(f float64) *Element                         { return nil }
+func (ArrayConstructor) String(val string) *Element                        { return nil }
+func (ArrayConstructor) Document(elems ...*Element) *Element               { return nil }
+func (ArrayConstructor) Array(elemens ...*Element) *Element                { return nil }
+func (ArrayConstructor) Binary(b []byte, btype uint) *Element              { return nil }
+func (ArrayConstructor) ObjectID(obj [12]byte) *Element                    { return nil }
+func (ArrayConstructor) Boolean(b bool) *Element                           { return nil }
+func (ArrayConstructor) DateTime(dt int64) *Element                        { return nil }
+func (ArrayConstructor) Regex(pattern, options string) *Element            { return nil }
+func (ArrayConstructor) DBPointer(dbpointer [12]byte) *Element             { return nil }
+func (ArrayConstructor) Javascript(js string) *Element                     { return nil }
+func (ArrayConstructor) Symbol(symbol string) *Element                     { return nil }
+func (ArrayConstructor) CodeWithScope(js string, scope *Document) *Element { return nil }
+func (ArrayConstructor) Int32(i int32) *Element                            { return nil }
+func (ArrayConstructor) Uint64(u uint64) *Element                          { return nil }
+func (ArrayConstructor) Int64(i int64) *Element                            { return nil }
+func (ArrayConstructor) Decimal128(d ast.Decimal128) *Element              { return nil }
 
 func (ModifierConstructor) UpdateKey(key string) Modifier                 { return nil }
 func (ModifierConstructor) ConvertToDouble(f float64) Modifier            { return nil }

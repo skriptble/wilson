@@ -3,6 +3,7 @@ package builder
 import (
 	"bytes"
 	"fmt"
+	"runtime"
 	"testing"
 )
 
@@ -67,4 +68,51 @@ func TestDocumentBuilder(t *testing.T) {
 			}
 		})
 	})
+}
+
+func ExampleDocumentBuilder_ClientDoc() {
+	internalVersion = "1234567"
+
+	/*
+		func createClientDoc(appName string) bson.M {
+			clientDoc := bson.M{
+				"driver": bson.M{
+					"name":    "mongo-go-driver",
+					"version": internal.Version,
+				},
+				"os": bson.M{
+					"type":         runtime.GOOS,
+					"architecture": runtime.GOARCH,
+				},
+				"platform": runtime.Version(),
+			}
+			if appName != "" {
+				clientDoc["application"] = bson.M{"name": appName}
+			}
+
+			return clientDoc
+		}
+	*/
+
+	f := func(appName string) *DocumentBuilder {
+		docbuilder := new(DocumentBuilder)
+		docbuilder.Init()
+		docbuilder.Append(
+			C.SubDocument("driver",
+				C.String("name", "mongo-go-driver"),
+				C.String("version", internalVersion),
+			),
+			C.SubDocument("os",
+				C.String("type", runtime.GOOS),
+				C.String("architecture", runtime.GOARCH),
+			),
+			C.String("platform", runtime.Version()),
+		)
+		if appName != "" {
+			docbuilder.Append(C.SubDocument("application", C.String("name", appName)))
+		}
+
+		return docbuilder
+	}
+	f("hello-world")
 }
