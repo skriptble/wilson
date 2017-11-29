@@ -210,6 +210,32 @@ func (c Constructor) ArrayWithElements(key string, elems ...ArrayElementer) Elem
 	return C.Array(key, &b)
 }
 
+func (c Constructor) Array(key string, array *ArrayBuilder) ElementFunc {
+	return func() (ElementSizer, ElementWriter) {
+		// A subdocument will always take (1 + key length + 1) + len(subdoc) bytes
+		return func() uint {
+				return 2 + uint(len(key)) + array.RequiredBytes()
+			},
+			func(start uint, writer interface{}) (int, error) {
+				arrayBytes := make([]byte, array.RequiredBytes())
+				_, err := array.WriteDocument(arrayBytes)
+				if err != nil {
+					return 0, err
+				}
+
+				return elements.Array.Element(start, writer, key, arrayBytes)
+			}
+	}
+}
+
+func (c Constructor) ArrayWithElements(key string, elems ...ArrayElementer) ElementFunc {
+	var b ArrayBuilder
+	b.Init()
+	b.Append(elems...)
+
+	return C.Array(key, &b)
+}
+
 func (Constructor) Double(key string, f float64) ElementFunc {
 	return func() (ElementSizer, ElementWriter) {
 		// A double will always take (1 + key length + 1) + 8 bytes
