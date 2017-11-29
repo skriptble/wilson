@@ -184,11 +184,37 @@ func (str) Element(start uint, writer interface{}, key string, s string) (int, e
 }
 
 func (document) Encode(start uint, writer interface{}, doc []byte) (int, error) {
-	return 0, nil
+	return encodeByteSlice(start, writer, doc)
 }
 
 func (document) Decode(start uint, reader interface{}) ([]byte, error) {
 	return nil, nil
+}
+
+func (document) Element(start uint, writer interface{}, key string, doc []byte) (int, error) {
+	var total int
+
+	n, err := Byte.Encode(start, writer, '\x03')
+	start += uint(n)
+	total += n
+	if err != nil {
+		return total, err
+	}
+
+	n, err = CString.Encode(start, writer, key)
+	start += uint(n)
+	total += n
+	if err != nil {
+		return total, err
+	}
+
+	n, err = Document.Encode(start, writer, doc)
+	total += n
+	if err != nil {
+		return total, err
+	}
+
+	return total, nil
 }
 
 func (array) Encode(start uint, writer interface{}, arr []byte) (int, error) {
