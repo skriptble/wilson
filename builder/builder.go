@@ -117,10 +117,6 @@ func (db *DocumentBuilder) RequiredBytes() uint {
 	return db.requiredSize(false)
 }
 
-func (db *DocumentBuilder) embeddedSize() uint {
-	return db.requiredSize(true)
-}
-
 func (db *DocumentBuilder) requiredSize(embedded bool) uint {
 	// db.calculateStarts()
 	db.required = 0
@@ -130,23 +126,16 @@ func (db *DocumentBuilder) requiredSize(embedded bool) uint {
 	if db.required < 5 {
 		return 5
 	}
-	if embedded {
-		return db.required + 3 + uint(len(db.Key)) // 1 byte for type, 1 byte for '\x00', 1 byte for doc '\x00'
-	}
 	return db.required + 1 // We add 1 because we don't include the ending null byte for the document
 
 }
 
 func (db *DocumentBuilder) WriteDocument(writer interface{}) (int64, error) {
-	n, err := db.writeDocument(0, writer, false)
-	return int64(n), err
-}
-
-func (db *DocumentBuilder) writeDocument(start uint, writer interface{}, embedded bool) (int, error) {
 	db.Init()
 	db.calculateStarts()
 
 	var total, n int
+	var start uint
 	var err error
 
 	if embedded {
@@ -164,7 +153,7 @@ func (db *DocumentBuilder) writeDocument(start uint, writer interface{}, embedde
 		}
 	}
 	if b, ok := writer.([]byte); ok {
-		if uint(len(b)) < start+db.required+1 {
+		if uint(len(b)) < db.required+1 {
 			return 0, ErrTooShort
 		}
 	}
@@ -173,12 +162,12 @@ func (db *DocumentBuilder) writeDocument(start uint, writer interface{}, embedde
 	start += uint(n)
 	total += n
 	if err != nil {
-		return n, err
+		return int64(n), err
 	}
 
 	n, err = elements.Byte.Encode(start, writer, '\x00')
 	total += n
-	return total, err
+	return int64(total), err
 }
 
 func (db *DocumentBuilder) writeElements(start uint, writer interface{}) (total int, err error) {
@@ -193,14 +182,30 @@ func (db *DocumentBuilder) writeElements(start uint, writer interface{}) (total 
 	return total, nil
 }
 
-func (db *DocumentBuilder) Element() (ElementSizer, ElementWriter) {
-	return db.embeddedSize, func(start uint, writer interface{}) (n int, err error) {
-		return db.writeDocument(start, writer, true)
+func (Constructor) SubDocument(key string, subdoc *DocumentBuilder) ElementFunc {
+	return func() (ElementSizer, ElementWriter) {
+		// A subdocument will always take (1 + key length + 1) + len(subdoc) bytes
+		return func() uint {
+				return 2 + uint(len(key)) + subdoc.RequiredBytes()
+			},
+			func(start uint, writer interface{}) (int, error) {
+				subdocBytes := make([]byte, subdoc.RequiredBytes())
+				_, err := subdoc.WriteDocument(subdocBytes)
+				if err != nil {
+					return 0, err
+				}
+
+				return elements.Document.Element(start, writer, key, subdocBytes)
+			}
 	}
 }
 
-func (Constructor) SubDocument(key string, elems ...Elementer) *DocumentBuilder {
-	return (&DocumentBuilder{Key: key}).Append(elems...)
+func (c Constructor) SubDocumentWithElements(key string, elems ...Elementer) ElementFunc {
+	var b DocumentBuilder
+	b.Init()
+	b.Append(elems...)
+
+	return c.SubDocument(key, &b)
 }
 
 func (Constructor) Double(key string, f float64) ElementFunc {

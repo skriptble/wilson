@@ -12,7 +12,7 @@ import (
 func TestDocumentBuilder(t *testing.T) {
 	t.Run("Basic-Construction", func(t *testing.T) {
 		b := make([]byte, 41)
-		d := new(DocumentBuilder).Append(C.Double("foo", 3.14159), C.SubDocument("bar", C.Double("baz", 3.14159)))
+		d := new(DocumentBuilder).Append(C.Double("foo", 3.14159), C.SubDocumentWithElements("bar", C.Double("baz", 3.14159)))
 		_, _ = d.WriteDocument(b)
 	})
 
@@ -100,6 +100,148 @@ func TestDocumentBuilder(t *testing.T) {
 			for _, tc := range testCases {
 				t.Run(tc.name, func(t *testing.T) {
 					sizer, f := (Constructor{}).String(tc.key, tc.s)()
+					if sizer() != tc.size {
+						t.Errorf("Element sizes do not match. got %d; want %d", sizer(), tc.size)
+					}
+					t.Run("[]byte", func(t *testing.T) {
+						b := make([]byte, sizer())
+						written, err := f(tc.start, b)
+						if written != tc.written {
+							t.Errorf("Number of bytes written incorrect. got %d; want %d", written, tc.written)
+						}
+						if err != tc.err {
+							t.Errorf("Returned error not expected error. got %s; want %s", err, tc.err)
+						}
+						if !bytes.Equal(b, tc.repr) {
+							t.Errorf("Written bytes do not match. got %#v; want %#v", b, tc.repr)
+						}
+					})
+					t.Run("io.WriterAt", func(t *testing.T) {
+						t.Skip("not implemented")
+					})
+					t.Run("io.WriteSeeker", func(t *testing.T) {
+						t.Skip("not implemented")
+					})
+					t.Run("io.Writer", func(t *testing.T) {
+						t.Skip("not implemented")
+					})
+				})
+			}
+		})
+
+		t.Run("SubDocument", func(t *testing.T) {
+			var b DocumentBuilder
+			b.Init()
+			b.Append(C.String("bar", "baz"))
+
+			testCases := []struct {
+				name    string
+				key     string
+				subdoc  *DocumentBuilder
+				size    uint
+				repr    []byte
+				start   uint
+				written int
+				err     error
+			}{
+				{"success", "foo",
+					&b,
+					23,
+					[]byte{
+						// type
+						0x3,
+						// key
+						0x66, 0x6f, 0x6f, 0x0,
+
+						// length
+						0x12, 0x0, 0x0, 0x0,
+						// type
+						0x2,
+						// key
+						0x62, 0x61, 0x72, 0x0,
+						// value - string length
+						0x4, 0x0, 0x0, 0x0,
+						// value - string
+						0x62, 0x61, 0x7a, 0x0,
+
+						// null terminator
+						0x0,
+					},
+					0, 23, nil},
+			}
+
+			for _, tc := range testCases {
+				t.Run(tc.name, func(t *testing.T) {
+					sizer, f := (Constructor{}).SubDocument(tc.key, tc.subdoc)()
+					if sizer() != tc.size {
+						t.Errorf("Element sizes do not match. got %d; want %d", sizer(), tc.size)
+					}
+					t.Run("[]byte", func(t *testing.T) {
+						b := make([]byte, sizer())
+						written, err := f(tc.start, b)
+						if written != tc.written {
+							t.Errorf("Number of bytes written incorrect. got %d; want %d", written, tc.written)
+						}
+						if err != tc.err {
+							t.Errorf("Returned error not expected error. got %s; want %s", err, tc.err)
+						}
+						if !bytes.Equal(b, tc.repr) {
+							t.Errorf("Written bytes do not match. got %#v; want %#v", b, tc.repr)
+						}
+					})
+					t.Run("io.WriterAt", func(t *testing.T) {
+						t.Skip("not implemented")
+					})
+					t.Run("io.WriteSeeker", func(t *testing.T) {
+						t.Skip("not implemented")
+					})
+					t.Run("io.Writer", func(t *testing.T) {
+						t.Skip("not implemented")
+					})
+				})
+			}
+		})
+
+		t.Run("SubDocumentWithElements", func(t *testing.T) {
+			testCases := []struct {
+				name    string
+				key     string
+				subdoc  []Elementer
+				size    uint
+				repr    []byte
+				start   uint
+				written int
+				err     error
+			}{
+				{"success", "foo",
+					[]Elementer{C.String("bar", "baz")},
+					23,
+					[]byte{
+						// type
+						0x3,
+						// key
+						0x66, 0x6f, 0x6f, 0x0,
+
+						// length
+						0x12, 0x0, 0x0, 0x0,
+						// type
+						0x2,
+						// key
+						0x62, 0x61, 0x72, 0x0,
+						// value - string length
+						0x4, 0x0, 0x0, 0x0,
+						// value - string
+						0x62, 0x61, 0x7a, 0x0,
+
+						// null terminator
+						0x0,
+					},
+					0, 23, nil},
+			}
+
+			for _, tc := range testCases {
+				t.Run(tc.name, func(t *testing.T) {
+					sizer, f := (Constructor{}).SubDocumentWithElements(tc.key, tc.subdoc...)()
 					if sizer() != tc.size {
 						t.Errorf("Element sizes do not match. got %d; want %d", sizer(), tc.size)
 					}
@@ -1183,18 +1325,18 @@ func ExampleDocumentBuilder_ClientDoc() {
 		docbuilder := new(DocumentBuilder)
 		docbuilder.Init()
 		docbuilder.Append(
-			C.SubDocument("driver",
+			C.SubDocumentWithElements("driver",
 				C.String("name", "mongo-go-driver"),
 				C.String("version", internalVersion),
 			),
-			C.SubDocument("os",
+			C.SubDocumentWithElements("os",
 				C.String("type", runtime.GOOS),
 				C.String("architecture", runtime.GOARCH),
 			),
 			C.String("platform", runtime.Version()),
 		)
 		if appName != "" {
-			docbuilder.Append(C.SubDocument("application", C.String("name", appName)))
+			docbuilder.Append(C.SubDocumentWithElements("application", C.String("name", appName)))
 		}
 
 		return docbuilder
