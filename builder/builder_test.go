@@ -270,6 +270,148 @@ func TestDocumentBuilder(t *testing.T) {
 			}
 		})
 
+		t.Run("Array", func(t *testing.T) {
+			var b ArrayBuilder
+			b.Init()
+			b.Append(AC.String("baz"))
+
+			testCases := []struct {
+				name    string
+				key     string
+				array   *ArrayBuilder
+				size    uint
+				repr    []byte
+				start   uint
+				written int
+				err     error
+			}{
+				{"success", "foo",
+					&b,
+					21,
+					[]byte{
+						// type
+						0x3,
+						// key
+						0x66, 0x6f, 0x6f, 0x0,
+
+						// length
+						0x10, 0x0, 0x0, 0x0,
+						// type
+						0x2,
+						// key
+						0x30, 0x0,
+						// value - string length
+						0x4, 0x0, 0x0, 0x0,
+						// value - string
+						0x62, 0x61, 0x7a, 0x0,
+
+						// null terminator
+						0x0,
+					},
+					0, 21, nil},
+			}
+
+			for _, tc := range testCases {
+				t.Run(tc.name, func(t *testing.T) {
+					sizer, f := (Constructor{}).Array(tc.key, tc.array)()
+					if sizer() != tc.size {
+						t.Errorf("Element sizes do not match. got %d; want %d", sizer(), tc.size)
+					}
+					t.Run("[]byte", func(t *testing.T) {
+						b := make([]byte, sizer())
+						written, err := f(tc.start, b)
+						if written != tc.written {
+							t.Errorf("Number of bytes written incorrect. got %d; want %d", written, tc.written)
+						}
+						if err != tc.err {
+							t.Errorf("Returned error not expected error. got %s; want %s", err, tc.err)
+						}
+						if !bytes.Equal(b, tc.repr) {
+							t.Errorf("Written bytes do not match. got %#v; want %#v", b, tc.repr)
+						}
+					})
+					t.Run("io.WriterAt", func(t *testing.T) {
+						t.Skip("not implemented")
+					})
+					t.Run("io.WriteSeeker", func(t *testing.T) {
+						t.Skip("not implemented")
+					})
+					t.Run("io.Writer", func(t *testing.T) {
+						t.Skip("not implemented")
+					})
+				})
+			}
+		})
+
+		t.Run("Array", func(t *testing.T) {
+			testCases := []struct {
+				name    string
+				key     string
+				array   []ArrayElementer
+				size    uint
+				repr    []byte
+				start   uint
+				written int
+				err     error
+			}{
+				{"success", "foo",
+					[]ArrayElementer{AC.String("baz")},
+					21,
+					[]byte{
+						// type
+						0x3,
+						// key
+						0x66, 0x6f, 0x6f, 0x0,
+
+						// length
+						0x10, 0x0, 0x0, 0x0,
+						// type
+						0x2,
+						// key
+						0x30, 0x0,
+						// value - string length
+						0x4, 0x0, 0x0, 0x0,
+						// value - string
+						0x62, 0x61, 0x7a, 0x0,
+
+						// null terminator
+						0x0,
+					},
+					0, 21, nil},
+			}
+
+			for _, tc := range testCases {
+				t.Run(tc.name, func(t *testing.T) {
+					sizer, f := (Constructor{}).ArrayWithElements(tc.key, tc.array...)()
+					if sizer() != tc.size {
+						t.Errorf("Element sizes do not match. got %d; want %d", sizer(), tc.size)
+					}
+					t.Run("[]byte", func(t *testing.T) {
+						b := make([]byte, sizer())
+						written, err := f(tc.start, b)
+						if written != tc.written {
+							t.Errorf("Number of bytes written incorrect. got %d; want %d", written, tc.written)
+						}
+						if err != tc.err {
+							t.Errorf("Returned error not expected error. got %s; want %s", err, tc.err)
+						}
+						if !bytes.Equal(b, tc.repr) {
+							t.Errorf("Written bytes do not match. got %#v; want %#v", b, tc.repr)
+						}
+					})
+					t.Run("io.WriterAt", func(t *testing.T) {
+						t.Skip("not implemented")
+					})
+					t.Run("io.WriteSeeker", func(t *testing.T) {
+						t.Skip("not implemented")
+					})
+					t.Run("io.Writer", func(t *testing.T) {
+						t.Skip("not implemented")
+					})
+				})
+			}
+		})
+
 		t.Run("Binary", func(t *testing.T) {
 			testCases := []struct {
 				name    string
@@ -441,7 +583,7 @@ func TestDocumentBuilder(t *testing.T) {
 			}
 		})
 
-		t.Run("ObjectID", func(t *testing.T) {
+		t.Run("ObjectId", func(t *testing.T) {
 			testCases := []struct {
 				name    string
 				key     string
@@ -466,7 +608,7 @@ func TestDocumentBuilder(t *testing.T) {
 
 			for _, tc := range testCases {
 				t.Run(tc.name, func(t *testing.T) {
-					sizer, f := (Constructor{}).ObjectID(tc.key, tc.oid)()
+					sizer, f := (Constructor{}).ObjectId(tc.key, tc.oid)()
 					if sizer() != tc.size {
 						t.Errorf("Element sizes do not match. got %d; want %d", sizer(), tc.size)
 					}
@@ -890,7 +1032,7 @@ func TestDocumentBuilder(t *testing.T) {
 			}
 		})
 
-		t.Run("JavaScriptCodeWithScope", func(t *testing.T) {
+		t.Run("CodeWithScope", func(t *testing.T) {
 			testCases := []struct {
 				name    string
 				key     string
@@ -937,7 +1079,7 @@ func TestDocumentBuilder(t *testing.T) {
 
 			for _, tc := range testCases {
 				t.Run(tc.name, func(t *testing.T) {
-					sizer, f := (Constructor{}).JavaScriptCodeWithScope(tc.key, tc.code, tc.scope)()
+					sizer, f := (Constructor{}).CodeWithScope(tc.key, tc.code, tc.scope)()
 					if sizer() != tc.size {
 						t.Errorf("Element sizes do not match. got %d; want %d", sizer(), tc.size)
 					}

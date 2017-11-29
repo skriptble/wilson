@@ -33,7 +33,7 @@ var String str
 var Document document
 var Array array
 var Binary bin
-var ObjectID objectid
+var ObjectId objectid
 var Boolean boolean
 var DateTime datetime
 var Regex regex
@@ -218,11 +218,37 @@ func (document) Element(start uint, writer interface{}, key string, doc []byte) 
 }
 
 func (array) Encode(start uint, writer interface{}, arr []byte) (int, error) {
-	return 0, nil
+	return Document.Encode(start, writer, arr)
 }
 
 func (array) Decode(start uint, reader interface{}) ([]byte, error) {
 	return nil, nil
+}
+
+func (array) Element(start uint, writer interface{}, key string, arr []byte) (int, error) {
+	var total int
+
+	n, err := Byte.Encode(start, writer, '\x04')
+	start += uint(n)
+	total += n
+	if err != nil {
+		return total, err
+	}
+
+	n, err = CString.Encode(start, writer, key)
+	start += uint(n)
+	total += n
+	if err != nil {
+		return total, err
+	}
+
+	n, err = Array.Encode(start, writer, arr)
+	total += n
+	if err != nil {
+		return total, err
+	}
+
+	return total, nil
 }
 
 func (bin) Encode(start uint, writer interface{}, b []byte, btype byte) (int, error) {
@@ -309,7 +335,7 @@ func (objectid) Element(start uint, writer interface{}, key string, oid [12]byte
 		return total, err
 	}
 
-	n, err = ObjectID.Encode(start, writer, oid)
+	n, err = ObjectId.Encode(start, writer, oid)
 	start += uint(n)
 	total += n
 	if err != nil {
@@ -467,7 +493,7 @@ func (dbpointer) Encode(start uint, writer interface{}, ns string, oid [12]byte)
 		return total, err
 	}
 
-	written, err = ObjectID.Encode(start+uint(written), writer, oid)
+	written, err = ObjectId.Encode(start+uint(written), writer, oid)
 	total += written
 
 	return total, err

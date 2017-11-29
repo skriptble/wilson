@@ -22,20 +22,10 @@ type Elementer interface {
 	Element() (ElementSizer, ElementWriter)
 }
 
-type ArrayElementer interface {
-	ArrayElement(pos uint) Elementer
-}
-
 type ElementFunc func() (ElementSizer, ElementWriter)
 
 func (ef ElementFunc) Element() (ElementSizer, ElementWriter) {
 	return ef()
-}
-
-type ArrayElementFunc func(pos uint) Elementer
-
-func (aef ArrayElementFunc) ArrayElement(pos uint) Elementer {
-	return aef(pos)
 }
 
 // Element is a function type used to insert BSON element values into a BSON
@@ -111,10 +101,6 @@ func (db *DocumentBuilder) calculateStarts() {
 // RequireBytes returns the number of bytes required to write the entire BSON
 // document.
 func (db *DocumentBuilder) RequiredBytes() uint {
-	return db.requiredSize(false)
-}
-
-func (db *DocumentBuilder) requiredSize(embedded bool) uint {
 	db.calculateStarts()
 	if db.required < 5 {
 		return 5
@@ -186,6 +172,32 @@ func (c Constructor) SubDocumentWithElements(key string, elems ...Elementer) Ele
 	return c.SubDocument(key, &b)
 }
 
+func (c Constructor) Array(key string, array *ArrayBuilder) ElementFunc {
+	return func() (ElementSizer, ElementWriter) {
+		// A subdocument will always take (1 + key length + 1) + len(subdoc) bytes
+		return func() uint {
+				return 2 + uint(len(key)) + array.RequiredBytes()
+			},
+			func(start uint, writer interface{}) (int, error) {
+				arrayBytes := make([]byte, array.RequiredBytes())
+				_, err := array.WriteDocument(arrayBytes)
+				if err != nil {
+					return 0, err
+				}
+
+				return elements.Array.Element(start, writer, key, arrayBytes)
+			}
+	}
+}
+
+func (c Constructor) ArrayWithElements(key string, elems ...ArrayElementer) ElementFunc {
+	var b ArrayBuilder
+	b.Init()
+	b.Append(elems...)
+
+	return C.Array(key, &b)
+}
+
 func (Constructor) Double(key string, f float64) ElementFunc {
 	return func() (ElementSizer, ElementWriter) {
 		// A double will always take (1 + key length + 1) + 8 bytes
@@ -254,21 +266,21 @@ func (Constructor) Undefined(key string) ElementFunc {
 	}
 }
 
-func (Constructor) ObjectID(key string, oid [12]byte) ElementFunc {
+func (Constructor) ObjectId(key string, oid [12]byte) ElementFunc {
 	return func() (ElementSizer, ElementWriter) {
-		// An ObjectID's length is (1 + key length + 1) + 12
+		// An ObjectId's length is (1 + key length + 1) + 12
 		return func() uint {
 				return uint(14 + len(key))
 			},
 			func(start uint, writer interface{}) (int, error) {
-				return elements.ObjectID.Element(start, writer, key, oid)
+				return elements.ObjectId.Element(start, writer, key, oid)
 			}
 	}
 }
 
 func (Constructor) Boolean(key string, b bool) ElementFunc {
 	return func() (ElementSizer, ElementWriter) {
-		// An ObjectID's length is (1 + key length + 1) + 1
+		// An ObjectId's length is (1 + key length + 1) + 1
 		return func() uint {
 				return uint(3 + len(key))
 			},
@@ -366,7 +378,7 @@ func (Constructor) Symbol(key string, symbol string) ElementFunc {
 	}
 }
 
-func (Constructor) JavaScriptCodeWithScope(key string, code string, scope []byte) ElementFunc {
+func (Constructor) CodeWithScope(key string, code string, scope []byte) ElementFunc {
 	return func() (ElementSizer, ElementWriter) {
 		// JavaScript code with scope's length is (1 + key length + 1) + (4 + len key + 1) + len(scope)
 		return func() uint {
