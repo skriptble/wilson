@@ -124,16 +124,12 @@ func (db *DocumentBuilder) Element() (ElementSizer, ElementWriter) {
 }
 
 func (db *DocumentBuilder) WriteDocument(writer interface{}) (int64, error) {
-	n, err := db.writeDocument(0, writer, false)
-	return int64(n), err
-}
-
-func (db *DocumentBuilder) writeDocument(start uint, writer interface{}, embedded bool) (int, error) {
 	db.Init()
 	// This calculates db.required
 	db.requiredSize(embedded)
 
 	var total, n int
+	var start uint
 	var err error
 
 	if b, ok := writer.([]byte); ok {
@@ -152,7 +148,7 @@ func (db *DocumentBuilder) writeDocument(start uint, writer interface{}, embedde
 		start += uint(n)
 		total += n
 		if err != nil {
-			return total, err
+			return int64(total), err
 		}
 	}
 
@@ -160,12 +156,12 @@ func (db *DocumentBuilder) writeDocument(start uint, writer interface{}, embedde
 	start += uint(n)
 	total += n
 	if err != nil {
-		return n, err
+		return int64(n), err
 	}
 
 	n, err = elements.Byte.Encode(start, writer, '\x00')
 	total += n
-	return total, err
+	return int64(total), err
 }
 
 func (db *DocumentBuilder) writeElements(start uint, writer interface{}) (total int, err error) {
