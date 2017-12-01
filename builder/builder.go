@@ -428,14 +428,14 @@ func (Constructor) Int32(key string, i int32) ElementFunc {
 	}
 }
 
-func (Constructor) Timestamp(key string, t uint64) ElementFunc {
+func (Constructor) Timestamp(key string, t uint32, i uint32) ElementFunc {
 	return func() (ElementSizer, ElementWriter) {
 		// An decimal's length is (1 + key length + 1) + 8 bytes
 		return func() uint {
 				return uint(10 + len(key))
 			},
 			func(start uint, writer interface{}) (int, error) {
-				return elements.Timestamp.Element(start, writer, key, t)
+				return elements.Timestamp.Element(start, writer, key, t, i)
 			}
 	}
 }

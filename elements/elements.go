@@ -716,15 +716,28 @@ func (i32) Element(start uint, writer interface{}, key string, i int32) (int, er
 	return total, nil
 }
 
-func (timestamp) Encode(start uint, writer interface{}, u uint64) (int, error) {
-	return encodeUint64(start, writer, u)
+func (timestamp) Encode(start uint, writer interface{}, t uint32, i uint32) (int, error) {
+	var total int
+
+	n, err := encodeUint32(start, writer, i)
+	start += uint(n)
+	total += n
+	if err != nil {
+		return total, err
+	}
+
+	n, err = encodeUint32(start, writer, t)
+	start += uint(n)
+	total += n
+
+	return total, err
 }
 
-func (timestamp) Decode(start uint, reader interface{}) (uint64, error) {
-	return 0, nil
+func (timestamp) Decode(start uint, reader interface{}) (uint32, uint32, error) {
+	return 0, 0, nil
 }
 
-func (timestamp) Element(start uint, writer interface{}, key string, t uint64) (int, error) {
+func (timestamp) Element(start uint, writer interface{}, key string, t uint32, i uint32) (int, error) {
 	var total int
 
 	n, err := Byte.Encode(start, writer, '\x11')
@@ -741,7 +754,7 @@ func (timestamp) Element(start uint, writer interface{}, key string, t uint64) (
 		return total, err
 	}
 
-	n, err = Timestamp.Encode(start, writer, t)
+	n, err = Timestamp.Encode(start, writer, t, i)
 	total += n
 	if err != nil {
 		return total, err
@@ -884,6 +897,35 @@ func encodeByteSlice(start uint, writer interface{}, b []byte) (int, error) {
 	}
 
 	return total, nil
+}
+
+func encodeUint32(start uint, writer interface{}, u uint32) (int, error) {
+	switch w := writer.(type) {
+	case []byte:
+		if len(w) < int(start+4) {
+			return 0, ErrTooSmall
+		}
+		binary.LittleEndian.PutUint32(w[start:], u)
+		return 4, nil
+	case io.WriterAt:
+		var b [4]byte
+		binary.LittleEndian.PutUint32(b[:], u)
+		return w.WriteAt(b[:], int64(start))
+	case io.WriteSeeker:
+		var b [4]byte
+		binary.LittleEndian.PutUint32(b[:], u)
+		_, err := w.Seek(int64(start), io.SeekStart)
+		if err != nil {
+			return 0, err
+		}
+		return w.Write(b[:])
+	case io.Writer:
+		var b [4]byte
+		binary.LittleEndian.PutUint32(b[:], u)
+		return w.Write(b[:])
+	default:
+		return 0, ErrInvalidWriter
+	}
 }
 
 func encodeUint64(start uint, writer interface{}, u uint64) (int, error) {

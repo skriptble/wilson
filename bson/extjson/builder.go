@@ -13,19 +13,40 @@ type docElementParser func([]byte, []byte, jsonparser.ValueType, int) error
 type arrayElementParser func(int, []byte, jsonparser.ValueType, int, error)
 
 func ParseObjectToBuilder(s string) (*builder.DocumentBuilder, error) {
-	var b builder.DocumentBuilder
-	b.Init()
-
-	return &b, jsonparser.ObjectEach([]byte(s), parseDocElement(&b))
+	return parseObjectToBuilder(s, true)
 }
 
 func ParseArrayToBuilder(s string) (*builder.ArrayBuilder, error) {
+	return parseArrayToBuilder(s, true)
+}
+
+func getDocElementParser(b *builder.DocumentBuilder, ext bool) docElementParser {
+	var p docElementParser
+
+	if ext {
+		s := newParseState(b)
+		p = s.parseElement
+	} else {
+		p = parseDocElement(b)
+	}
+
+	return p
+}
+
+func parseArrayToBuilder(s string, ext bool) (*builder.ArrayBuilder, error) {
 	var b builder.ArrayBuilder
 	b.Init()
 
-	_, err := jsonparser.ArrayEach([]byte(s), parseArrayElement(&b))
+	_, err := jsonparser.ArrayEach([]byte(s), parseArrayElement(&b, ext))
 
 	return &b, err
+}
+
+func parseObjectToBuilder(s string, ext bool) (*builder.DocumentBuilder, error) {
+	var b builder.DocumentBuilder
+	b.Init()
+
+	return &b, jsonparser.ObjectEach([]byte(s), getDocElementParser(&b, ext))
 }
 
 func parseDocElement(b *builder.DocumentBuilder) docElementParser {
@@ -51,7 +72,7 @@ func parseDocElement(b *builder.DocumentBuilder) docElementParser {
 			b.Append(builder.C.Double(name, f))
 
 		case jsonparser.Object:
-			nested, err := ParseObjectToBuilder(string(value))
+			nested, err := parseObjectToBuilder(string(value), false)
 			if err != nil {
 				return fmt.Errorf("invalid JSON object: %s", string(value))
 			}
@@ -82,10 +103,12 @@ func parseDocElement(b *builder.DocumentBuilder) docElementParser {
 	}
 }
 
-func parseArrayElement(b *builder.ArrayBuilder) arrayElementParser {
-	p := parseDocElement(&b.DocumentBuilder)
+func parseArrayElement(b *builder.ArrayBuilder, ext bool) arrayElementParser {
+	p := getDocElementParser(&b.DocumentBuilder, ext)
 
 	return func(index int, value []byte, dataType jsonparser.ValueType, offset int, err error) {
-		p([]byte(strconv.FormatUint(uint64(index), 10)), value, dataType, offset)
+		indexStr := strconv.FormatUint(uint64(index), 10)
+
+		p([]byte(indexStr), value, dataType, offset)
 	}
 }

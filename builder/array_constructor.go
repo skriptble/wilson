@@ -150,9 +150,9 @@ func (ArrayConstructor) Int32(i int32) ArrayElementFunc {
 	}
 }
 
-func (ArrayConstructor) Timestamp(t uint64) ArrayElementFunc {
+func (ArrayConstructor) Timestamp(t uint32, i uint32) ArrayElementFunc {
 	return func(pos uint) Elementer {
-		return C.Timestamp(strconv.FormatUint(uint64(pos), 10), t)
+		return C.Timestamp(strconv.FormatUint(uint64(pos), 10), t, i)
 	}
 }
 
