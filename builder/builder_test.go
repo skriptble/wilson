@@ -290,7 +290,7 @@ func TestDocumentBuilder(t *testing.T) {
 					21,
 					[]byte{
 						// type
-						0x3,
+						0x4,
 						// key
 						0x66, 0x6f, 0x6f, 0x0,
 
@@ -359,7 +359,7 @@ func TestDocumentBuilder(t *testing.T) {
 					21,
 					[]byte{
 						// type
-						0x3,
+						0x4,
 						// key
 						0x66, 0x6f, 0x6f, 0x0,
 
@@ -1168,28 +1168,29 @@ func TestDocumentBuilder(t *testing.T) {
 			testCases := []struct {
 				name    string
 				key     string
-				t       uint64
+				t       uint32
+				i       uint32
 				size    uint
 				repr    []byte
 				start   uint
 				written int
 				err     error
 			}{
-				{"success", "foo", 17, 13,
+				{"success", "foo", 8, 17, 13,
 					[]byte{
 						// type
 						0x11,
 						// key
 						0x66, 0x6f, 0x6f, 0x0,
 						// value
-						0x11, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+						0x11, 0x0, 0x0, 0x0, 0x8, 0x0, 0x0, 0x0,
 					},
 					0, 13, nil},
 			}
 
 			for _, tc := range testCases {
 				t.Run(tc.name, func(t *testing.T) {
-					sizer, f := (Constructor{}).Timestamp(tc.key, tc.t)()
+					sizer, f := (Constructor{}).Timestamp(tc.key, tc.t, tc.i)()
 					if sizer() != tc.size {
 						t.Errorf("Element sizes do not match. got %d; want %d", sizer(), tc.size)
 					}
