@@ -60,6 +60,13 @@ type DocumentBuilder struct {
 	initialized bool
 }
 
+func NewDocumentBuilder() *DocumentBuilder {
+	var b DocumentBuilder
+	b.Init()
+
+	return &b
+}
+
 func (db *DocumentBuilder) Init() {
 	if db.initialized {
 		return
@@ -254,8 +261,14 @@ func (c Constructor) Binary(key string, b []byte) ElementFunc {
 
 func (Constructor) BinaryWithSubtype(key string, b []byte, btype byte) ElementFunc {
 	return func() (ElementSizer, ElementWriter) {
-		// A binary's length is (1 + key length + 1) + (4 + 1 + b length)
+		// A binary of subtype 2 has length (1 + key length + 1) + (4 + 1 + 4 + b length)
+		// All other binary subtypes have length  (1 + key length + 1) + (4 + 1 + b length)
 		return func() uint {
+				//
+				if btype == 2 {
+					return uint(11 + len(key) + len(b))
+				}
+
 				return uint(7 + len(key) + len(b))
 			},
 			func(start uint, writer interface{}) (int, error) {
@@ -406,9 +419,9 @@ func (Constructor) Symbol(key string, symbol string) ElementFunc {
 
 func (Constructor) CodeWithScope(key string, code string, scope []byte) ElementFunc {
 	return func() (ElementSizer, ElementWriter) {
-		// JavaScript code with scope's length is (1 + key length + 1) + (4 + len key + 1) + len(scope)
+		// JavaScript code with scope's length is (1 + key length + 1) + 4 +  (4 + len key + 1) + len(scope)
 		return func() uint {
-				return uint(7 + len(key) + len(code) + len(scope))
+				return uint(11 + len(key) + len(code) + len(scope))
 			},
 			func(start uint, writer interface{}) (int, error) {
 				return elements.CodeWithScope.Element(start, writer, key, code, scope)
