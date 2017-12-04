@@ -78,7 +78,7 @@ func parseObjectToBuilder(b *builder.DocumentBuilder, s string, containingKey *s
 			}
 		case DBRef:
 			if !st.refFound || !st.idFound {
-				return errors.New("extjson DBRef must have both $ref and $id")
+				return errors.New("extjson DBRef must have both $ref and $i")
 			}
 
 			fallthrough
