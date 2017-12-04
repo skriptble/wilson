@@ -252,6 +252,10 @@ func (array) Element(start uint, writer interface{}, key string, arr []byte) (in
 }
 
 func (bin) Encode(start uint, writer interface{}, b []byte, btype byte) (int, error) {
+	if btype == 2 {
+		return Binary.encodeSubtype2(start, writer, b)
+	}
+
 	var total int
 
 	switch w := writer.(type) {
@@ -261,19 +265,55 @@ func (bin) Encode(start uint, writer interface{}, b []byte, btype byte) (int, er
 		}
 
 		// write length
-		written, err := Int32.Encode(start, writer, int32(len(b)))
-		total += written
+		n, err := Int32.Encode(start, writer, int32(len(b)))
+		start += uint(n)
+		total += n
 		if err != nil {
 			return total, err
 		}
 
-		w[start+uint(total)] = btype
+		w[start] = btype
+		start++
 		total += 1
 
-		total += copy(w[start+uint(total):], b)
+		total += copy(w[start:], b)
 
 	default:
 		return 0, ErrInvalidWriter
+	}
+
+	return total, nil
+}
+
+func (bin) encodeSubtype2(start uint, writer interface{}, b []byte) (int, error) {
+	var total int
+
+	switch w := writer.(type) {
+	case []byte:
+		if len(w) < int(start)+9+len(b) {
+			return 0, ErrTooSmall
+		}
+
+		// write length
+		n, err := Int32.Encode(start, writer, int32(len(b))+4)
+		start += uint(n)
+		total += n
+		if err != nil {
+			return total, err
+		}
+
+		w[start] = 2
+		start++
+		total += 1
+
+		n, err = Int32.Encode(start, writer, int32(len(b)))
+		start += uint(n)
+		total += n
+		if err != nil {
+			return total, err
+		}
+
+		total += copy(w[start:], b)
 	}
 
 	return total, nil
@@ -606,14 +646,23 @@ func (symbol) Element(start uint, writer interface{}, key string, symbol string)
 func (codewithscope) Encode(start uint, writer interface{}, code string, doc []byte) (int, error) {
 	var total int
 
-	written, err := String.Encode(start, writer, code)
-	total += written
+	// Length of CodeWithScope is 4 + 4 + len(code) + 1 + len(doc)
+	n, err := Int32.Encode(start, writer, 9+int32(len(code))+int32(len(doc)))
+	start += uint(n)
+	total += n
 	if err != nil {
 		return total, err
 	}
 
-	written, err = encodeByteSlice(start+uint(total), writer, doc)
-	total += written
+	n, err = String.Encode(start, writer, code)
+	start += uint(n)
+	total += n
+	if err != nil {
+		return total, err
+	}
+
+	n, err = encodeByteSlice(start, writer, doc)
+	total += n
 
 	return total, err
 }

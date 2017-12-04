@@ -3,6 +3,8 @@ package extjson
 import (
 	"fmt"
 
+	"errors"
+
 	"strconv"
 
 	"github.com/skriptble/wilson/bson/internal/jsonparser"
@@ -10,27 +12,34 @@ import (
 )
 
 type docElementParser func([]byte, []byte, jsonparser.ValueType, int) error
-type arrayElementParser func(int, []byte, jsonparser.ValueType, int, error)
+type arrayElementParser func(int, []byte, jsonparser.ValueType, int) error
 
 func ParseObjectToBuilder(s string) (*builder.DocumentBuilder, error) {
-	return parseObjectToBuilder(s, true)
+	b := builder.NewDocumentBuilder()
+	err := parseObjectToBuilder(b, s, nil, true)
+	if err != nil {
+		return nil, err
+	}
+
+	return b, nil
 }
 
 func ParseArrayToBuilder(s string) (*builder.ArrayBuilder, error) {
 	return parseArrayToBuilder(s, true)
 }
 
-func getDocElementParser(b *builder.DocumentBuilder, ext bool) docElementParser {
+func getDocElementParser(b *builder.DocumentBuilder, containingKey *string, ext bool) (docElementParser, *parseState) {
 	var p docElementParser
+	var s *parseState
 
 	if ext {
-		s := newParseState(b)
+		s = newParseState(b, containingKey)
 		p = s.parseElement
 	} else {
-		p = parseDocElement(b)
+		p = parseDocElement(b, false)
 	}
 
-	return p
+	return p, s
 }
 
 func parseArrayToBuilder(s string, ext bool) (*builder.ArrayBuilder, error) {
@@ -42,20 +51,61 @@ func parseArrayToBuilder(s string, ext bool) (*builder.ArrayBuilder, error) {
 	return &b, err
 }
 
-func parseObjectToBuilder(s string, ext bool) (*builder.DocumentBuilder, error) {
-	var b builder.DocumentBuilder
-	b.Init()
+func parseObjectToBuilder(b *builder.DocumentBuilder, s string, containingKey *string, ext bool) error {
+	p, st := getDocElementParser(b, containingKey, ext)
+	err := jsonparser.ObjectEach([]byte(s), p)
+	if err != nil {
+		return err
+	}
 
-	return &b, jsonparser.ObjectEach([]byte(s), getDocElementParser(&b, ext))
+	if st != nil {
+		switch st.wtype {
+		case Code:
+			if st.code == nil {
+				return errors.New("extjson object with $scope must also have $code")
+			}
+
+			if st.scope == nil {
+				b.Append(builder.C.JavaScriptCode(*containingKey, *st.code))
+			} else {
+				scope := make([]byte, st.scope.RequiredBytes())
+				_, err := st.scope.WriteDocument(scope)
+				if err != nil {
+					return fmt.Errorf("unable to write $scope document to bytes: %s", err)
+				}
+
+				b.Append(builder.C.CodeWithScope(*containingKey, *st.code, scope))
+			}
+		case DBRef:
+			if !st.refFound || !st.idFound {
+				return errors.New("extjson DBRef must have both $ref and $id")
+			}
+
+			fallthrough
+		case None:
+			if containingKey == nil {
+				*b = *st.subdocBuilder
+			} else {
+				b.Append(builder.C.SubDocument(*containingKey, st.subdocBuilder))
+			}
+		}
+	}
+
+	return nil
 }
 
-func parseDocElement(b *builder.DocumentBuilder) docElementParser {
+func parseDocElement(b *builder.DocumentBuilder, ext bool) docElementParser {
 	return func(key []byte, value []byte, dataType jsonparser.ValueType, offset int) error {
 		name := string(key)
 
 		switch dataType {
 		case jsonparser.String:
-			b.Append(builder.C.String(name, string(value)))
+			unescaped, err := jsonparser.Unescape(value, nil)
+			if err != nil {
+				return fmt.Errorf(`unable to unescape string "%s": %s`, string(value), err)
+			}
+
+			b.Append(builder.C.String(name, string(unescaped)))
 
 		case jsonparser.Number:
 			i, err := jsonparser.ParseInt(value)
@@ -72,12 +122,10 @@ func parseDocElement(b *builder.DocumentBuilder) docElementParser {
 			b.Append(builder.C.Double(name, f))
 
 		case jsonparser.Object:
-			nested, err := parseObjectToBuilder(string(value), false)
+			err := parseObjectToBuilder(b, string(value), &name, ext)
 			if err != nil {
-				return fmt.Errorf("invalid JSON object: %s", string(value))
+				return fmt.Errorf("%s: %s", err, string(value))
 			}
-
-			b.Append(builder.C.SubDocument(name, nested))
 
 		case jsonparser.Array:
 			array, err := ParseArrayToBuilder(string(value))
@@ -104,11 +152,9 @@ func parseDocElement(b *builder.DocumentBuilder) docElementParser {
 }
 
 func parseArrayElement(b *builder.ArrayBuilder, ext bool) arrayElementParser {
-	p := getDocElementParser(&b.DocumentBuilder, ext)
+	return func(index int, value []byte, dataType jsonparser.ValueType, offset int) error {
+		name := strconv.FormatInt(int64(index), 10)
 
-	return func(index int, value []byte, dataType jsonparser.ValueType, offset int, err error) {
-		indexStr := strconv.FormatUint(uint64(index), 10)
-
-		p([]byte(indexStr), value, dataType, offset)
+		return parseDocElement(&b.DocumentBuilder, ext)([]byte(name), value, dataType, offset)
 	}
 }

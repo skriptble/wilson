@@ -273,7 +273,7 @@ func searchKeys(data []byte, keys ...string) int {
 				var valueFound []byte
 				var valueOffset int
 				var curI = i
-				ArrayEach(data[i:], func(_ int, value []byte, dataType ValueType, offset int, err error) {
+				ArrayEach(data[i:], func(_ int, value []byte, dataType ValueType, offset int) error {
 					if curIdx == aIdx {
 						valueFound = value
 						valueOffset = offset
@@ -283,6 +283,8 @@ func searchKeys(data []byte, keys ...string) int {
 						}
 					}
 					curIdx += 1
+
+					return nil
 				})
 
 				if valueFound == nil {
@@ -463,7 +465,7 @@ func EachKey(data []byte, cb func(int, []byte, ValueType, error), paths ...[]str
 				level++
 
 				var curIdx int
-				arrOff, _ := ArrayEach(data[i:], func(_ int, value []byte, dataType ValueType, offset int, err error) {
+				arrOff, _ := ArrayEach(data[i:], func(_ int, value []byte, dataType ValueType, offset int) error {
 					if arrIdxFlags&bitwiseFlags[curIdx+1] != 0 {
 						for pi, p := range paths {
 							if pIdxFlags&bitwiseFlags[pi+1] != 0 {
@@ -485,6 +487,8 @@ func EachKey(data []byte, cb func(int, []byte, ValueType, error), paths ...[]str
 					}
 
 					curIdx += 1
+
+					return nil
 				})
 
 				if pathsMatched == len(paths) {
@@ -834,7 +838,7 @@ func internalGet(data []byte, keys ...string) (value []byte, dataType ValueType,
 }
 
 // ArrayEach is used when iterating arrays, accepts a callback function with the same return arguments as `Get`.
-func ArrayEach(data []byte, cb func(index int, value []byte, dataType ValueType, offset int, err error), keys ...string) (offset int, err error) {
+func ArrayEach(data []byte, cb func(index int, value []byte, dataType ValueType, offset int) error, keys ...string) (offset int, err error) {
 	if len(data) == 0 {
 		return -1, MalformedObjectError
 	}
@@ -885,7 +889,7 @@ func ArrayEach(data []byte, cb func(index int, value []byte, dataType ValueType,
 		}
 
 		if t != NotExist {
-			cb(i, v, t, offset+o-len(v), e)
+			cb(i, v, t, offset+o-len(v))
 		}
 
 		if e != nil {

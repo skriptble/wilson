@@ -4,10 +4,8 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"strconv"
-
 	"math"
-
+	"strconv"
 	"time"
 
 	"github.com/skriptble/wilson/bson/internal/jsonparser"
@@ -150,8 +148,8 @@ func parseSymbol(data []byte, dataType jsonparser.ValueType) (string, error) {
 }
 
 func parseInt32(data []byte, dataType jsonparser.ValueType) (int32, error) {
-	if dataType != jsonparser.Number {
-		return 0, fmt.Errorf("$numberInt value should be number, but instead is %s", dataType.String())
+	if dataType != jsonparser.String {
+		return 0, fmt.Errorf("$numberInt value should be string, but instead is %s", dataType.String())
 	}
 
 	i, err := jsonparser.ParseInt(data)
@@ -167,8 +165,8 @@ func parseInt32(data []byte, dataType jsonparser.ValueType) (int32, error) {
 }
 
 func parseInt64(data []byte, dataType jsonparser.ValueType) (int64, error) {
-	if dataType != jsonparser.Number {
-		return 0, fmt.Errorf("$numberLong value should be number, but instead is %s", dataType.String())
+	if dataType != jsonparser.String {
+		return 0, fmt.Errorf("$numberLong value should be string, but instead is %s", dataType.String())
 	}
 
 	i, err := jsonparser.ParseInt(data)
@@ -180,21 +178,17 @@ func parseInt64(data []byte, dataType jsonparser.ValueType) (int64, error) {
 }
 
 func parseDouble(data []byte, dataType jsonparser.ValueType) (float64, error) {
-	if dataType == jsonparser.String {
-		switch string(data) {
-		case "Infinity":
-			return math.Inf(1), nil
-		case "-Infinity":
-			return math.Inf(-1), nil
-		case "NaN":
-			return math.NaN(), nil
-		}
-
-		return 0, fmt.Errorf(`$numberDouble string value is not one of "Infinity", "-Infinity", or "NaN: %s`, string(data))
+	if dataType != jsonparser.String {
+		return 0, fmt.Errorf("$numberDouble value should be string, but instead is %s", dataType.String())
 	}
 
-	if dataType != jsonparser.Number {
-		return 0, fmt.Errorf("$numberDouble value should be string or number, but instead is %s", dataType.String())
+	switch string(data) {
+	case "Infinity":
+		return math.Inf(1), nil
+	case "-Infinity":
+		return math.Inf(-1), nil
+	case "NaN":
+		return math.NaN(), nil
 	}
 
 	f, err := jsonparser.ParseFloat(data)
@@ -252,11 +246,13 @@ func parseBinary(data []byte, dataType jsonparser.ValueType) ([]byte, byte, erro
 				return fmt.Errorf("$binary subType value should be string, but instead is %s", dataType.String())
 			}
 
-			i, err := strconv.ParseInt(string(value), 16, 8)
+			i, err := strconv.ParseInt(string(value), 16, 64)
 			if err != nil {
+				fmt.Println(err)
 				return fmt.Errorf("invalid $binary subtype string: %s", string(value))
 			}
 
+			fmt.Println(i)
 			subType = &i
 		default:
 			return fmt.Errorf("invalid key in $binary object: %s", string(key))
@@ -299,7 +295,13 @@ func parseScope(data []byte, dataType jsonparser.ValueType) (*builder.DocumentBu
 		return nil, fmt.Errorf("$scope value should be an object, but instead is %s", dataType.String())
 	}
 
-	return parseObjectToBuilder(string(data), false)
+	b := builder.NewDocumentBuilder()
+	err := parseObjectToBuilder(b, string(data), nil, true)
+	if err != nil {
+		return nil, err
+	}
+
+	return b, nil
 }
 
 func parseTimestamp(data []byte, dataType jsonparser.ValueType) (uint32, uint32, error) {
@@ -428,7 +430,12 @@ func parseRegex(data []byte, dataType jsonparser.ValueType) (string, string, err
 
 	}
 
-	return *pat, *opt, nil
+	unescapedRegex, err := jsonparser.Unescape([]byte(*pat), nil)
+	if err != nil {
+		return "", "", fmt.Errorf("invalid escaped $regularExpression pattern: %s", *pat)
+	}
+
+	return string(unescapedRegex), *opt, nil
 }
 
 func parseDBPointer(data []byte, dataType jsonparser.ValueType) (string, [12]byte, error) {
@@ -462,7 +469,7 @@ func parseDBPointer(data []byte, dataType jsonparser.ValueType) (string, [12]byt
 				return fmt.Errorf("$dbPointer $id value should be object, but instead is %s", dataType.String())
 			}
 
-			id, err := parseObjectId(value, dataType)
+			id, err := parseDBPointerObjectId(value)
 			if err != nil {
 				return err
 			}
@@ -489,6 +496,46 @@ func parseDBPointer(data []byte, dataType jsonparser.ValueType) (string, [12]byt
 	}
 
 	return *ns, oid, nil
+}
+
+func parseDBPointerObjectId(data []byte) ([12]byte, error) {
+	var oid [12]byte
+	oidFound := false
+
+	err := jsonparser.ObjectEach(data, func(key []byte, value []byte, dataType jsonparser.ValueType, offset int) error {
+		switch string(key) {
+		case "$oid":
+			if oidFound {
+				return fmt.Errorf("duplicate $id key in $dbPointer $oid: %s", string(data))
+			}
+
+			if dataType != jsonparser.String {
+				return fmt.Errorf("$dbPointer $id $oid value should be string, but instead is %s", dataType.String())
+			}
+
+			var err error
+			oid, err = parseObjectId(value, dataType)
+			if err != nil {
+				return fmt.Errorf("invalid $dbPointer $id $oid value: %s", err)
+			}
+
+			oidFound = true
+		default:
+			return fmt.Errorf("invalid key in $dbPointer $id object: %s", string(key))
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return oid, err
+	}
+
+	if !oidFound {
+		return oid, fmt.Errorf("missing $oid field in $dbPointer $id object: %s", string(data))
+	}
+
+	return oid, nil
 }
 
 const RFC3339Micro = "2006-01-02T15:04:05.999999Z07:00"
@@ -523,8 +570,8 @@ func parseDatetimeObject(data []byte) (int64, error) {
 				return fmt.Errorf("duplicate $numberLong key in $dbPointer: %s", string(data))
 			}
 
-			if dataType != jsonparser.Number {
-				return fmt.Errorf("$date $numberLong field should be number, but instead is %s", dataType.String())
+			if dataType != jsonparser.String {
+				return fmt.Errorf("$date $numberLong field should be string, but instead is %s", dataType.String())
 			}
 
 			i, err := parseInt64(value, dataType)
@@ -550,6 +597,32 @@ func parseDatetimeObject(data []byte) (int64, error) {
 	}
 
 	return *d, nil
+}
+
+func parseRef(data []byte, dataType jsonparser.ValueType) (string, error) {
+	if dataType != jsonparser.String {
+		return "", fmt.Errorf("$ref value should be string, but instead is %s", dataType.String())
+	}
+
+	str, err := jsonparser.ParseString(data)
+	if err != nil {
+		return "", fmt.Errorf("invalid escaping in $ref string: %s", string(data))
+	}
+
+	return str, nil
+}
+
+func parseDB(data []byte, dataType jsonparser.ValueType) (string, error) {
+	if dataType != jsonparser.String {
+		return "", fmt.Errorf("$db value should be string, but instead is %s", dataType.String())
+	}
+
+	str, err := jsonparser.ParseString(data)
+	if err != nil {
+		return "", fmt.Errorf("invalid escaping in $db string: %s", string(data))
+	}
+
+	return str, nil
 }
 
 func parseMinKey(data []byte, dataType jsonparser.ValueType) error {
