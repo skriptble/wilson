@@ -59,7 +59,7 @@ func (d Decimal128) String() string {
 	case 0x1F:
 		return "NaN"
 	case 0x1E:
-		return "-Inf"[pos:]
+		return "-Infinity"[pos:]
 	}
 
 	l = d.l
