@@ -7,6 +7,8 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"errors"
+
 	"github.com/10gen/mongo-go-driver/bson"
 	"github.com/skriptble/wilson/bson/extjson"
 	"github.com/skriptble/wilson/builder"
@@ -86,6 +88,7 @@ const (
 	bsonD
 	bsonRawD
 	documentBuilder
+	extJson
 )
 
 func (ot outType) String() string {
@@ -98,6 +101,8 @@ func (ot outType) String() string {
 		return "bson.RawD"
 	case documentBuilder:
 		return "docBuilder"
+	case extJson:
+		return "extJson"
 	default:
 		panic(fmt.Sprintf("Unknown outType. Val: %d", ot))
 	}
@@ -133,40 +138,39 @@ func benchmarkEncodingGen(filename string, out outType) func(b *testing.B) {
 	}
 }
 
-func benchmarkDecodingGen(filename string, out outType) func(b *testing.B) {
-	return func(benchmark *testing.B) {
-		docBuilder, err := loadDocBuilderFromJsonFile(filename)
-		if err != nil {
-			benchmark.Fatalf("Error parsing file. Filename: %v Err: %v", filename, err)
-		}
-
-		bsonBytes := make([]byte, docBuilder.RequiredBytes())
-		_, err = docBuilder.WriteDocument(bsonBytes)
-		if err != nil {
-			benchmark.Fatalf("Error writing document to bytes")
-		}
-
-		switch out {
-		case bsonM:
-			for idx := 0; idx < benchmark.N; idx++ {
-				doc := make(bson.M)
-				bson.Unmarshal(bsonBytes, &doc)
-			}
-		case bsonD:
-			for idx := 0; idx < benchmark.N; idx++ {
-				doc := make(bson.D, 0, 8)
-				bson.Unmarshal(bsonBytes, &doc)
-			}
-		case bsonRawD:
-			for idx := 0; idx < benchmark.N; idx++ {
-				doc := make(bson.RawD, 0, 8)
-				bson.Unmarshal(bsonBytes, &doc)
-			}
-		}
+func benchmarkDecodingGen(filename string, out outType) (func(b *testing.B), error) {
+	docBuilder, err := loadDocBuilderFromJsonFile(filename)
+	if err != nil {
+		return nil, fmt.Errorf("Error parsing file. Filename: %v Err: %v", filename, err)
 	}
+
+	bsonBytes := make([]byte, docBuilder.RequiredBytes())
+	_, err = docBuilder.WriteDocument(bsonBytes)
+	if err != nil {
+		return nil, errors.New("Error writing document to bytes")
+	}
+
+	return func(benchmark *testing.B) {
+			for idx := 0; idx < benchmark.N; idx++ {
+				switch out {
+				case bsonM:
+					doc := make(bson.M)
+					bson.Unmarshal(bsonBytes, &doc)
+				case bsonD:
+					doc := make(bson.D, 0, 8)
+					bson.Unmarshal(bsonBytes, &doc)
+				case bsonRawD:
+					doc := make(bson.RawD, 0, 8)
+					bson.Unmarshal(bsonBytes, &doc)
+				case extJson:
+					extjson.BsonToExtJson(true, bsonBytes)
+				}
+			}
+		},
+		nil
 }
 
-func BenchmarkEncoding(benchmark *testing.B) {
+func benchmarkEncoding(benchmark *testing.B) {
 	perfBaseDir := "../data/"
 
 	for _, relFilename := range benchmarkDataFiles {
@@ -180,15 +184,20 @@ func BenchmarkEncoding(benchmark *testing.B) {
 	}
 }
 
-func benchmarkDecoding(benchmark *testing.B) {
+func BenchmarkDecoding(benchmark *testing.B) {
 	perfBaseDir := "../data/"
 
 	for _, relFilename := range benchmarkDataFiles {
 		filename := perfBaseDir + relFilename
-		for _, ot := range []outType{bsonM, bsonD, bsonRawD, documentBuilder} {
+		for _, ot := range []outType{bsonM, bsonD, bsonRawD, extJson} {
+			b, err := benchmarkDecodingGen(filename, ot)
+			if err != nil {
+				benchmark.Fatal(err)
+			}
+
 			benchmark.Run(
 				fmt.Sprintf("%v-%v", ot, relFilename),
-				benchmarkDecodingGen(filename, ot),
+				b,
 			)
 		}
 	}
