@@ -14,27 +14,27 @@ type Element interface {
 	elementNode()
 }
 
-func (*FloatElement) elementNode()           {}
-func (*StringElement) elementNode()          {}
-func (*DocumentElement) elementNode()        {}
-func (*ArrayElement) elementNode()           {}
-func (*DataElement) elementNode()            {}
-func (*UndefinedElement) elementNode()       {}
-func (*ObjectIDElement) elementNode()        {}
-func (*BoolElement) elementNode()            {}
-func (*DateTimeElement) elementNode()        {}
-func (*NullElement) elementNode()            {}
-func (*RegexElement) elementNode()           {}
-func (*DBPointerElement) elementNode()       {}
-func (*JavaScriptElement) elementNode()      {}
-func (*SymbolElement) elementNode()          {}
-func (*JavaScriptScopeElement) elementNode() {}
-func (*Int32Element) elementNode()           {}
-func (*TimestampElement) elementNode()       {}
-func (*Int64Element) elementNode()           {}
-func (*DecimalElement) elementNode()         {}
-func (*MinKeyElement) elementNode()          {}
-func (*MaxKeyElement) elementNode()          {}
+func (*FloatElement) elementNode()         {}
+func (*StringElement) elementNode()        {}
+func (*DocumentElement) elementNode()      {}
+func (*ArrayElement) elementNode()         {}
+func (*BinaryElement) elementNode()        {}
+func (*UndefinedElement) elementNode()     {}
+func (*ObjectIdElement) elementNode()      {}
+func (*BoolElement) elementNode()          {}
+func (*DateTimeElement) elementNode()      {}
+func (*NullElement) elementNode()          {}
+func (*RegexElement) elementNode()         {}
+func (*DBPointerElement) elementNode()     {}
+func (*JavaScriptElement) elementNode()    {}
+func (*SymbolElement) elementNode()        {}
+func (*CodeWithScopeElement) elementNode() {}
+func (*Int32Element) elementNode()         {}
+func (*TimestampElement) elementNode()     {}
+func (*Int64Element) elementNode()         {}
+func (*DecimalElement) elementNode()       {}
+func (*MinKeyElement) elementNode()        {}
+func (*MaxKeyElement) elementNode()        {}
 
 // FloatElement represents a BSON double element.
 type FloatElement struct {
@@ -61,7 +61,7 @@ type ArrayElement struct {
 }
 
 // DataElement represents a BSON binary element.
-type DataElement struct {
+type BinaryElement struct {
 	Name   *ElementKeyName
 	Binary *Binary
 }
@@ -71,8 +71,8 @@ type UndefinedElement struct {
 	Name *ElementKeyName
 }
 
-// ObjectIDElement represents a BSON objectID element.
-type ObjectIDElement struct {
+// ObjectIdElement represents a BSON objectID element.
+type ObjectIdElement struct {
 	Name *ElementKeyName
 	ID   [12]byte
 }
@@ -122,7 +122,7 @@ type SymbolElement struct {
 }
 
 // JavaScriptScopeElement represents a BSON JavaScript with scope element.
-type JavaScriptScopeElement struct {
+type CodeWithScopeElement struct {
 	Name          *ElementKeyName
 	CodeWithScope *CodeWithScope
 }
@@ -148,7 +148,7 @@ type Int64Element struct {
 // DecimalElement represents a BSON Decimal128 element.
 //
 // TODO(skriptble): Borrowing the Decimal128 implementation from mgo/bson
-// for now until we write a new implementaiton, prferrably using the math/big
+// for now until we write a new implementation, preferably using the math/big
 // package and providing a way to return a big.Float.
 type DecimalElement struct {
 	Name       *ElementKeyName

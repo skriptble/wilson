@@ -4,11 +4,15 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"path"
+	"strconv"
 	"testing"
+	"unicode"
 
 	"github.com/skriptble/wilson/bson/extjson"
+	"github.com/skriptble/wilson/bson/internal/jsonpretty"
 	"github.com/stretchr/testify/require"
 )
 
@@ -63,6 +67,67 @@ func findJSONFilesInDir(t *testing.T, dir string) []string {
 	return files
 }
 
+func needsEscapedUnicode(bsonType string) bool {
+	return bsonType == "0x02" || bsonType == "0x0D" || bsonType == "0x0F"
+}
+
+func escape(s string, escapeUnicode bool) string {
+	newS := ""
+	lastWasBackslash := false
+
+	for _, r := range s {
+		switch r {
+		case 0x8:
+			newS += `\b`
+		case 0x9:
+			newS += `\t`
+		case 0xA:
+			newS += `\n`
+		case 0xC:
+			newS += `\f`
+		case 0xD:
+			newS += `\r`
+		case '\\':
+			newS += `\\`
+		case '"':
+			if lastWasBackslash {
+				newS += `\"`
+			} else {
+				newS += `"`
+			}
+		default:
+			if r < ' ' || (r > unicode.MaxASCII && escapeUnicode) {
+				code := fmt.Sprintf("%04x", r)
+				newS += `\u` + code
+			} else {
+				newS += string(r)
+			}
+		}
+
+		if r == '\\' {
+			lastWasBackslash = true
+		} else {
+			lastWasBackslash = false
+		}
+	}
+
+	return newS
+}
+
+func normalizeCanonicalDouble(t *testing.T, key string, cEJ string) string {
+	// Unmarshal string into map
+	cEJMap := make(map[string]map[string]string)
+	err := json.Unmarshal([]byte(cEJ), &cEJMap)
+	require.NoError(t, err)
+
+	// Parse the float contained by the map.
+	expectedString := cEJMap[key]["$numberDouble"]
+	expectedFloat, err := strconv.ParseFloat(expectedString, 64)
+
+	// Normalize the string
+	return fmt.Sprintf(`{ "%s": { "$numberDouble": "%s" } }`, key, extjson.FormatDouble(expectedFloat))
+}
+
 func runTest(t *testing.T, file string) {
 	filepath := path.Join(dataDir, file)
 	content, err := ioutil.ReadFile(filepath)
@@ -70,28 +135,43 @@ func runTest(t *testing.T, file string) {
 
 	// Remove ".json" from filename.
 	file = file[:len(file)-5]
-	testName := "bson_corpus--builder:" + file
+	testName := "bson_corpus--" + file
 
 	t.Run(testName, func(t *testing.T) {
 		var test testCase
 		require.NoError(t, json.Unmarshal(content, &test))
 
 		for _, v := range test.Valid {
-			if v.Lossy != nil && *v.Lossy {
-				continue
+			cB, err := hex.DecodeString(v.CanonicalBson)
+			require.NoError(t, err)
+
+			cEJ := v.CanonicalExtJson
+
+			// Normalize float strings
+			if test.BsonType == "0x01" {
+				cEJ = normalizeCanonicalDouble(t, *test.TestKey, cEJ)
 			}
 
-			doc, err := extjson.ParseObjectToBuilder(v.CanonicalExtJson)
+			// bson_to_canonical_extended_json(cB) = cEJ
+			cEJ = string(pretty.Ugly([]byte(cEJ)))
+			actualExtendedJson, err := extjson.BsonToExtJson(true, cB)
 			require.NoError(t, err)
 
-			expectedBytes, err := hex.DecodeString(v.CanonicalBson)
-			require.NoError(t, err)
+			actualCompactExtendedJson := string(pretty.Ugly([]byte(actualExtendedJson)))
+			escaped := escape(actualCompactExtendedJson, needsEscapedUnicode(test.BsonType))
+			require.Equal(t, cEJ, escaped)
 
-			actualBytes := make([]byte, doc.RequiredBytes())
-			i, err := doc.WriteDocument(actualBytes)
-			require.NoError(t, err)
-			require.Len(t, expectedBytes, int(i))
-			require.True(t, bytes.Equal(expectedBytes, actualBytes))
+			// json_to_bson(cEJ) = cB (unless lossy)
+			if v.Lossy == nil || !*v.Lossy {
+				doc, err := extjson.ParseObjectToBuilder(v.CanonicalExtJson)
+				require.NoError(t, err)
+
+				actualBytes := make([]byte, doc.RequiredBytes())
+				i, err := doc.WriteDocument(actualBytes)
+				require.NoError(t, err)
+				require.Len(t, cB, int(i))
+				require.True(t, bytes.Equal(cB, actualBytes))
+			}
 		}
 	})
 }

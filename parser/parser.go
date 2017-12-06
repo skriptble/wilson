@@ -54,8 +54,8 @@ func (p *Parser) readUint64() (uint64, error) {
 	return u, err
 }
 
-// readObjectID reads a single objectID from the parser's reader.
-func (p *Parser) readObjectID() ([12]byte, error) {
+// readObjectId reads a single objectID from the parser's reader.
+func (p *Parser) readObjectId() ([12]byte, error) {
 	var id [12]byte
 	b := make([]byte, 12)
 	_, err := io.ReadFull(p.r, b)
@@ -99,7 +99,16 @@ func (p *Parser) ParseDocument() (*ast.Document, error) {
 		return nil, err
 	}
 	doc.EList = elist
+
 	// ensure the document ends with \x00
+	eol, err := p.r.ReadByte()
+	if err != nil {
+		return nil, err
+	}
+	if eol != '\x00' {
+		return nil, ErrCorruptDocument
+	}
+
 	return doc, nil
 }
 
@@ -115,6 +124,7 @@ func (p *Parser) ParseEList() ([]ast.Element, error) {
 		if err != nil {
 			return list, err
 		}
+
 		if idents[0] == '\x00' {
 			break
 		}
@@ -190,7 +200,7 @@ func (p *Parser) ParseElement() (ast.Element, error) {
 		if err != nil {
 			return nil, err
 		}
-		el = &ast.DataElement{
+		el = &ast.BinaryElement{
 			Name:   key,
 			Binary: bin,
 		}
@@ -199,11 +209,11 @@ func (p *Parser) ParseElement() (ast.Element, error) {
 			Name: key,
 		}
 	case '\x07':
-		id, err := p.readObjectID()
+		id, err := p.readObjectId()
 		if err != nil {
 			return nil, err
 		}
-		el = &ast.ObjectIDElement{
+		el = &ast.ObjectIdElement{
 			Name: key,
 			ID:   id,
 		}
@@ -248,7 +258,7 @@ func (p *Parser) ParseElement() (ast.Element, error) {
 		if err != nil {
 			return nil, err
 		}
-		pointer, err := p.readObjectID()
+		pointer, err := p.readObjectId()
 		if err != nil {
 			return nil, err
 		}
@@ -280,7 +290,7 @@ func (p *Parser) ParseElement() (ast.Element, error) {
 		if err != nil {
 			return nil, err
 		}
-		el = &ast.JavaScriptScopeElement{
+		el = &ast.CodeWithScopeElement{
 			Name:          key,
 			CodeWithScope: cws,
 		}
@@ -359,6 +369,11 @@ func (p *Parser) ParseString() (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	if l > 0 {
+		l--
+	}
+
 	b := make([]byte, l)
 	_, err = io.ReadFull(p.r, b)
 	if err != nil {
@@ -371,6 +386,7 @@ func (p *Parser) ParseString() (string, error) {
 	if eol != '\x00' {
 		return "", ErrCorruptDocument
 	}
+
 	return string(b), nil
 }
 

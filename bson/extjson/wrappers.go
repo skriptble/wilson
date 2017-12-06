@@ -248,11 +248,9 @@ func parseBinary(data []byte, dataType jsonparser.ValueType) ([]byte, byte, erro
 
 			i, err := strconv.ParseInt(string(value), 16, 64)
 			if err != nil {
-				fmt.Println(err)
 				return fmt.Errorf("invalid $binary subtype string: %s", string(value))
 			}
 
-			fmt.Println(i)
 			subType = &i
 		default:
 			return fmt.Errorf("invalid key in $binary object: %s", string(key))
@@ -538,7 +536,7 @@ func parseDBPointerObjectId(data []byte) ([12]byte, error) {
 	return oid, nil
 }
 
-const RFC3339Micro = "2006-01-02T15:04:05.999999Z07:00"
+const RFC3339Milli = "2006-01-02T15:04:05.999Z07:00"
 
 func parseDatetime(data []byte, dataType jsonparser.ValueType) (int64, error) {
 	switch dataType {
@@ -552,7 +550,7 @@ func parseDatetime(data []byte, dataType jsonparser.ValueType) (int64, error) {
 }
 
 func parseDatetimeString(data []byte) (int64, error) {
-	t, err := time.Parse(RFC3339Micro, string(data))
+	t, err := time.Parse(RFC3339Milli, string(data))
 	if err != nil {
 		return 0, fmt.Errorf("invalid $date value string: %s", string(data))
 	}
