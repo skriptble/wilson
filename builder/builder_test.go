@@ -172,7 +172,7 @@ func TestDocumentBuilder(t *testing.T) {
 
 			for _, tc := range testCases {
 				t.Run(tc.name, func(t *testing.T) {
-					sizer, f := (Constructor{}).SubDocument(tc.key, tc.subdoc)()
+					sizer, f := (Constructor{}).SubDocument(tc.key, tc.subdoc).Element()
 					if sizer() != tc.size {
 						t.Errorf("Element sizes do not match. got %d; want %d", sizer(), tc.size)
 					}
