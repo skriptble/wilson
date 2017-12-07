@@ -3,15 +3,16 @@ package bson
 import (
 	"bytes"
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"testing"
-
-	"errors"
 
 	"github.com/10gen/mongo-go-driver/bson"
 	"github.com/skriptble/wilson/bson/extjson"
 	"github.com/skriptble/wilson/builder"
+	"github.com/stretchr/testify/require"
 )
 
 var benchmarkDataFiles []string = []string{
@@ -98,6 +99,7 @@ const (
 	bsonRawD
 	documentBuilder
 	extJson
+	reader
 )
 
 func (ot outType) String() string {
@@ -210,6 +212,237 @@ func benchmarkRoundtripGen(filename string, out outType) func(b *testing.B) {
 	}
 }
 
+func benchmarkFirstKeyGen(filename string, out outType) func(benchmark *testing.B) {
+	docBuilder, err := loadDocBuilderFromJsonFile(filename)
+	var bsonBytes []byte
+	if err == nil {
+		bsonBytes = make([]byte, docBuilder.RequiredBytes())
+		_, err = docBuilder.WriteDocument(bsonBytes)
+	}
+
+	return func(b *testing.B) {
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		for i := 0; i < b.N; i++ {
+			switch out {
+			case bsonM:
+				doc := make(bson.M)
+				err = bson.Unmarshal(bsonBytes, &doc)
+				if err != nil {
+					b.Fatal(err)
+				}
+
+				var key string
+				for key = range doc {
+				}
+
+				if len(key) > math.MaxInt32 {
+					b.Fatal("failed unnecessary check to ensure that lookup not optimized out")
+				}
+			case bsonD:
+				doc := make(bson.D, 0, 8)
+				err = bson.Unmarshal(bsonBytes, &doc)
+				if err != nil {
+					b.Fatal(err)
+				}
+
+				if len(doc[0].Name) > math.MaxInt32 {
+					b.Fatal("failed unnecessary check to ensure that lookup not optimized out")
+				}
+			case bsonRawD:
+				doc := make(bson.RawD, 0, 8)
+				err = bson.Unmarshal(bsonBytes, &doc)
+				if err != nil {
+					b.Fatal(err)
+				}
+
+				if len(doc[0].Name) > math.MaxInt32 {
+					b.Fatal("failed unnecessary check to ensure that lookup not optimized out")
+				}
+			case reader:
+				reader := Reader(bsonBytes)
+				elem, err := reader.ElementAt(0)
+				require.NoError(b, err)
+
+				if len(elem.Key()) > math.MaxInt32 {
+					b.Fatal("failed unnecessary check to ensure that lookup not optimized out")
+				}
+			}
+		}
+	}
+}
+
+func benchmarkTopLevelKeysGen(filename string, out outType) func(benchmark *testing.B) {
+	docBuilder, err := loadDocBuilderFromJsonFile(filename)
+	var bsonBytes []byte
+	if err == nil {
+		bsonBytes = make([]byte, docBuilder.RequiredBytes())
+		_, err = docBuilder.WriteDocument(bsonBytes)
+	}
+
+	return func(b *testing.B) {
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		for i := 0; i < b.N; i++ {
+			switch out {
+			case bsonM:
+				doc := make(bson.M)
+				err = bson.Unmarshal(bsonBytes, &doc)
+				if err != nil {
+					b.Fatal(err)
+				}
+
+				for key := range doc {
+					if len(key) > math.MaxInt32 {
+						b.Fatal("failed unnecessary check to ensure that lookup not optimized out")
+					}
+				}
+			case bsonD:
+				doc := make(bson.D, 0, 8)
+				err = bson.Unmarshal(bsonBytes, &doc)
+				if err != nil {
+					b.Fatal(err)
+				}
+
+				for _, elem := range doc {
+					if len(elem.Name) > math.MaxInt32 {
+						b.Fatal("failed unnecessary check to ensure that lookup not optimized out")
+					}
+				}
+			case bsonRawD:
+				doc := make(bson.RawD, 0, 8)
+				err = bson.Unmarshal(bsonBytes, &doc)
+				if err != nil {
+					b.Fatal(err)
+				}
+
+				for _, elem := range doc {
+					if len(elem.Name) > math.MaxInt32 {
+						b.Fatal("failed unnecessary check to ensure that lookup not optimized out")
+					}
+				}
+			case reader:
+				reader := Reader(bsonBytes)
+				keys, err := reader.Keys(false)
+				require.NoError(b, err)
+
+				for _, key := range keys {
+					if len(key.Name) > math.MaxInt32 {
+						b.Fatal("failed unnecessary check to ensure that lookup not optimized out")
+					}
+				}
+			}
+		}
+	}
+}
+
+func benchmarkAllNestedKeysGen(filename string, out outType) func(benchmark *testing.B) {
+	docBuilder, err := loadDocBuilderFromJsonFile(filename)
+	var bsonBytes []byte
+	if err == nil {
+		bsonBytes = make([]byte, docBuilder.RequiredBytes())
+		_, err = docBuilder.WriteDocument(bsonBytes)
+	}
+
+	return func(b *testing.B) {
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		for i := 0; i < b.N; i++ {
+			switch out {
+			case bsonM:
+				doc := make(bson.M)
+				err = bson.Unmarshal(bsonBytes, &doc)
+				if err != nil {
+					b.Fatal(err)
+				}
+
+				assertBsonMKeyLengths(b, doc)
+			case bsonD:
+				doc := make(bson.D, 0, 8)
+				err = bson.Unmarshal(bsonBytes, &doc)
+				if err != nil {
+					b.Fatal(err)
+				}
+
+				assertBsonDKeyLengths(b, doc)
+			case bsonRawD:
+				doc := make(bson.RawD, 0, 8)
+				err = bson.Unmarshal(bsonBytes, &doc)
+				if err != nil {
+					b.Fatal(err)
+				}
+
+				assertBsonRawDKeyLengths(b, doc)
+			case reader:
+				reader := Reader(bsonBytes)
+				keys, err := reader.Keys(true)
+				require.NoError(b, err)
+
+				for _, key := range keys {
+					if len(key.Name) > math.MaxInt32 {
+						b.Fatal("failed unnecessary check to ensure that lookup not optimized out")
+					}
+				}
+			}
+		}
+	}
+}
+
+func assertBsonMKeyLengths(b *testing.B, doc bson.M) {
+	for key, val := range doc {
+		if len(key) > math.MaxInt32 {
+			b.Fatal("failed unnecessary check to ensure that lookup not optimized out")
+		}
+
+		assertBsonKeyLengths(b, val)
+	}
+}
+
+func assertBsonDKeyLengths(b *testing.B, doc bson.D) {
+	for _, elem := range doc {
+		if len(elem.Name) > math.MaxInt32 {
+			b.Fatal("failed unnecessary check to ensure that lookup not optimized out")
+		}
+
+		assertBsonKeyLengths(b, elem.Value)
+	}
+}
+
+func assertBsonRawDKeyLengths(b *testing.B, doc bson.RawD) {
+	for _, elem := range doc {
+		if len(elem.Name) > math.MaxInt32 {
+			b.Fatal("failed unnecessary check to ensure that lookup not optimized out")
+		}
+
+		if elem.Value.Kind == 0x03 {
+			nestedDoc := make(bson.RawD, 0, 8)
+			err := bson.Unmarshal(elem.Value.Data, &nestedDoc)
+			if err != nil {
+				b.Fatal(err)
+			}
+
+			assertBsonRawDKeyLengths(b, nestedDoc)
+		}
+	}
+}
+
+func assertBsonKeyLengths(b *testing.B, doc interface{}) {
+	switch d := doc.(type) {
+	case bson.M:
+		assertBsonMKeyLengths(b, d)
+	case bson.D:
+		assertBsonDKeyLengths(b, d)
+	case bson.RawD:
+		assertBsonRawDKeyLengths(b, d)
+	}
+}
+
 func benchmarkEncoding(benchmark *testing.B) {
 	perfBaseDir := "../data/"
 
@@ -243,7 +476,7 @@ func benchmarkDecoding(benchmark *testing.B) {
 	}
 }
 
-func BenchmarkRoundTrip(benchmark *testing.B) {
+func benchmarkRoundTrip(benchmark *testing.B) {
 	perfBaseDir := "../data/"
 
 	for _, relFilename := range benchmarkDataFiles {
@@ -252,6 +485,48 @@ func BenchmarkRoundTrip(benchmark *testing.B) {
 			benchmark.Run(
 				fmt.Sprintf("%v-%v", ot, relFilename),
 				benchmarkRoundtripGen(filename, ot),
+			)
+		}
+	}
+}
+
+func BenchmarkFirstKey(benchmark *testing.B) {
+	perfBaseDir := "../data/"
+
+	for _, relFilename := range benchmarkDataFiles {
+		filename := perfBaseDir + relFilename
+		for _, ot := range []outType{bsonM, bsonD, bsonRawD, reader} {
+			benchmark.Run(
+				fmt.Sprintf("%v-%v", ot, relFilename),
+				benchmarkFirstKeyGen(filename, ot),
+			)
+		}
+	}
+}
+
+func BenchmarkTopLevelKeys(benchmark *testing.B) {
+	perfBaseDir := "../data/"
+
+	for _, relFilename := range benchmarkDataFiles {
+		filename := perfBaseDir + relFilename
+		for _, ot := range []outType{bsonM, bsonD, bsonRawD, reader} {
+			benchmark.Run(
+				fmt.Sprintf("%v-%v", ot, relFilename),
+				benchmarkTopLevelKeysGen(filename, ot),
+			)
+		}
+	}
+}
+
+func BenchmarkAllNestedKeys(benchmark *testing.B) {
+	perfBaseDir := "../data/"
+
+	for _, relFilename := range benchmarkDataFiles {
+		filename := perfBaseDir + relFilename
+		for _, ot := range []outType{bsonM, bsonD, bsonRawD, reader} {
+			benchmark.Run(
+				fmt.Sprintf("%v-%v", ot, relFilename),
+				benchmarkAllNestedKeysGen(filename, ot),
 			)
 		}
 	}
