@@ -24,7 +24,7 @@ var benchmarkDataFiles []string = []string{
 	//"extended_bson/full_bson.json.gz",
 }
 
-func loadDocBuilderFromJsonFile(filename string) (*builder.DocumentBuilder, error) {
+func loadJsonBytesFromFile(filename string) ([]byte, error) {
 	compressedData, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
@@ -36,6 +36,15 @@ func loadDocBuilderFromJsonFile(filename string) (*builder.DocumentBuilder, erro
 	}
 
 	jsonBytes, err := ioutil.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
+
+	return jsonBytes, nil
+}
+
+func loadDocBuilderFromJsonFile(filename string) (*builder.DocumentBuilder, error) {
+	jsonBytes, err := loadJsonBytesFromFile(filename)
 	if err != nil {
 		return nil, err
 	}
@@ -170,6 +179,37 @@ func benchmarkDecodingGen(filename string, out outType) (func(b *testing.B), err
 		nil
 }
 
+func benchmarkRoundtripGen(filename string, out outType) func(b *testing.B) {
+	jsonBytes, err := loadJsonBytesFromFile(filename)
+
+	return func(benchmark *testing.B) {
+		if err != nil {
+			benchmark.Fatalf("Error parsing file. Filename: %v Err: %v", filename, err)
+		}
+
+		switch out {
+		case documentBuilder:
+			for idx := 0; idx < benchmark.N; idx++ {
+				doc, err := extjson.ParseObjectToBuilder(string(jsonBytes))
+				if err != nil {
+					benchmark.Fatal(err)
+				}
+
+				bsonBytes := make([]byte, doc.RequiredBytes())
+				_, err = doc.WriteDocument(bsonBytes)
+				if err != nil {
+					benchmark.Fatal(err)
+				}
+
+				_, err = extjson.BsonToExtJson(true, bsonBytes)
+				if err != nil {
+					benchmark.Fatal(err)
+				}
+			}
+		}
+	}
+}
+
 func benchmarkEncoding(benchmark *testing.B) {
 	perfBaseDir := "../data/"
 
@@ -184,7 +224,7 @@ func benchmarkEncoding(benchmark *testing.B) {
 	}
 }
 
-func BenchmarkDecoding(benchmark *testing.B) {
+func benchmarkDecoding(benchmark *testing.B) {
 	perfBaseDir := "../data/"
 
 	for _, relFilename := range benchmarkDataFiles {
@@ -198,6 +238,20 @@ func BenchmarkDecoding(benchmark *testing.B) {
 			benchmark.Run(
 				fmt.Sprintf("%v-%v", ot, relFilename),
 				b,
+			)
+		}
+	}
+}
+
+func BenchmarkRoundTrip(benchmark *testing.B) {
+	perfBaseDir := "../data/"
+
+	for _, relFilename := range benchmarkDataFiles {
+		filename := perfBaseDir + relFilename
+		for _, ot := range []outType{documentBuilder} {
+			benchmark.Run(
+				fmt.Sprintf("%v-%v", ot, relFilename),
+				benchmarkRoundtripGen(filename, ot),
 			)
 		}
 	}
