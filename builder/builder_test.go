@@ -172,7 +172,7 @@ func TestDocumentBuilder(t *testing.T) {
 
 			for _, tc := range testCases {
 				t.Run(tc.name, func(t *testing.T) {
-					sizer, f := (Constructor{}).SubDocument(tc.key, tc.subdoc)()
+					sizer, f := (Constructor{}).SubDocument(tc.key, tc.subdoc).Element()
 					if sizer() != tc.size {
 						t.Errorf("Element sizes do not match. got %d; want %d", sizer(), tc.size)
 					}
@@ -241,7 +241,7 @@ func TestDocumentBuilder(t *testing.T) {
 
 			for _, tc := range testCases {
 				t.Run(tc.name, func(t *testing.T) {
-					sizer, f := (Constructor{}).SubDocumentWithElements(tc.key, tc.subdoc...)()
+					sizer, f := (Constructor{}).SubDocumentWithElements(tc.key, tc.subdoc...).Element()
 					if sizer() != tc.size {
 						t.Errorf("Element sizes do not match. got %d; want %d", sizer(), tc.size)
 					}
@@ -484,20 +484,22 @@ func TestDocumentBuilder(t *testing.T) {
 				written int
 				err     error
 			}{
-				{"success", "foo", []byte{8, 6, 7, 5, 3, 0, 9}, 0x2, 17,
+				{"success", "foo", []byte{8, 6, 7, 5, 3, 0, 9}, 0x2, 21,
 					[]byte{
 						// type
 						0x5,
 						// key
 						0x66, 0x6f, 0x6f, 0x0,
 						// value - binary length
-						0x7, 0x0, 0x0, 0x0,
+						0xb, 0x0, 0x0, 0x0,
 						// value - binary subtype
 						0x2,
+						//
+						0x07, 0x00, 0x00, 0x00,
 						// value - binary data
 						0x8, 0x6, 0x7, 0x5, 0x3, 0x0, 0x9,
 					},
-					0, 17, nil},
+					0, 21, nil},
 			}
 
 			for _, tc := range testCases {
@@ -1056,13 +1058,15 @@ func TestDocumentBuilder(t *testing.T) {
 						// terminal
 						0x0,
 					},
-					30,
+					34,
 					[]byte{
 						// type
 						0xf,
 						// key
 						0x66, 0x6f, 0x6f, 0x0,
 						// value - code length
+						0x1d, 0x0, 0x0, 0x0,
+						// vale -length
 						0xd, 0x0, 0x0, 0x0,
 						// value - code
 						0x76, 0x61, 0x72, 0x20, 0x62, 0x61, 0x72, 0x20, 0x3d, 0x20, 0x78, 0x3b, 0x0,
@@ -1075,7 +1079,7 @@ func TestDocumentBuilder(t *testing.T) {
 						// value - scope terminal
 						0x0,
 					},
-					0, 30, nil},
+					0, 34, nil},
 			}
 
 			for _, tc := range testCases {
