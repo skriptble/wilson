@@ -102,6 +102,10 @@ func (db *DocumentBuilder) RequiredBytes() uint {
 	return db.requiredSize(false)
 }
 
+func (db *DocumentBuilder) embeddedSize() uint {
+	return db.requiredSize(true)
+}
+
 func (db *DocumentBuilder) requiredSize(embedded bool) uint {
 	db.required = 0
 	for _, sizer := range db.sizers {
@@ -112,9 +116,8 @@ func (db *DocumentBuilder) requiredSize(embedded bool) uint {
 		return 5
 	}
 	if embedded {
-		return db.required + 2 + uint(len(db.Key))
+		return db.required + 3 + uint(len(db.Key))
 	}
-	return db.required //+ 1 // We add 1 because we don't include the ending null byte for the document
 }
 
 func (db *DocumentBuilder) Element() (ElementSizer, ElementWriter) {
@@ -124,12 +127,16 @@ func (db *DocumentBuilder) Element() (ElementSizer, ElementWriter) {
 }
 
 func (db *DocumentBuilder) WriteDocument(writer interface{}) (int64, error) {
+	n, err := db.writeDocument(0, writer, false)
+	return int64(n), err
+}
+
+func (db *DocumentBuilder) writeDocument(start uint, writer interface{}, embedded bool) (int, error) {
 	db.Init()
 	// This calculates db.required
 	db.requiredSize(embedded)
 
 	var total, n int
-	var start uint
 	var err error
 
 	if b, ok := writer.([]byte); ok {
@@ -148,7 +155,7 @@ func (db *DocumentBuilder) WriteDocument(writer interface{}) (int64, error) {
 		start += uint(n)
 		total += n
 		if err != nil {
-			return int64(total), err
+			return total, err
 		}
 	}
 
@@ -156,12 +163,12 @@ func (db *DocumentBuilder) WriteDocument(writer interface{}) (int64, error) {
 	start += uint(n)
 	total += n
 	if err != nil {
-		return int64(n), err
+		return n, err
 	}
 
 	n, err = elements.Byte.Encode(start, writer, '\x00')
 	total += n
-	return int64(total), err
+	return total, err
 }
 
 func (db *DocumentBuilder) writeElements(start uint, writer interface{}) (total int, err error) {
@@ -183,58 +190,6 @@ func (Constructor) SubDocument(key string, subdoc *DocumentBuilder) Elementer {
 
 func (c Constructor) SubDocumentWithElements(key string, elems ...Elementer) Elementer {
 	return (&DocumentBuilder{Key: key}).Append(elems...)
-}
-
-func (c Constructor) Array(key string, array *ArrayBuilder) ElementFunc {
-	return func() (ElementSizer, ElementWriter) {
-		// A subdocument will always take (1 + key length + 1) + len(subdoc) bytes
-		return func() uint {
-				return 2 + uint(len(key)) + array.RequiredBytes()
-			},
-			func(start uint, writer interface{}) (int, error) {
-				arrayBytes := make([]byte, array.RequiredBytes())
-				_, err := array.WriteDocument(arrayBytes)
-				if err != nil {
-					return 0, err
-				}
-
-				return elements.Array.Element(start, writer, key, arrayBytes)
-			}
-	}
-}
-
-func (c Constructor) ArrayWithElements(key string, elems ...ArrayElementer) ElementFunc {
-	var b ArrayBuilder
-	b.Init()
-	b.Append(elems...)
-
-	return C.Array(key, &b)
-}
-
-func (c Constructor) Array(key string, array *ArrayBuilder) ElementFunc {
-	return func() (ElementSizer, ElementWriter) {
-		// A subdocument will always take (1 + key length + 1) + len(subdoc) bytes
-		return func() uint {
-				return 2 + uint(len(key)) + array.RequiredBytes()
-			},
-			func(start uint, writer interface{}) (int, error) {
-				arrayBytes := make([]byte, array.RequiredBytes())
-				_, err := array.WriteDocument(arrayBytes)
-				if err != nil {
-					return 0, err
-				}
-
-				return elements.Array.Element(start, writer, key, arrayBytes)
-			}
-	}
-}
-
-func (c Constructor) ArrayWithElements(key string, elems ...ArrayElementer) ElementFunc {
-	var b ArrayBuilder
-	b.Init()
-	b.Append(elems...)
-
-	return C.Array(key, &b)
 }
 
 func (c Constructor) Array(key string, array *ArrayBuilder) ElementFunc {
