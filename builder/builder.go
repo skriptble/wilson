@@ -89,21 +89,10 @@ func (db *DocumentBuilder) Append(elems ...Elementer) *DocumentBuilder {
 }
 
 func (db *DocumentBuilder) documentHeader() (ElementSizer, ElementWriter) {
-	return func() uint { return 4 },
+	return func() uint { return 5 },
 		func(start uint, writer interface{}) (n int, err error) {
 			return elements.Int32.Encode(start, writer, int32(db.RequiredBytes()))
 		}
-}
-
-func (db *DocumentBuilder) calculateStarts() {
-	// TODO(skriptble): This method should cache its results and Append should
-	// invalidate the cache.
-	db.required = 0
-	db.starts = db.starts[:0]
-	for _, sizer := range db.sizers {
-		db.starts = append(db.starts, db.required)
-		db.required += sizer()
-	}
 }
 
 // RequireBytes returns the number of bytes required to write the entire BSON
@@ -117,14 +106,17 @@ func (db *DocumentBuilder) embeddedSize() uint {
 }
 
 func (db *DocumentBuilder) requiredSize(embedded bool) uint {
-	db.calculateStarts()
+	db.required = 0
+	for _, sizer := range db.sizers {
+		db.required += sizer()
+	}
 	if db.required < 5 {
 		return 5
 	}
 	if embedded {
-		return db.required + 3 + uint(len(db.Key))
+		return db.required + 2 + uint(len(db.Key))
 	}
-	return db.required + 1 // We add 1 because we don't include the ending null byte for the document
+	return db.required //+ 1 // We add 1 because we don't include the ending null byte for the document
 }
 
 func (db *DocumentBuilder) Element() (ElementSizer, ElementWriter) {
@@ -140,13 +132,14 @@ func (db *DocumentBuilder) WriteDocument(writer interface{}) (int64, error) {
 
 func (db *DocumentBuilder) writeDocument(start uint, writer interface{}, embedded bool) (int, error) {
 	db.Init()
-	db.calculateStarts()
+	// This calculates db.required
+	db.requiredSize(embedded)
 
 	var total, n int
 	var err error
 
 	if b, ok := writer.([]byte); ok {
-		if uint(len(b)) < start+db.required+1 {
+		if uint(len(b)) < start+db.required {
 			return 0, ErrTooShort
 		}
 	}
@@ -178,8 +171,9 @@ func (db *DocumentBuilder) writeDocument(start uint, writer interface{}, embedde
 
 func (db *DocumentBuilder) writeElements(start uint, writer interface{}) (total int, err error) {
 	for idx := range db.funcs {
-		n, err := db.funcs[idx](uint(db.starts[idx])+start, writer)
+		n, err := db.funcs[idx](start, writer)
 		total += n
+		start += uint(n)
 		if err != nil {
 			return total, err
 		}
