@@ -111,14 +111,13 @@ func (db *DocumentBuilder) requiredSize(embedded bool) uint {
 	for _, sizer := range db.sizers {
 		db.required += sizer()
 	}
-
 	if db.required < 5 {
 		return 5
 	}
 	if embedded {
-		return db.required + 3 + uint(len(db.Key))
+		return db.required + 2 + uint(len(db.Key))
 	}
-	return db.required + 1 // We add 1 because we don't include the ending null byte for the document
+	return db.required //+ 1 // We add 1 because we don't include the ending null byte for the document
 }
 
 func (db *DocumentBuilder) Element() (ElementSizer, ElementWriter) {
