@@ -2,6 +2,7 @@ package builder
 
 import (
 	"bytes"
+	"fmt"
 	"runtime"
 	"testing"
 
@@ -1198,5 +1199,31 @@ func ExampleDocumentBuilder_ClientDoc() {
 
 		return docbuilder
 	}
-	f("hello-world")
+	d := f("hello-world")
+	buf := make([]byte, d.RequiredBytes())
+	d.WriteDocument(buf)
+	fmt.Println(buf)
+
+}
+
+func BenchmarkDocumentBuilder(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		internalVersion := "1234567"
+		docbuilder := new(DocumentBuilder)
+		docbuilder.Init()
+		docbuilder.Append(
+			C.SubDocument("driver",
+				C.String("name", "mongo-go-driver"),
+				C.String("version", internalVersion),
+			),
+			C.SubDocument("os",
+				C.String("type", runtime.GOOS),
+				C.String("architecture", runtime.GOARCH),
+			),
+			C.String("platform", runtime.Version()),
+		)
+		buf := make([]byte, docbuilder.RequiredBytes())
+		docbuilder.WriteDocument(buf)
+	}
 }

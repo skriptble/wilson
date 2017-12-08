@@ -12,6 +12,12 @@
 // won't parse out the key string. There are encoder and decoder helper methods
 // for the CString BSON element type, so this package can be used to parse
 // keys.
+//
+// TODO(skriptble): This package using interface{} for writers is quite
+// expensive since there are nested calls, e.g. Element calls Encode in for
+// multiple different types. After some thinking, this package might be able
+// to only support byte slices, which would remove the empty interface problem
+// entirely.
 package elements
 
 import (

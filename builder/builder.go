@@ -62,10 +62,10 @@ type ElementSizer func() (size uint)
 // appending then writing and then appending and writing again is a valid usage
 // pattern.
 type DocumentBuilder struct {
-	Key         string
-	funcs       []ElementWriter
-	sizers      []ElementSizer
-	starts      []uint
+	Key    string
+	funcs  []ElementWriter
+	sizers []ElementSizer
+	// starts      []uint
 	required    uint // number of required bytes. Should start at 4
 	initialized bool
 }
@@ -74,6 +74,8 @@ func (db *DocumentBuilder) Init() {
 	if db.initialized {
 		return
 	}
+	db.funcs = make([]ElementWriter, 0, 5)
+	db.sizers = make([]ElementSizer, 0, 5)
 	sizer, f := db.documentHeader()
 	db.funcs = append(db.funcs, f)
 	db.sizers = append(db.sizers, sizer)
@@ -99,14 +101,14 @@ func (db *DocumentBuilder) documentHeader() (ElementSizer, ElementWriter) {
 }
 
 func (db *DocumentBuilder) calculateStarts() {
-	// TODO(skriptble): This method should cache it's results and Append should
-	// invalidate the cache.
-	db.required = 0
-	db.starts = db.starts[:0]
-	for _, sizer := range db.sizers {
-		db.starts = append(db.starts, db.required)
-		db.required += sizer()
-	}
+	// // TODO(skriptble): This method should cache it's results and Append should
+	// // invalidate the cache.
+	// db.required = 0
+	// db.starts = db.starts[:0]
+	// for _, sizer := range db.sizers {
+	// 	db.starts = append(db.starts, db.required)
+	// 	db.required += sizer()
+	// }
 }
 
 // RequireBytes returns the number of bytes required to write the entire BSON
@@ -120,7 +122,11 @@ func (db *DocumentBuilder) embeddedSize() uint {
 }
 
 func (db *DocumentBuilder) requiredSize(embedded bool) uint {
-	db.calculateStarts()
+	// db.calculateStarts()
+	db.required = 0
+	for _, sizer := range db.sizers {
+		db.required += sizer()
+	}
 	if db.required < 5 {
 		return 5
 	}
@@ -177,8 +183,9 @@ func (db *DocumentBuilder) writeDocument(start uint, writer interface{}, embedde
 
 func (db *DocumentBuilder) writeElements(start uint, writer interface{}) (total int, err error) {
 	for idx := range db.funcs {
-		n, err := db.funcs[idx](uint(db.starts[idx])+start, writer)
+		n, err := db.funcs[idx](start, writer)
 		total += n
+		start += uint(n)
 		if err != nil {
 			return total, err
 		}

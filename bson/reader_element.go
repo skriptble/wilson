@@ -20,27 +20,24 @@ type ReaderElement struct {
 	start uint32
 	value uint32
 
-	d *Document
-
 	data []byte
 }
 
+// TODO(skriptble): Do we need this function? It's only useful if we want to
+// allow users to construct their own Elements and not use a constructor.
 func NewElement(start, value uint32, data []byte) *ReaderElement {
 	return &ReaderElement{start: start, value: value, data: data}
 }
 
-func (e *ReaderElement) Recycle(start, value uint32, data []byte) {
-	e.start, e.value, e.data = start, value, data
-}
-
-func (e *ReaderElement) Validate(recursive bool) (uint32, error) {
+// Validates the element and returns its total size.
+func (e *ReaderElement) Validate() (uint32, error) {
 	var total uint32 = 1
 	n, err := e.keySize()
 	total += n
 	if err != nil {
 		return total, err
 	}
-	n, err = e.validateValue(recursive)
+	n, err = e.validateValue()
 	total += n
 	if err != nil {
 		return total, err
@@ -48,6 +45,7 @@ func (e *ReaderElement) Validate(recursive bool) (uint32, error) {
 	return total, nil
 }
 
+// TODO(skriptble): Rename this validateKey to match validateValue.
 func (e *ReaderElement) keySize() (uint32, error) {
 	pos, end := e.start+1, e.value
 	var total uint32 = 0
@@ -57,27 +55,43 @@ func (e *ReaderElement) keySize() (uint32, error) {
 	if pos == end || e.data[pos] != '\x00' {
 		return total, ErrInvalidKey
 	}
+	total++
 	return total, nil
 }
 
 // valueSize returns the size of the value in bytes.
 func (e *ReaderElement) valueSize() (uint32, error) {
-	return e.validateValue(false)
+	switch e.data[e.start] {
+	case '\x03', '\x04':
+		if int(e.value+4) > len(e.data) {
+			return 0, errors.New("Too small")
+		}
+		size := readi32(e.data[e.value : e.value+4])
+		if int32(e.value)+size > int32(len(e.data)) {
+			return 0, errors.New("Too small")
+		}
+		// TODO(skriptble): We need a check here to ensure that the size is
+		// not negative.
+		return uint32(size), nil
+	default:
+		return e.validateValue()
+	}
 }
 
-func (e *ReaderElement) validateValue(recursive bool) (uint32, error) {
+func (e *ReaderElement) validateValue() (uint32, error) {
 	var total uint32 = 0
 	switch e.data[e.start] {
 	case '\x06', '\x0A', '\xFF', '\x7F':
 	case '\x01':
-		if int(e.value+8) > len(e.data) {
+		if int(e.value+8) >= len(e.data) {
 			return total, ErrTooSmall
 		}
 		total += 8
 	case '\x02', '\x0D', '\x0E':
 		if int(e.value+4) > len(e.data) {
-			return total, errors.New("Too small")
+			return total, ErrTooSmall
 		}
+		// TODO(skriptble): This is wrong and could cause a panic.
 		l := int32(binary.LittleEndian.Uint32(e.data[e.value : e.value+4]))
 		total += 4
 		if int32(e.value)+4+l > int32(len(e.data)) {
@@ -88,29 +102,22 @@ func (e *ReaderElement) validateValue(recursive bool) (uint32, error) {
 		if int(e.value+4) > len(e.data) {
 			return total, errors.New("Too small")
 		}
+		// TODO(skriptble): This is wrong and could cause a panic.
 		l := int32(binary.LittleEndian.Uint32(e.data[e.value : e.value+4]))
 		total += 4
-		if int32(e.value)+4+l > int32(len(e.data)) {
+		if int32(e.value)+l > int32(len(e.data)) {
 			return total, errors.New("Too small")
 		}
-		total += uint32(l)
-		if recursive {
-			if e.d == nil {
-				e.d = &Document{
-					start: e.value,
-					data:  e.data,
-				}
-			}
-			n, err := e.d.Validate(recursive)
-			total += n
-			if err != nil {
-				return total, err
-			}
+		n, err := Reader(e.data[e.value : e.value+4+uint32(l)]).Validate()
+		total += n
+		if err != nil {
+			return total, err
 		}
 	case '\x05':
 		if int(e.value+5) > len(e.data) {
 			return total, errors.New("Too small")
 		}
+		// TODO(skriptble): This is wrong and could cause a panic.
 		l := int32(binary.LittleEndian.Uint32(e.data[e.value : e.value+4]))
 		total += 5
 		if e.data[e.value+4] > '\x05' && e.data[e.value+4] < '\x80' {
@@ -160,6 +167,7 @@ func (e *ReaderElement) validateValue(recursive bool) (uint32, error) {
 		if int(e.value+4) > len(e.data) {
 			return total, errors.New("Too small")
 		}
+		// TODO(skriptble): This is wrong and could cause a panic.
 		l := int32(binary.LittleEndian.Uint32(e.data[e.value : e.value+4]))
 		total += 4
 		if int32(e.value)+4+l+12 > int32(len(e.data)) {
@@ -170,31 +178,25 @@ func (e *ReaderElement) validateValue(recursive bool) (uint32, error) {
 		if int(e.value+4) > len(e.data) {
 			return total, errors.New("Too small")
 		}
+		// TODO(skriptble): This is wrong and could cause a panic.
 		l := int32(binary.LittleEndian.Uint32(e.data[e.value : e.value+4]))
 		total += 4
 		if int32(e.value)+l > int32(len(e.data)) {
 			return total, errors.New("Too small")
 		}
 		total += uint32(l) - 4
+		// TODO(skriptble): This is wrong and could cause a panic.
 		sLength := int32(binary.LittleEndian.Uint32(e.data[e.value+4 : e.value+8]))
 		// If the length of the string is larger than the total length of the
 		// field minus the int32 for length, 5 bytes for a minimum document
-		// size, and an int32 for the string length
+		// size, and an int32 for the string length the value is invalid.
 		if sLength > l-13 {
 			return total, errors.New("String size is larger than the Code With Scope container")
 		}
-		if recursive {
-			if e.d == nil {
-				e.d = &Document{
-					start: e.value + 8 + uint32(sLength),
-					data:  e.data,
-				}
-			}
-			n, err := e.d.Validate(recursive)
-			total += n
-			if err != nil {
-				return total, err
-			}
+		n, err := Reader(e.data[e.value+4+uint32(sLength) : e.value+uint32(l)]).Validate()
+		total += n
+		if err != nil {
+			return total, err
 		}
 	case '\x10':
 		if int(e.value+4) > len(e.data) {
@@ -262,36 +264,26 @@ func (e *ReaderElement) String() string {
 	return string(e.data[e.value+4 : int32(e.value)+4+l])
 }
 
-func (e *ReaderElement) Document() *Document {
+func (e *ReaderElement) Document() Reader {
 	if e == nil || e.start == 0 || e.value == 0 {
 		panic(ErrUninitializedElement)
 	}
 	if e.data[e.start] != '\x03' {
 		panic(ElementTypeError{"compact.Element.Document", BSONType(e.data[e.start])})
 	}
-	if e.d == nil {
-		e.d = &Document{
-			start: e.value,
-			data:  e.data,
-		}
-	}
-	return e.d
+	l := int32(binary.LittleEndian.Uint32(e.data[e.value : e.value+4]))
+	return Reader(e.data[e.value : e.value+uint32(l)])
 }
 
-func (e *ReaderElement) Array() *Array {
+func (e *ReaderElement) Array() Reader {
 	if e == nil || e.start == 0 || e.value == 0 {
 		panic(ErrUninitializedElement)
 	}
 	if e.data[e.start] != '\x04' {
 		panic(ElementTypeError{"compact.Element.Array", BSONType(e.data[e.start])})
 	}
-	if e.d == nil {
-		e.d = &Document{
-			start: e.value,
-			data:  e.data,
-		}
-	}
-	return &Array{e.d}
+	l := int32(binary.LittleEndian.Uint32(e.data[e.value : e.value+4]))
+	return Reader(e.data[e.value : e.value+uint32(l)])
 }
 
 func (e *ReaderElement) Binary() (subtype byte, data []byte) {
@@ -348,6 +340,7 @@ func (e *ReaderElement) Regex() (pattern, options string) {
 	if e.data[e.start] != '\x0B' {
 		panic(ElementTypeError{"compact.Element.Regex", BSONType(e.data[e.start])})
 	}
+	// TODO(skriptble): Use the elements package here.
 	var pstart, pend, ostart, oend uint32
 	i := e.value
 	pstart = i
@@ -397,17 +390,23 @@ func (e *ReaderElement) Symbol() string {
 	return string(e.data[e.value+4 : int32(e.value)+4+l])
 }
 
-func (e *ReaderElement) JavascriptWithScope() *CodeWithScope {
+func (e *ReaderElement) JavascriptWithScope() (code string, rdr Reader) {
 	if e == nil || e.start == 0 || e.value == 0 {
 		panic(ErrUninitializedElement)
 	}
 	if e.data[e.start] != '\x0F' {
 		panic(ElementTypeError{"compact.Element.JavascriptWithScope", BSONType(e.data[e.start])})
 	}
-	return &CodeWithScope{
-		start: e.value,
-		data:  e.data,
-	}
+	// TODO(skriptble): This is wrong and could cause a panic.
+	l := int32(binary.LittleEndian.Uint32(e.data[e.value : e.value+4]))
+	// TODO(skriptble): This is wrong and could cause a panic.
+	sLength := int32(binary.LittleEndian.Uint32(e.data[e.value+4 : e.value+8]))
+	// If the length of the string is larger than the total length of the
+	// field minus the int32 for length, 5 bytes for a minimum document
+	// size, and an int32 for the string length the value is invalid.
+	str := string(e.data[e.value+4 : e.value+4+uint32(sLength)])
+	r := Reader(e.data[e.value+4+uint32(sLength) : e.value+uint32(l)])
+	return str, r
 }
 
 func (e *ReaderElement) Int32() int32 {
