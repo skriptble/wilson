@@ -3,8 +3,6 @@ package bson
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
-	"os"
 	"runtime"
 	"testing"
 )
@@ -266,13 +264,7 @@ func ExampleDocument_ClientDoc() {
 
 		return doc
 	}
-	buf, err := f("hello-world").MarshalBSON()
-	fmt.Println(err)
-	fmt.Printf("%v", buf)
-	file, _ := os.Create("foo.bson")
-	file.Write(buf)
-
-	// Output: foo
+	f("hello-world").MarshalBSON()
 }
 
 func BenchmarkDocument(b *testing.B) {

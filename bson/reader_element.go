@@ -37,7 +37,7 @@ func (e *ReaderElement) Validate() (uint32, error) {
 	if err != nil {
 		return total, err
 	}
-	n, err = e.validateValue()
+	n, err = e.validateValue(true)
 	total += n
 	if err != nil {
 		return total, err
@@ -74,11 +74,11 @@ func (e *ReaderElement) valueSize() (uint32, error) {
 		// not negative.
 		return uint32(size), nil
 	default:
-		return e.validateValue()
+		return e.validateValue(true)
 	}
 }
 
-func (e *ReaderElement) validateValue() (uint32, error) {
+func (e *ReaderElement) validateValue(recursive bool) (uint32, error) {
 	var total uint32 = 0
 	switch e.data[e.start] {
 	case '\x06', '\x0A', '\xFF', '\x7F':
@@ -100,19 +100,23 @@ func (e *ReaderElement) validateValue() (uint32, error) {
 		total += uint32(l)
 	case '\x03', '\x04':
 		if int(e.value+4) > len(e.data) {
-			return total, errors.New("Too small")
+			return total, ErrTooSmall
 		}
 		// TODO(skriptble): This is wrong and could cause a panic.
 		l := int32(binary.LittleEndian.Uint32(e.data[e.value : e.value+4]))
 		total += 4
 		if int32(e.value)+l > int32(len(e.data)) {
-			return total, errors.New("Too small")
+			return total, ErrInvalidReadOnlyDocument
 		}
-		n, err := Reader(e.data[e.value : e.value+4+uint32(l)]).Validate()
-		total += n
-		if err != nil {
-			return total, err
+		if recursive {
+			n, err := Reader(e.data[e.value : e.value+uint32(l)]).Validate()
+			total += n - 4
+			if err != nil {
+				return total, err
+			}
+			break
 		}
+		total += uint32(l) - 4
 	case '\x05':
 		if int(e.value+5) > len(e.data) {
 			return total, errors.New("Too small")

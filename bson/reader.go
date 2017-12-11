@@ -2,7 +2,10 @@ package bson
 
 import (
 	"errors"
+	"strings"
 )
+
+var validateDone = errors.New("validation loop complete")
 
 // Reader is a wrapper around a byte slice. It will interpret the slice as a
 // BSON document. Most of the methods on Reader are low cost and are meant for
@@ -13,49 +16,17 @@ type Reader []byte
 
 // Validates the document. This method only validates the first document in
 // the slice, to validate other documents, the slice must be resliced
-func (r Reader) Validate() (uint32, error) {
-	// validate the length, setup a length tracker
-	// read each element
-	// 		- Validate the key
-	// 		- Validate the value
-	if len(r) < 5 {
-		return 0, errors.New("Too short")
-	}
-	// TODO(skriptble): We could support multiple documents in the same byte
-	// slice without reslicing if we have pos as a parameter and use that to
-	// get the length of the document.
-	givenLength := readi32(r[0:4])
-	if len(r) < int(givenLength) {
-		return 0, errors.New("Incorrect length in document header")
-	}
-	var pos uint32 = 4
-	var elemStart, elemValStart uint32
-	var elem = new(ReaderElement)
-	end := uint32(givenLength)
-	for {
-		if r[pos] == '\x00' {
-			pos++
-			break
+func (r Reader) Validate() (size uint32, err error) {
+	return r.readElements(func(elem *ReaderElement) error {
+		var err error
+		switch elem.Type() {
+		case '\x03':
+			_, err = elem.Document().Validate()
+		case '\x04':
+			_, err = elem.Array().Validate()
 		}
-		elemStart = pos
-		pos++
-		n, err := r.keySize(pos, end)
-		pos += n
-		if err != nil {
-			return pos, err
-		}
-		elemValStart = pos
-		elem.start = elemStart
-		elem.value = elemValStart
-		elem.data = r
-		n, err = elem.Validate()
-		pos += n
-		if err != nil {
-			return pos, err
-		}
-		pos++
-	}
-	return pos, nil
+		return err
+	})
 }
 
 func (r Reader) keySize(pos, end uint32) (uint32, error) {
@@ -85,99 +56,63 @@ func (r Reader) Lookup(key ...string) (*ReaderElement, error) {
 		return nil, nil
 	}
 
-	givenLength := readi32(r[0:4])
-	if len(r) < int(givenLength) {
-		return nil, errors.New("Incorrect length in document header")
-	}
-	if r[givenLength-1] != '\x00' {
-		return nil, errors.New("Incorrect document termination")
-	}
-	var pos uint32 = 4
-	var elemStart, elemValStart uint32
-	var elem = new(ReaderElement)
-	end := uint32(givenLength)
-	for {
-		// TODO(skriptble): Handle the out of bounds error better.
-		if pos >= end || r[pos] == '\x00' {
-			pos++
-			break
-		}
-		elemStart = pos
-		pos++
-		n, err := r.keySize(pos, end)
-		pos += n
-		if err != nil {
-			return nil, err
-		}
-		elemValStart = pos
-		elem.start = elemStart
-		elem.value = elemValStart
-		elem.data = r
-		n, err = elem.Validate()
-		pos += n
-		if err != nil {
-			return nil, err
-		}
-		if key[0] == elem.Key() {
+	var elem *ReaderElement
+	_, err := r.readElements(func(e *ReaderElement) error {
+		if key[0] == e.Key() {
 			if len(key) > 1 {
-				switch elem.Type() {
+				switch e.Type() {
 				case '\x03':
-					return elem.Document().Lookup(key[1:]...)
+					e, err := e.Document().Lookup(key[1:]...)
+					if err != nil {
+						return err
+					}
+					elem = e
+					return validateDone
 				case '\x04':
-					return elem.Array().Lookup(key[1:]...)
+					e, err := e.Array().Lookup(key[1:]...)
+					if err != nil {
+						return err
+					}
+					elem = e
+					return validateDone
 				default:
 					// TODO(skriptble): This error message is pretty awful.
 					// Please fix.
-					return nil, errors.New("Incorrect type for depth")
+					return errors.New("Incorrect type for depth")
 				}
 			}
-			return elem, nil
+			elem = e
+			return validateDone
 		}
-	}
-	return nil, nil
+		return nil
+	})
+	return elem, err
 }
 
 // ElementAt searches for a retrieves the element at the given index. This
 // method will validate all the elements up to and including the element at
 // the given index.
+//
+// TODO(skriptble): Should this be zero indexed? Prevents the error case and
+// aligns with byte slice style access pattern.
 func (r Reader) ElementAt(index uint) (*ReaderElement, error) {
-	givenLength := readi32(r[0:4])
-	if len(r) < int(givenLength) {
-		return nil, errors.New("Incorrect length in document header")
-	}
-	var pos uint32 = 4
-	var elemStart, elemValStart uint32
 	var current uint
-	var elem = new(ReaderElement)
-	end := uint32(givenLength)
-	for {
-		// TODO(skriptble): Handle the out of bounds error better.
-		if pos >= end || r[pos] == '\x00' {
-			break
-		}
-		elemStart = pos
-		pos++
-		n, err := r.keySize(pos, end)
-		pos += n
-		if err != nil {
-			return nil, err
-		}
-		elemValStart = pos
-		elem.start = elemStart
-		elem.value = elemValStart
-		elem.data = r
-		n, err = elem.Validate()
-		pos += n
-		if err != nil {
-			return nil, err
-		}
+	var elem *ReaderElement
+	_, err := r.readElements(func(e *ReaderElement) error {
 		if current != index {
 			current++
-			continue
+			return nil
 		}
-		return elem, nil
+		elem = e
+		return validateDone
+	})
+	if err != nil {
+		return nil, err
 	}
-	return nil, errors.New("index out of bounds")
+	if elem == nil {
+		return nil, errors.New("index out of bounds")
+	}
+	return elem, nil
 }
 
 // Keys returns all of the keys for this document. If recursive is true then
@@ -189,19 +124,64 @@ func (r Reader) Keys(recursive bool) (Keys, error) {
 }
 
 func (r Reader) recursiveKeys(recursive bool, prefix ...string) (Keys, error) {
+	ks := make(Keys, 0)
+	_, err := r.readElements(func(elem *ReaderElement) error {
+		key := elem.Key()
+		ks = append(ks, Key{Prefix: prefix, Name: key})
+		if recursive {
+			switch elem.Type() {
+			case '\x03':
+				recursivePrefix := append(prefix, key)
+				recurKeys, err := elem.Document().recursiveKeys(recursive, recursivePrefix...)
+				if err != nil {
+					return err
+				}
+				ks = append(ks, recurKeys...)
+			case '\x04':
+				recursivePrefix := append(prefix, key)
+				recurKeys, err := elem.Array().recursiveKeys(recursive, recursivePrefix...)
+				if err != nil {
+					return err
+				}
+				ks = append(ks, recurKeys...)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return ks, nil
+}
+
+// readElements is an internal method used to traverse the document. It will
+// validate the document and the underlying elements. If the provided function
+// is non-nil it will be called for each element. If `validateDone` is returned
+// from the function, this method will return. This method will return nil when
+// the function returns validateDone, in all other cases a non-nil error will
+// be returned by this method.
+func (r Reader) readElements(f func(e *ReaderElement) error) (uint32, error) {
+	if len(r) < 5 {
+		return 0, ErrTooSmall
+	}
+	// TODO(skriptble): We could support multiple documents in the same byte
+	// slice without reslicing if we have pos as a parameter and use that to
+	// get the length of the document.
 	givenLength := readi32(r[0:4])
 	if len(r) < int(givenLength) {
-		return nil, errors.New("Incorrect length in document header")
+		return 0, ErrInvalidLength
 	}
 	var pos uint32 = 4
 	var elemStart, elemValStart uint32
 	var elem = new(ReaderElement)
 	end := uint32(givenLength)
-	ks := make(Keys, 0)
 	for {
-		// TODO(skriptble): Handle the out of bounds error better.
-		if pos >= end || r[pos] == '\x00' {
-			pos++
+		if pos >= end {
+			// We've gone off the end of the buffer and we're missing
+			// a null terminator.
+			return pos, ErrInvalidReadOnlyDocument
+		}
+		if r[pos] == '\x00' {
 			break
 		}
 		elemStart = pos
@@ -209,38 +189,32 @@ func (r Reader) recursiveKeys(recursive bool, prefix ...string) (Keys, error) {
 		n, err := r.keySize(pos, end)
 		pos += n
 		if err != nil {
-			return nil, err
+			return pos, err
 		}
 		elemValStart = pos
 		elem.start = elemStart
 		elem.value = elemValStart
 		elem.data = r
-		n, err = elem.Validate()
+		n, err = elem.validateValue(false)
 		pos += n
 		if err != nil {
-			return nil, err
+			return pos, err
 		}
-		key := elem.Key()
-		ks = append(ks, Key{Prefix: prefix, Name: key})
-		if recursive {
-			prefix = append(prefix, key)
-			switch elem.Type() {
-			case '\x03':
-				recurKeys, err := elem.Document().recursiveKeys(recursive, prefix...)
-				if err != nil {
-					return nil, err
+		if f != nil {
+			err = f(elem)
+			if err != nil {
+				if err == validateDone {
+					break
 				}
-				ks = append(ks, recurKeys...)
-			case '\x04':
-				recurKeys, err := elem.Array().recursiveKeys(recursive, prefix...)
-				if err != nil {
-					return nil, err
-				}
-				ks = append(ks, recurKeys...)
+				return pos, err
 			}
 		}
 	}
-	return ks, nil
+
+	// The size is always 1 larger than the position, since position is 0
+	// indexed.
+	return pos + 1, nil
+
 }
 
 // Keys represents the keys of a BSON document.
@@ -251,6 +225,14 @@ type Keys []Key
 type Key struct {
 	Prefix []string
 	Name   string
+}
+
+func (k Key) String() string {
+	str := strings.Join(k.Prefix, ".")
+	if str != "" {
+		return str + "." + k.Name
+	}
+	return k.Name
 }
 
 func readi32(b []byte) int32 {
