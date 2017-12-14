@@ -159,7 +159,6 @@ func (db *DocumentBuilder) writeDocument(start uint, writer interface{}, embedde
 			return total, err
 		}
 	}
-
 	n, err = db.writeElements(start, writer)
 	start += uint(n)
 	total += n
