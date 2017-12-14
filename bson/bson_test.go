@@ -28,7 +28,7 @@ func TestElement(t *testing.T) {
 		})
 		t.Run("string", func(t *testing.T) {
 			defer handle()
-			(*ReaderElement)(nil).String()
+			(*ReaderElement)(nil).StringValue()
 		})
 		t.Run("document", func(t *testing.T) {
 			defer handle()
@@ -89,7 +89,7 @@ func TestElement(t *testing.T) {
 		e := &ReaderElement{start: 4, value: 9, data: buf}
 		binary.LittleEndian.PutUint32(buf[9:13], 3)
 		want := "bar"
-		got := e.String()
+		got := e.StringValue()
 		if got != want {
 			t.Errorf("Unexpected result. got %f; want %f", got, want)
 		}

@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+const validateMaxDepthDefault = 2048
+
 // ReaderElement represents a BSON document element. An unintialized ReaderElement will
 // panic if any of it's methods are invoked.
 //
@@ -45,6 +47,14 @@ func (e *ReaderElement) Validate() (uint32, error) {
 	return total, nil
 }
 
+// validate is a common validation method for elements.
+//
+// TODO(skriptble): Fill out this method and ensure all validation routines
+// pass through this method.
+func (e *ReaderElement) validate(recursive bool, currentDepth, maxDepth uint32) (uint32, error) {
+	return 0, nil
+}
+
 // TODO(skriptble): Rename this validateKey to match validateValue.
 func (e *ReaderElement) keySize() (uint32, error) {
 	pos, end := e.start+1, e.value
@@ -62,7 +72,7 @@ func (e *ReaderElement) keySize() (uint32, error) {
 // valueSize returns the size of the value in bytes.
 func (e *ReaderElement) valueSize() (uint32, error) {
 	switch e.data[e.start] {
-	case '\x03', '\x04':
+	case '\x03', '\x04', '\x0F':
 		if int(e.value+4) > len(e.data) {
 			return 0, errors.New("Too small")
 		}
@@ -227,7 +237,7 @@ func (e *ReaderElement) validateValue(recursive bool) (uint32, error) {
 // Key returns the key for this element.
 // It panics if e is uninitialized.
 func (e *ReaderElement) Key() string {
-	if e == nil || e.start == 0 {
+	if e == nil || e.value == 0 {
 		panic(ErrUninitializedElement)
 	}
 	return string(e.data[e.start+1 : e.value-1])
@@ -236,7 +246,7 @@ func (e *ReaderElement) Key() string {
 // Type returns the identifying element byte for this element.
 // It panics if e is uninitialized.
 func (e *ReaderElement) Type() byte {
-	if e == nil || e.start == 0 {
+	if e == nil || e.value == 0 {
 		panic(ErrUninitializedElement)
 	}
 	return e.data[e.start]
@@ -245,7 +255,7 @@ func (e *ReaderElement) Type() byte {
 // Double returns the float64 value for this element.
 // It panics if e's BSON type is not Double ('\x01') or if e is uninitialized.
 func (e *ReaderElement) Double() float64 {
-	if e == nil || e.start == 0 {
+	if e == nil || e.value == 0 {
 		panic(ErrUninitializedElement)
 	}
 	if e.data[e.start] != '\x01' {
@@ -255,10 +265,13 @@ func (e *ReaderElement) Double() float64 {
 	return math.Float64frombits(bits)
 }
 
-// String returns the string balue for this element.
-// It panics if e's BSON type is not String ('\x02') or if e is uninitialized.
-func (e *ReaderElement) String() string {
-	if e == nil || e.start == 0 || e.value == 0 {
+// StringValue returns the string balue for this element.
+// It panics if e's BSON type is not StringValue ('\x02') or if e is uninitialized.
+//
+// NOTE: This method is called StringValue to avoid it implementing the
+// fmt.Stringer interface.
+func (e *ReaderElement) StringValue() string {
+	if e == nil || e.value == 0 {
 		panic(ErrUninitializedElement)
 	}
 	if e.data[e.start] != '\x02' {
@@ -269,7 +282,7 @@ func (e *ReaderElement) String() string {
 }
 
 func (e *ReaderElement) Document() Reader {
-	if e == nil || e.start == 0 || e.value == 0 {
+	if e == nil || e.value == 0 {
 		panic(ErrUninitializedElement)
 	}
 	if e.data[e.start] != '\x03' {
@@ -280,7 +293,7 @@ func (e *ReaderElement) Document() Reader {
 }
 
 func (e *ReaderElement) Array() Reader {
-	if e == nil || e.start == 0 || e.value == 0 {
+	if e == nil || e.value == 0 {
 		panic(ErrUninitializedElement)
 	}
 	if e.data[e.start] != '\x04' {
@@ -291,7 +304,7 @@ func (e *ReaderElement) Array() Reader {
 }
 
 func (e *ReaderElement) Binary() (subtype byte, data []byte) {
-	if e == nil || e.start == 0 || e.value == 0 {
+	if e == nil || e.value == 0 {
 		panic(ErrUninitializedElement)
 	}
 	if e.data[e.start] != '\x05' {
@@ -305,7 +318,7 @@ func (e *ReaderElement) Binary() (subtype byte, data []byte) {
 }
 
 func (e *ReaderElement) ObjectID() [12]byte {
-	if e == nil || e.start == 0 || e.value == 0 {
+	if e == nil || e.value == 0 {
 		panic(ErrUninitializedElement)
 	}
 	if e.data[e.start] != '\x07' {
@@ -317,7 +330,7 @@ func (e *ReaderElement) ObjectID() [12]byte {
 }
 
 func (e *ReaderElement) Boolean() bool {
-	if e == nil || e.start == 0 || e.value == 0 {
+	if e == nil || e.value == 0 {
 		panic(ErrUninitializedElement)
 	}
 	if e.data[e.start] != '\x08' {
@@ -327,7 +340,7 @@ func (e *ReaderElement) Boolean() bool {
 }
 
 func (e *ReaderElement) DateTime() time.Time {
-	if e == nil || e.start == 0 || e.value == 0 {
+	if e == nil || e.value == 0 {
 		panic(ErrUninitializedElement)
 	}
 	if e.data[e.start] != '\x09' {
@@ -338,7 +351,7 @@ func (e *ReaderElement) DateTime() time.Time {
 }
 
 func (e *ReaderElement) Regex() (pattern, options string) {
-	if e == nil || e.start == 0 || e.value == 0 {
+	if e == nil || e.value == 0 {
 		panic(ErrUninitializedElement)
 	}
 	if e.data[e.start] != '\x0B' {
@@ -361,7 +374,7 @@ func (e *ReaderElement) Regex() (pattern, options string) {
 }
 
 func (e *ReaderElement) DBPointer() [12]byte {
-	if e == nil || e.start == 0 || e.value == 0 {
+	if e == nil || e.value == 0 {
 		panic(ErrUninitializedElement)
 	}
 	if e.data[e.start] != '\x0C' {
@@ -373,7 +386,7 @@ func (e *ReaderElement) DBPointer() [12]byte {
 }
 
 func (e *ReaderElement) Javascript() string {
-	if e == nil || e.start == 0 || e.value == 0 {
+	if e == nil || e.value == 0 {
 		panic(ErrUninitializedElement)
 	}
 	if e.data[e.start] != '\x0D' {
@@ -384,7 +397,7 @@ func (e *ReaderElement) Javascript() string {
 }
 
 func (e *ReaderElement) Symbol() string {
-	if e == nil || e.start == 0 || e.value == 0 {
+	if e == nil || e.value == 0 {
 		panic(ErrUninitializedElement)
 	}
 	if e.data[e.start] != '\x0E' {
@@ -395,7 +408,7 @@ func (e *ReaderElement) Symbol() string {
 }
 
 func (e *ReaderElement) JavascriptWithScope() (code string, rdr Reader) {
-	if e == nil || e.start == 0 || e.value == 0 {
+	if e == nil || e.value == 0 {
 		panic(ErrUninitializedElement)
 	}
 	if e.data[e.start] != '\x0F' {
@@ -414,7 +427,7 @@ func (e *ReaderElement) JavascriptWithScope() (code string, rdr Reader) {
 }
 
 func (e *ReaderElement) Int32() int32 {
-	if e == nil || e.start == 0 || e.value == 0 {
+	if e == nil || e.value == 0 {
 		panic(ErrUninitializedElement)
 	}
 	if e.data[e.start] != '\x10' {
@@ -424,7 +437,7 @@ func (e *ReaderElement) Int32() int32 {
 }
 
 func (e *ReaderElement) Uint64() uint64 {
-	if e == nil || e.start == 0 || e.value == 0 {
+	if e == nil || e.value == 0 {
 		panic(ErrUninitializedElement)
 	}
 	if e.data[e.start] != '\x11' {
@@ -434,7 +447,7 @@ func (e *ReaderElement) Uint64() uint64 {
 }
 
 func (e *ReaderElement) Int64() int64 {
-	if e == nil || e.start == 0 || e.value == 0 {
+	if e == nil || e.value == 0 {
 		panic(ErrUninitializedElement)
 	}
 	if e.data[e.start] != '\x12' {
@@ -444,7 +457,7 @@ func (e *ReaderElement) Int64() int64 {
 }
 
 func (e *ReaderElement) Decimal128() Decimal128 {
-	if e == nil || e.start == 0 || e.value == 0 {
+	if e == nil || e.value == 0 {
 		panic(ErrUninitializedElement)
 	}
 	if e.data[e.start] != '\x12' {

@@ -150,7 +150,7 @@ func (db *DocumentBuilder) writeDocument(start uint, writer interface{}, embedde
 	var err error
 
 	if embedded {
-		n, err = elements.Byte.Encode(start, writer, '\x02')
+		n, err = elements.Byte.Encode(start, writer, '\x03')
 		start += uint(n)
 		total += n
 		if err != nil {

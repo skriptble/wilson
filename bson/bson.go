@@ -11,4 +11,15 @@ package bson
 // could result in parsing errors.
 type node [2]uint32
 
-type Modifier func(elem *ReaderElement)
+type BSONType byte
+
+func (bt BSONType) String() string {
+	switch bt {
+	case '\x01':
+		return "double"
+	case '\x02':
+		return "string"
+	default:
+		return "invalid"
+	}
+}

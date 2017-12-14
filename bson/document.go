@@ -42,15 +42,40 @@ func ReadDocument(b []byte) (*Document, error) {
 	return doc, nil
 }
 
-func (d *Document) Walk(recursive bool, f func(prefix []string, e *Element)) {
-}
-
 // TODO(skriptble): Perhaps we should let the user pass in a []string and put
 // as many keys as we can inside?
 // TODO(skriptble): Should we even bother getting recursive keys? This seems
 // like an edge case but maybe not.
-func (d *Document) Keys(recursive bool) [][]string {
-	return nil
+func (d *Document) Keys(recursive bool) (Keys, error) {
+	return d.recursiveKeys(recursive)
+}
+
+func (d *Document) recursiveKeys(recursive bool, prefix ...string) (Keys, error) {
+	ks := make(Keys, 0, len(d.elems))
+	for _, elem := range d.elems {
+		key := elem.Key()
+		ks = append(ks, Key{Prefix: prefix, Name: key})
+		if !recursive {
+			continue
+		}
+		switch elem.Type() {
+		case '\x03':
+			subprefix := append(prefix, key)
+			subkeys, err := elem.Document().recursiveKeys(recursive, subprefix...)
+			if err != nil {
+				return nil, err
+			}
+			ks = append(ks, subkeys...)
+		case '\x04':
+			subprefix := append(prefix, key)
+			subkeys, err := elem.Array().recursiveKeys(recursive, subprefix...)
+			if err != nil {
+				return nil, err
+			}
+			ks = append(ks, subkeys...)
+		}
+	}
+	return ks, nil
 }
 
 // Appends each element to the document, in order. If a nil element is passed
@@ -124,16 +149,21 @@ func (d *Document) Prepend(elems ...*Element) *Document {
 	return d
 }
 
+func (d *Document) Replace(elems ...*Element) *Document {
+	return d
+}
+
 // TODO: Do we really need an error here? It doesn't seem possible to insert a nil element.
 func (d *Document) Lookup(key ...string) (*Element, error) {
 	if len(key) == 0 {
 		return nil, ErrEmptyKey
 	}
-	i := sort.Search(len(d.index), func(i int) bool { return bytes.Compare(d.keyFromIndex(i), []byte(key[0])) >= 0 })
-	if i < len(d.index) && bytes.Compare(d.keyFromIndex(i), []byte(key[0])) == 0 {
+	first := []byte(key[0] + "\x00")
+	i := sort.Search(len(d.index), func(i int) bool { return bytes.Compare(d.keyFromIndex(i), first) >= 0 })
+	if i < len(d.index) && bytes.Compare(d.keyFromIndex(i), first) == 0 {
 		return d.elems[d.index[i]], nil
 	}
-	return nil, nil
+	return nil, errors.New("Not found")
 }
 
 // Delete will delete the key from the Document. The deleted element is
@@ -146,8 +176,9 @@ func (d *Document) Delete(key ...string) *Element {
 	// Do a binary search through the index, delete the element from
 	// the index and delete the element from the elems array.
 	var elem *Element
-	i := sort.Search(len(d.index), func(i int) bool { return bytes.Compare(d.keyFromIndex(i), []byte(key[0])) >= 0 })
-	if i < len(d.index) && bytes.Compare(d.keyFromIndex(i), []byte(key[0])) == 0 {
+	first := []byte(key[0] + "\x00")
+	i := sort.Search(len(d.index), func(i int) bool { return bytes.Compare(d.keyFromIndex(i), first) >= 0 })
+	if i < len(d.index) && bytes.Compare(d.keyFromIndex(i), first) == 0 {
 		keyIndex := d.index[i]
 		elem = d.elems[keyIndex]
 		if len(key) == 1 {
@@ -167,32 +198,6 @@ func (d *Document) Delete(key ...string) *Element {
 	return elem
 }
 
-func (d *Document) RenameKey(newKey string, key ...string) error {
-	if len(key) == 0 {
-		return ErrEmptyKey
-	}
-	var err error
-	var elem *Element
-
-	i := sort.Search(len(d.index), func(i int) bool { return bytes.Compare(d.keyFromIndex(i), []byte(key[0])) >= 0 })
-	if i < len(d.index) && bytes.Compare(d.keyFromIndex(i), []byte(key[0])) == 0 {
-		keyIndex := d.index[i]
-		elem = d.elems[keyIndex]
-		if len(key) == 1 {
-			return elem.updateKey(newKey)
-		}
-		switch elem.Type() {
-		case '\x03':
-			err = elem.Document().RenameKey(newKey, key[1:]...)
-		case '\x04':
-			err = elem.Array().Document.RenameKey(newKey, key[1:]...)
-		default:
-			err = ErrInvalidKey
-		}
-	}
-	return err
-}
-
 func (d *Document) ElementAt(index uint) (*Element, error) {
 	if int(index) >= len(d.elems) {
 		return nil, errors.New("Out of bounds")
@@ -204,11 +209,14 @@ func (d *Document) Iterator() *Iterator {
 	return nil
 }
 
+// Combine will take the keys from the provided document and append them onto
+// the end of this document.
+//
 // doc must be one of the following:
 //
-// - *Document
-// - []byte
-// - io.Reader
+//   - *Document
+//   - []byte
+//   - io.Reader
 func (d *Document) Combine(doc interface{}) error {
 	return nil
 }
@@ -237,11 +245,19 @@ func (d *Document) Validate() (uint32, error) {
 	return size, nil
 }
 
+// validates the document and returns its total size. This method has
+// bookkeeping parameters to prevent a stack overflow.
+func (d *Document) validate(currentDepth, maxDepth uint32) (uint32, error) {
+	return 0, nil
+}
+
 // WriteTo implements the io.WriterTo interface.
 func (d *Document) WriteTo(w io.Writer) (int64, error) {
 	return d.WriteDocument(0, w)
 }
 
+// WriteDocument will serialize this document to the provided writer beginning
+// at the provided start position.
 func (d *Document) WriteDocument(start uint, writer interface{}) (int64, error) {
 	var total int64
 	var pos uint = start
@@ -263,6 +279,7 @@ func (d *Document) WriteDocument(start uint, writer interface{}) (int64, error) 
 	return total, nil
 }
 
+// MarshalBSON implements the Marshaler interface.
 func (d *Document) MarshalBSON() ([]byte, error) {
 	size, err := d.Validate()
 	if err != nil {
@@ -276,6 +293,8 @@ func (d *Document) MarshalBSON() ([]byte, error) {
 	return b, nil
 }
 
+// writeByteSlice handles serializing this document to a slice of bytes starting
+// at the given start position.
 func (d *Document) writeByteSlice(start uint, size uint32, b []byte) (int64, error) {
 	var total int64
 	var pos uint = start
@@ -305,6 +324,7 @@ func (d *Document) writeByteSlice(start uint, size uint32, b []byte) (int64, err
 	return total, nil
 }
 
+// UnmarshalBSON implements the Unmarshaler interface.
 func (d *Document) UnmarshalBSON(b []byte) error {
 	// Read byte array
 	//   - Create an Element for each element found

@@ -3,6 +3,8 @@ package bson
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
+	"reflect"
 	"runtime"
 	"testing"
 )
@@ -64,7 +66,7 @@ func TestDocument(t *testing.T) {
 		}
 	})
 	t.Run("Walk", func(t *testing.T) {})
-	t.Run("Keys", func(t *testing.T) {})
+	t.Run("Keys", testDocumentKeys)
 	t.Run("Append", func(t *testing.T) {
 		testCases := []struct {
 			name  string
@@ -120,13 +122,25 @@ func TestDocument(t *testing.T) {
 	t.Run("Lookup", func(t *testing.T) {
 		testCases := []struct {
 			name string
-			doc  *Document
+			d    *Document
 			key  []string
 			want *Element
-		}{}
+			err  error
+		}{
+			{"first", (&Document{}).Append(C.Null("x")), []string{"x"},
+				&Element{ReaderElement: ReaderElement{start: 0, value: 3}}, nil},
+		}
 
 		for _, tc := range testCases {
-			t.Run(tc.name, func(t *testing.T) {})
+			t.Run(tc.name, func(t *testing.T) {
+				got, err := tc.d.Lookup(tc.key...)
+				if err != tc.err {
+					t.Errorf("Returned error does not match. got %v; want %v", err, tc.err)
+				}
+				if !elementEqual(got, tc.want) {
+					t.Errorf("Returned element does not match expected element. got %v; want %v", got, tc.want)
+				}
+			})
 		}
 	})
 	t.Run("Delete", func(t *testing.T) {
@@ -146,6 +160,60 @@ func TestDocument(t *testing.T) {
 	t.Run("ElementAt", func(t *testing.T) {})
 	t.Run("Iterator", func(t *testing.T) {})
 	t.Run("Combine", func(t *testing.T) {})
+}
+
+func testDocumentKeys(t *testing.T) {
+	testCases := []struct {
+		name      string
+		d         *Document
+		want      Keys
+		err       error
+		recursive bool
+	}{
+		{"one", (&Document{}).Append(C.String("foo", "")), Keys{{Name: "foo"}}, nil, false},
+		{"two", (&Document{}).Append(C.Null("x"), C.Null("y")), Keys{{Name: "x"}, {Name: "y"}}, nil, false},
+		{"one-flat", (&Document{}).Append(C.SubDocumentFromElements("foo", C.Null("a"), C.Null("b"))),
+			Keys{{Name: "foo"}}, nil, false,
+		},
+		{"one-recursive", (&Document{}).Append(C.SubDocumentFromElements("foo", C.Null("a"), C.Null("b"))),
+			Keys{{Name: "foo"}, {Prefix: []string{"foo"}, Name: "a"}, {Prefix: []string{"foo"}, Name: "b"}}, nil, true,
+		},
+		// {"one-array-recursive", (&Document{}).Append(c.ArrayFromElements("foo", AC.Null(())),
+		// 	Keys{{Name: "foo"}, {Prefix: []string{"foo"}, Name: "1"}, {Prefix: []string{"foo"}, Name: "2"}}, nil, true,
+		// },
+		// {"invalid-subdocument",
+		// 	Reader{
+		// 		'\x15', '\x00', '\x00', '\x00',
+		// 		'\x03',
+		// 		'f', 'o', 'o', '\x00',
+		// 		'\x0B', '\x00', '\x00', '\x00', '\x01', '1', '\x00',
+		// 		'\x0A', '2', '\x00', '\x00', '\x00',
+		// 	},
+		// 	nil, ErrTooSmall, true,
+		// },
+		// {"invalid-array",
+		// 	Reader{
+		// 		'\x15', '\x00', '\x00', '\x00',
+		// 		'\x04',
+		// 		'f', 'o', 'o', '\x00',
+		// 		'\x0B', '\x00', '\x00', '\x00', '\x01', '1', '\x00',
+		// 		'\x0A', '2', '\x00', '\x00', '\x00',
+		// 	},
+		// 	nil, ErrTooSmall, true,
+		// },
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := tc.d.Keys(tc.recursive)
+			if err != tc.err {
+				t.Errorf("Returned error does not match. got %v; want %v", err, tc.err)
+			}
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("Returned keys do not match expected keys. got %v; want %v", got, tc.want)
+			}
+		})
+	}
 }
 
 var tpag testPrependAppendGenerator
@@ -221,29 +289,8 @@ func (testPrependAppendGenerator) twoOnePrependBytes() []byte {
 	}
 }
 
-func ExampleDocument_ClientDoc() {
+func ExampleDocument() {
 	internalVersion := "1234567"
-
-	/*
-		func createClientDoc(appName string) bson.M {
-			clientDoc := bson.M{
-				"driver": bson.M{
-					"name":    "mongo-go-driver",
-					"version": internal.Version,
-				},
-				"os": bson.M{
-					"type":         runtime.GOOS,
-					"architecture": runtime.GOARCH,
-				},
-				"platform": runtime.Version(),
-			}
-			if appName != "" {
-				clientDoc["application"] = bson.M{"name": appName}
-			}
-
-			return clientDoc
-		}
-	*/
 
 	f := func(appName string) *Document {
 		doc := NewDocument()
@@ -264,7 +311,13 @@ func ExampleDocument_ClientDoc() {
 
 		return doc
 	}
-	f("hello-world").MarshalBSON()
+	buf, err := f("hello-world").MarshalBSON()
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(buf)
+
+	// Output: [177 0 0 0 3 100 114 105 118 101 114 0 52 0 0 0 2 110 97 109 101 0 16 0 0 0 109 111 110 103 111 45 103 111 45 100 114 105 118 101 114 0 2 118 101 114 115 105 111 110 0 8 0 0 0 49 50 51 52 53 54 55 0 0 3 111 115 0 46 0 0 0 2 116 121 112 101 0 7 0 0 0 100 97 114 119 105 110 0 2 97 114 99 104 105 116 101 99 116 117 114 101 0 6 0 0 0 97 109 100 54 52 0 0 2 112 108 97 116 102 111 114 109 0 8 0 0 0 103 111 49 46 57 46 50 0 3 97 112 112 108 105 99 97 116 105 111 110 0 27 0 0 0 2 110 97 109 101 0 12 0 0 0 104 101 108 108 111 45 119 111 114 108 100 0 0 0]
 }
 
 func BenchmarkDocument(b *testing.B) {
@@ -285,4 +338,14 @@ func BenchmarkDocument(b *testing.B) {
 		)
 		doc.MarshalBSON()
 	}
+}
+
+func elementEqual(e1, e2 *Element) bool {
+	if e1.start != e2.start {
+		return false
+	}
+	if e1.value != e2.value {
+		return false
+	}
+	return true
 }

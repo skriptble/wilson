@@ -4,8 +4,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
-
-	"github.com/skriptble/wilson/parser/ast"
 )
 
 // ErrUninitializedElement is returned whenever any method is invoked on an unintialized Element.
@@ -30,6 +28,8 @@ type Element struct {
 	d *Document
 }
 
+// Validates the element and if recursive is true, validates all subdocuments
+// and arrays.
 func (e *Element) Validate(recursive bool) (uint32, error) {
 	var total uint32 = 1
 	n, err := e.keySize()
@@ -45,109 +45,31 @@ func (e *Element) Validate(recursive bool) (uint32, error) {
 	return total, nil
 }
 
-func (e *Element) validateValue(recursive bool) (uint32, error) {
-	var total uint32 = 0
-	switch e.data[e.start] {
-	case '\x06', '\x0A', '\xFF', '\x7F':
-	case '\x01':
-		if int(e.value+8) > len(e.data) {
-			return total, ErrTooSmall
-		}
-		total += 8
-	case '\x02', '\x0D', '\x0E':
-		if int(e.value+4) > len(e.data) {
-			return total, ErrTooSmall
-		}
-		l := int32(binary.LittleEndian.Uint32(e.data[e.value : e.value+4]))
-		total += 4
-		if int32(e.value)+4+l > int32(len(e.data)) {
-			return total, errors.New("Too small")
-		}
-		total += uint32(l)
-	case '\x03', '\x04':
-		if e.d == nil {
-			if int(e.value+4) > len(e.data) {
-				return total, errors.New("Too small")
-			}
-			l := int32(binary.LittleEndian.Uint32(e.data[e.value : e.value+4]))
-			total += 4
-			if int32(e.value)+4+l > int32(len(e.data)) {
-				return total, errors.New("Too small")
-			}
-			n, err := Reader(e.data[e.value : e.value+4+uint32(l)]).Validate()
-			total += n
-			if err != nil {
-				return total, err
-			}
-			break
-		}
+// validate is a common validation method for elements.
+//
+// TODO(skriptble): Fill out this method and ensure all validation routines
+// pass through this method.
+func (e *Element) validate(recursive bool, currentDepth, maxDepth uint32) (uint32, error) {
+	return 0, nil
+}
 
+// validateValue will validate that the element is properly formed. This method
+// wraps the ReaderElement's validateValue command except for the case of an
+// element that has a document.
+func (e *Element) validateValue(recursive bool) (uint32, error) {
+	if e.d == nil {
+		return e.ReaderElement.validateValue(recursive)
+	}
+
+	var total uint32 = 0
+
+	switch e.data[e.start] {
+	case '\x03', '\x04':
 		n, err := e.d.Validate()
 		total += uint32(n)
 		if err != nil {
 			return total, err
 		}
-	case '\x05':
-		if int(e.value+5) > len(e.data) {
-			return total, errors.New("Too small")
-		}
-		// TODO(skriptble): This is wrong and could cause a panic.
-		l := int32(binary.LittleEndian.Uint32(e.data[e.value : e.value+4]))
-		total += 5
-		if e.data[e.value+4] > '\x05' && e.data[e.value+4] < '\x80' {
-			return total, errors.New("Invalid BSON Binary Subtype")
-		}
-		if int32(e.value)+5+l > int32(len(e.data)) {
-			return total, errors.New("Too small")
-		}
-		total += uint32(l)
-	case '\x07':
-		if int(e.value+12) > len(e.data) {
-			return total, errors.New("Too small")
-		}
-		total += 12
-	case '\x08':
-		if int(e.value+1) > len(e.data) {
-			return total, errors.New("Too small")
-		}
-		total += 1
-		if e.data[e.value] != '\x00' && e.data[e.value] != '\x01' {
-			return total, errors.New("Invalid value for BSON Boolean Type")
-		}
-	case '\x09':
-		if int(e.value+8) > len(e.data) {
-			return total, errors.New("Too small")
-		}
-		total += 8
-	case '\x0B':
-		i := e.value
-		for ; int(i) < len(e.data) && e.data[i] != '\x00'; i++ {
-			total++
-		}
-		i++
-		if int(i) > len(e.data) {
-			return total, errors.New("Too small")
-		}
-		total++
-		for ; int(i) < len(e.data) && e.data[i] != '\x00'; i++ {
-			total++
-		}
-		i++
-		if int(i) > len(e.data) {
-			return total, errors.New("Too small")
-		}
-		total++
-	case '\x0C':
-		if int(e.value+4) > len(e.data) {
-			return total, errors.New("Too small")
-		}
-		// TODO(skriptble): This is wrong and could cause a panic.
-		l := int32(binary.LittleEndian.Uint32(e.data[e.value : e.value+4]))
-		total += 4
-		if int32(e.value)+4+l+12 > int32(len(e.data)) {
-			return total, errors.New("Too small")
-		}
-		total += uint32(l) + 12
 	case '\x0F':
 		if int(e.value+4) > len(e.data) {
 			return total, errors.New("Too small")
@@ -167,44 +89,24 @@ func (e *Element) validateValue(recursive bool) (uint32, error) {
 			return total, errors.New("String size is larger than the Code With Scope container")
 		}
 		total += uint32(sLength)
-		if e.d == nil {
-			n, err := Reader(e.data[e.value+4+uint32(sLength) : e.value+uint32(l)]).Validate()
-			total += n
-			if err != nil {
-				return total, err
-			}
-			break
-		}
 
 		n, err := e.d.Validate()
 		total += uint32(n)
 		if err != nil {
 			return total, err
 		}
-	case '\x10':
-		if int(e.value+4) > len(e.data) {
-			return total, errors.New("Too small")
-		}
-		total += 4
-	case '\x11', '\x12':
-		if int(e.value+8) > len(e.data) {
-			return total, errors.New("Too small")
-		}
-		total += 8
-	case '\x13':
-		if int(e.value+16) > len(e.data) {
-			return total, errors.New("Too small")
-		}
-		total += 16
 	default:
-		return total, errors.New("Invalid Element")
+		// These are the only types that have a document attached to them.
+		// It's an error if we get here.
+		return 0, errors.New("Invalid element")
 	}
 
 	return total, nil
 }
 
+// Document returns the subdocument for this element.
 func (e *Element) Document() *Document {
-	if e == nil || e.start == 0 || e.value == 0 {
+	if e == nil || e.value == 0 {
 		panic(ErrUninitializedElement)
 	}
 	if e.data[e.start] != '\x03' {
@@ -221,8 +123,9 @@ func (e *Element) Document() *Document {
 	return e.d
 }
 
+// Array returns the array for this element.
 func (e *Element) Array() *Array {
-	if e == nil || e.start == 0 || e.value == 0 {
+	if e == nil || e.value == 0 {
 		panic(ErrUninitializedElement)
 	}
 	if e.data[e.start] != '\x04' {
@@ -239,8 +142,10 @@ func (e *Element) Array() *Array {
 	return &Array{e.d}
 }
 
+// JavascriptWithScope returns the javascript code and the scope document for
+// this element
 func (e *Element) JavascriptWithScope() (code string, d *Document) {
-	if e == nil || e.start == 0 || e.value == 0 {
+	if e == nil || e.value == 0 {
 		panic(ErrUninitializedElement)
 	}
 	if e.data[e.start] != '\x0F' {
@@ -264,49 +169,13 @@ func (e *Element) JavascriptWithScope() (code string, d *Document) {
 	return str, e.d
 }
 
-func (e *Element) ConvertToDouble(f float64)                         {}
-func (e *Element) ConvertToString(val string)                        {}
-func (e *Element) ConvertToDocument(doc *Document)                   {}
-func (e *Element) ConvertToArray(arr *Array)                         {}
-func (e *Element) ConvertToBinary(b []byte, btype uint)              {}
-func (e *Element) ConvertToObjectID(obj [12]byte)                    {}
-func (e *Element) ConvertToBoolean(b bool)                           {}
-func (e *Element) ConvertToDateTime(dt int64)                        {}
-func (e *Element) ConvertToRegex(pattern, options string)            {}
-func (e *Element) ConvertToDBPointer(dbpointer [12]byte)             {}
-func (e *Element) ConvertToJavascript(js string)                     {}
-func (e *Element) ConvertToSymbol(symbol string)                     {}
-func (e *Element) ConvertToCodeWithScope(js string, scope *Document) {}
-func (e *Element) ConvertToInt32(i int32)                            {}
-func (e *Element) ConvertToUint64(u uint64)                          {}
-func (e *Element) ConvertToInt64(i int64)                            {}
-func (e *Element) ConvertToDecimal128(d ast.Decimal128)              {}
-
-// NOTE: This is private since we don't want anything outside of this package
-// to change the key of a element that is inside of a document.
-func (e *Element) updateKey(key string) error                     { return nil }
-func (e *Element) UpdateDouble(f float64)                         {}
-func (e *Element) UpdateString(val string)                        {}
-func (e *Element) UpdateDocument(doc *Document)                   {}
-func (e *Element) UpdateArray(arr *Array)                         {}
-func (e *Element) UpdateBinary(b []byte, btype uint)              {}
-func (e *Element) UpdateObjectID(obj [12]byte)                    {}
-func (e *Element) UpdateBoolean(b bool)                           {}
-func (e *Element) UpdateDateTime(dt int64)                        {}
-func (e *Element) UpdateRegex(pattern, options string)            {}
-func (e *Element) UpdateDBPointer(dbpointer [12]byte)             {}
-func (e *Element) UpdateJavascript(js string)                     {}
-func (e *Element) UpdateSymbol(symbol string)                     {}
-func (e *Element) UpdateCodeWithScope(js string, scope *Document) {}
-func (e *Element) UpdateInt32(i int32)                            {}
-func (e *Element) UpdateUint64(u uint64)                          {}
-func (e *Element) UpdateInt64(i int64)                            {}
-func (e *Element) UpdateDecimal128(d ast.Decimal128)              {}
-
+// WriteTo implements the io.WriterTo interface.
 func (e *Element) WriteTo(w io.Writer) (int64, error) {
 	return 0, nil
 }
 
+// WriteElement serializes this element to the provided writer starting at the
+// provided start position.
 func (e *Element) WriteElement(start uint, writer interface{}) (int64, error) {
 	// TODO(skriptble): Figure out if we want to use uint or uint32 and
 	// standardize across all packages.
@@ -328,6 +197,7 @@ func (e *Element) WriteElement(start uint, writer interface{}) (int64, error) {
 	return total, nil
 }
 
+// MarshalBSON implements the Marshaler interface.
 func (e *Element) MarshalBSON() ([]byte, error) {
 	size, err := e.Validate(true)
 	if err != nil {
@@ -341,6 +211,7 @@ func (e *Element) MarshalBSON() ([]byte, error) {
 	return b, nil
 }
 
+// writeByteSlice handles writing this element to a slice of bytes.
 func (e *Element) writeByteSlice(start uint, size uint32, b []byte) (int64, error) {
 	if len(b) < int(size)+int(start) {
 		return 0, ErrTooSmall
@@ -351,7 +222,7 @@ func (e *Element) writeByteSlice(start uint, size uint32, b []byte) (int64, erro
 	// the d property is nil. If it is, we can do a regular copy. If it is
 	// non-nil we need to marshal that Document to bytes then copy it into the
 	// byte slice.
-	case '\x03':
+	case '\x03', '\x04':
 		if e.d == nil {
 			n = copy(b[start:start+uint(size)], e.data[e.start:e.start+size])
 			break
@@ -365,7 +236,6 @@ func (e *Element) writeByteSlice(start uint, size uint32, b []byte) (int64, erro
 		if err != nil {
 			return int64(n), err
 		}
-	case '\x04':
 	case '\x0F':
 	default:
 		n = copy(b[start:start+uint(size)], e.data[e.start:e.start+size])

@@ -11,7 +11,7 @@ func (itr *Iterator) Close() error {
 	return nil
 }
 
-func (itr *Iterator) Element() *ReaderElement {
+func (itr *Iterator) Element() *Element {
 	return nil
 }
 

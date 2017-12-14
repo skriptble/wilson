@@ -59,11 +59,49 @@ func (Constructor) SubDocument(key string, d *Document) *Element {
 func (c Constructor) SubDocumentFromElements(key string, elems ...*Element) *Element {
 	return c.SubDocument(key, NewDocument().Append(elems...))
 }
-func (Constructor) Array(key string, elems ...*Element) *Element                  { return nil }
-func (Constructor) Binary(key string, b []byte, btype uint) *Element              { return nil }
-func (Constructor) ObjectID(key string, obj [12]byte) *Element                    { return nil }
-func (Constructor) Boolean(key string, b bool) *Element                           { return nil }
-func (Constructor) DateTime(key string, dt int64) *Element                        { return nil }
+func (Constructor) Array(key string, d *Document) *Element {
+	size := uint32(1 + len(key) + 1)
+	b := make([]byte, size)
+	elem := new(Element)
+	elem.start = 0
+	elem.value = size
+	_, err := elements.Byte.Encode(0, b, '\x04')
+	if err != nil {
+		panic(err)
+	}
+	_, err = elements.CString.Encode(1, b, key)
+	if err != nil {
+		panic(err)
+	}
+	elem.data = b
+	elem.d = d
+	return elem
+}
+func (c Constructor) ArrayFromElements(key string, elems ...*Element) *Element {
+	return c.Array(key, NewDocument().Append(elems...))
+}
+func (Constructor) Binary(key string, b []byte, btype uint) *Element { return nil }
+func (Constructor) Undefined(key string) *Element                    { return nil }
+func (Constructor) ObjectID(key string, obj [12]byte) *Element       { return nil }
+func (Constructor) Boolean(key string, b bool) *Element              { return nil }
+func (Constructor) DateTime(key string, dt int64) *Element           { return nil }
+func (Constructor) Null(key string) *Element {
+	size := uint32(1 + len(key) + 1)
+	b := make([]byte, size)
+	elem := new(Element)
+	elem.start = 0
+	elem.value = uint32(1 + len(key) + 1)
+	_, err := elements.Byte.Encode(0, b, '\x0A')
+	if err != nil {
+		panic(err)
+	}
+	_, err = elements.CString.Encode(1, b, key)
+	if err != nil {
+		panic(err)
+	}
+	elem.data = b
+	return elem
+}
 func (Constructor) Regex(key string, pattern, options string) *Element            { return nil }
 func (Constructor) DBPointer(key string, dbpointer [12]byte) *Element             { return nil }
 func (Constructor) Javascript(key string, js string) *Element                     { return nil }
@@ -73,15 +111,35 @@ func (Constructor) Int32(key string, i int32) *Element                          
 func (Constructor) Uint64(key string, u uint64) *Element                          { return nil }
 func (Constructor) Int64(key string, i int64) *Element                            { return nil }
 func (Constructor) Decimal128(key string, d ast.Decimal128) *Element              { return nil }
+func (Constructor) MinKey(key string) *Element                                    { return nil }
+func (Constructor) MaxKey(key string) *Element                                    { return nil }
 
-func (ArrayConstructor) Double(f float64) *Element                         { return nil }
-func (ArrayConstructor) String(val string) *Element                        { return nil }
-func (ArrayConstructor) Document(elems ...*Element) *Element               { return nil }
-func (ArrayConstructor) Array(elemens ...*Element) *Element                { return nil }
-func (ArrayConstructor) Binary(b []byte, btype uint) *Element              { return nil }
-func (ArrayConstructor) ObjectID(obj [12]byte) *Element                    { return nil }
-func (ArrayConstructor) Boolean(b bool) *Element                           { return nil }
-func (ArrayConstructor) DateTime(dt int64) *Element                        { return nil }
+func (ArrayConstructor) Double(f float64) *Element            { return nil }
+func (ArrayConstructor) String(val string) *Element           { return nil }
+func (ArrayConstructor) Document(elems ...*Element) *Element  { return nil }
+func (ArrayConstructor) Array(elemens ...*Element) *Element   { return nil }
+func (ArrayConstructor) Binary(b []byte, btype uint) *Element { return nil }
+func (ArrayConstructor) ObjectID(obj [12]byte) *Element       { return nil }
+func (ArrayConstructor) Boolean(b bool) *Element              { return nil }
+func (ArrayConstructor) DateTime(dt int64) *Element           { return nil }
+func (ArrayConstructor) Null() *Element {
+	return nil
+	// size := uint32(1 + len(key) + 1)
+	// b := make([]byte, size)
+	// elem := new(Element)
+	// elem.start = 0
+	// elem.value = uint32(1 + len(key) + 1)
+	// _, err := elements.Byte.Encode(0, b, '\x0A')
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// _, err = elements.CString.Encode(1, b, key)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// elem.data = b
+	// return elem
+}
 func (ArrayConstructor) Regex(pattern, options string) *Element            { return nil }
 func (ArrayConstructor) DBPointer(dbpointer [12]byte) *Element             { return nil }
 func (ArrayConstructor) Javascript(js string) *Element                     { return nil }

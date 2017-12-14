@@ -15,7 +15,7 @@ var validateDone = errors.New("validation loop complete")
 type Reader []byte
 
 // Validates the document. This method only validates the first document in
-// the slice, to validate other documents, the slice must be resliced
+// the slice, to validate other documents, the slice must be resliced.
 func (r Reader) Validate() (size uint32, err error) {
 	return r.readElements(func(elem *ReaderElement) error {
 		var err error
@@ -29,6 +29,8 @@ func (r Reader) Validate() (size uint32, err error) {
 	})
 }
 
+// keySize will ensure the key is valid and return the length of the key
+// including the null terminator.
 func (r Reader) keySize(pos, end uint32) (uint32, error) {
 	// Read a CString, return the length, including the '\x00'
 	var total uint32 = 0
@@ -115,14 +117,22 @@ func (r Reader) ElementAt(index uint) (*ReaderElement, error) {
 	return elem, nil
 }
 
-// Keys returns all of the keys for this document. If recursive is true then
-// this method will also return all of the keys for subdocuments and arrays.
+// Iterator returns a ReaderIterator that can be used to iterate through the
+// elements of this Reader.
+func (r Reader) Iterator() (*ReaderIterator, error) {
+	return NewReadIterator(r)
+}
+
+// Keys returns the keys for this document. If recursive is true then this
+// method will also return the keys for subdocuments and arrays.
 //
 // The keys will be return in order.
 func (r Reader) Keys(recursive bool) (Keys, error) {
 	return r.recursiveKeys(recursive)
 }
 
+// recursiveKeys implements the logic for the Keys method. This is a separate
+// function to facilitate recursive calls.
 func (r Reader) recursiveKeys(recursive bool, prefix ...string) (Keys, error) {
 	ks := make(Keys, 0)
 	_, err := r.readElements(func(elem *ReaderElement) error {
@@ -227,6 +237,7 @@ type Key struct {
 	Name   string
 }
 
+// String implements the fmt.Stringer interface.
 func (k Key) String() string {
 	str := strings.Join(k.Prefix, ".")
 	if str != "" {
@@ -235,6 +246,7 @@ func (k Key) String() string {
 	return k.Name
 }
 
+// readi32 is a helper function for reading an int32 from slice of bytes.
 func readi32(b []byte) int32 {
 	_ = b[3] // bounds check hint to compiler; see golang.org/issue/14808
 	return int32(b[0]) | int32(b[1])<<8 | int32(b[2])<<16 | int32(b[3])<<24

@@ -1227,3 +1227,37 @@ func BenchmarkDocumentBuilder(b *testing.B) {
 		docbuilder.WriteDocument(buf)
 	}
 }
+
+func ExampleDocumentBuilder() {
+	internalVersion := "1234567"
+
+	f := func(appName string) *DocumentBuilder {
+		builder := new(DocumentBuilder)
+		builder.Init()
+		builder.Append(
+			C.SubDocument("driver",
+				C.String("name", "mongo-go-driver"),
+				C.String("version", internalVersion),
+			),
+			C.SubDocument("os",
+				C.String("type", runtime.GOOS),
+				C.String("architecture", runtime.GOARCH),
+			),
+			C.String("platform", runtime.Version()),
+		)
+		if appName != "" {
+			builder.Append(C.SubDocument("application", C.String("name", appName)))
+		}
+
+		return builder
+	}
+	db := f("hello-world")
+	buf := make([]byte, db.RequiredBytes())
+	_, err := f("hello-world").WriteDocument(buf)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(buf)
+
+	// Output: [177 0 0 0 3 100 114 105 118 101 114 0 52 0 0 0 2 110 97 109 101 0 16 0 0 0 109 111 110 103 111 45 103 111 45 100 114 105 118 101 114 0 2 118 101 114 115 105 111 110 0 8 0 0 0 49 50 51 52 53 54 55 0 0 3 111 115 0 46 0 0 0 2 116 121 112 101 0 7 0 0 0 100 97 114 119 105 110 0 2 97 114 99 104 105 116 101 99 116 117 114 101 0 6 0 0 0 97 109 100 54 52 0 0 2 112 108 97 116 102 111 114 109 0 8 0 0 0 103 111 49 46 57 46 50 0 3 97 112 112 108 105 99 97 116 105 111 110 0 27 0 0 0 2 110 97 109 101 0 12 0 0 0 104 101 108 108 111 45 119 111 114 108 100 0 0 0]
+}
