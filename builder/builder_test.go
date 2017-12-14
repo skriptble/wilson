@@ -1502,11 +1502,11 @@ func BenchmarkDocumentBuilder(b *testing.B) {
 		docbuilder := new(DocumentBuilder)
 		docbuilder.Init()
 		docbuilder.Append(
-			C.SubDocument("driver",
+			C.SubDocumentWithElements("driver",
 				C.String("name", "mongo-go-driver"),
 				C.String("version", internalVersion),
 			),
-			C.SubDocument("os",
+			C.SubDocumentWithElements("os",
 				C.String("type", runtime.GOOS),
 				C.String("architecture", runtime.GOARCH),
 			),
@@ -1524,18 +1524,18 @@ func ExampleDocumentBuilder() {
 		builder := new(DocumentBuilder)
 		builder.Init()
 		builder.Append(
-			C.SubDocument("driver",
+			C.SubDocumentWithElements("driver",
 				C.String("name", "mongo-go-driver"),
 				C.String("version", internalVersion),
 			),
-			C.SubDocument("os",
+			C.SubDocumentWithElements("os",
 				C.String("type", runtime.GOOS),
 				C.String("architecture", runtime.GOARCH),
 			),
 			C.String("platform", runtime.Version()),
 		)
 		if appName != "" {
-			builder.Append(C.SubDocument("application", C.String("name", appName)))
+			builder.Append(C.SubDocumentWithElements("application", C.String("name", appName)))
 		}
 
 		return builder

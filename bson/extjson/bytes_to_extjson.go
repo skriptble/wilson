@@ -85,7 +85,7 @@ func (w *extJsonWriter) writeDocument(d *ast.Document) error {
 			err = w.writeBinaryElement(e)
 		case *ast.UndefinedElement:
 			err = w.writeUndefinedElement(e)
-		case *ast.ObjectIdElement:
+		case *ast.ObjectIDElement:
 			err = w.writeObjectIdElement(e)
 		case *ast.BoolElement:
 			err = w.writeBoolElement(e)
@@ -156,7 +156,7 @@ func (w *extJsonWriter) writeArray(d *ast.Document) error {
 			err = w.writeBinaryValue(e.Binary.Data, e.Binary.Subtype)
 		case *ast.UndefinedElement:
 			err = w.writeUndefinedValue()
-		case *ast.ObjectIdElement:
+		case *ast.ObjectIDElement:
 			err = w.writeObjectIdValue(e.ID)
 		case *ast.BoolElement:
 			err = w.writeBoolValue(e.Bool)
@@ -456,7 +456,7 @@ func (w *extJsonWriter) writeUndefinedElement(e *ast.UndefinedElement) error {
 	return w.writeUndefinedValue()
 }
 
-func (w *extJsonWriter) writeObjectIdElement(e *ast.ObjectIdElement) error {
+func (w *extJsonWriter) writeObjectIdElement(e *ast.ObjectIDElement) error {
 	err := w.writeKey(e.Name.Key)
 	if err != nil {
 		return err
@@ -622,6 +622,6 @@ func newInt64Element(key string, i int64) *ast.Int64Element {
 	return &ast.Int64Element{Name: &ast.ElementKeyName{Key: key}, Int64: i}
 }
 
-func newObjectIdElement(key string, oid [12]byte) *ast.ObjectIdElement {
-	return &ast.ObjectIdElement{Name: &ast.ElementKeyName{Key: key}, ID: oid}
+func newObjectIdElement(key string, oid [12]byte) *ast.ObjectIDElement {
+	return &ast.ObjectIDElement{Name: &ast.ElementKeyName{Key: key}, ID: oid}
 }

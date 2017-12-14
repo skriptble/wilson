@@ -284,7 +284,7 @@ func TestBSONParser(t *testing.T) {
 			b := make([]byte, 7)
 			binary.LittleEndian.PutUint32(b[:4], 3)
 			b[4], b[5], b[6] = 'f', 'o', 'o'
-			want := errors.New("readbyte-error")
+			want := ErrCorruptDocument
 			p := &Parser{r: bufio.NewReader(&errReader{b: b, err: want})}
 			_, got := p.ParseString()
 			if got != want {
@@ -303,7 +303,7 @@ func TestBSONParser(t *testing.T) {
 			}
 		})
 		b := make([]byte, 8)
-		binary.LittleEndian.PutUint32(b[:4], 3)
+		binary.LittleEndian.PutUint32(b[:4], 4)
 		b[4], b[5], b[6], b[7] = 'f', 'o', 'o', '\x00'
 		want := "foo"
 		r := bytes.NewReader(b)
@@ -522,7 +522,7 @@ func TestBSONParser(t *testing.T) {
 		}
 		b := make([]byte, 8)
 		binary.LittleEndian.PutUint32(b[:4], 0)
-		binary.LittleEndian.PutUint32(b[4:8], uint32(len(want.String)))
+		binary.LittleEndian.PutUint32(b[4:8], uint32(len(want.String)+1))
 		b = append(b, []byte(want.String)...)
 		b = append(b, '\x00')
 		doclen := make([]byte, 4)
@@ -596,7 +596,7 @@ func parseElementTest(t *testing.T) {
 		b[0] = '\x02'
 		copy(b[1:7], []byte(key))
 		b[7] = '\x00'
-		binary.LittleEndian.PutUint32(b[8:12], uint32(len(val)))
+		binary.LittleEndian.PutUint32(b[8:12], uint32(len(val)+1))
 		copy(b[12:18], []byte(val))
 		b[18] = '\x00'
 		return b
@@ -707,7 +707,7 @@ func parseElementTest(t *testing.T) {
 		b[0] = '\x0C'
 		copy(b[1:7], []byte(key))
 		b[7] = '\x00'
-		binary.LittleEndian.PutUint32(b[8:12], uint32(len(str)))
+		binary.LittleEndian.PutUint32(b[8:12], uint32(len(str)+1))
 		copy(b[12:17], []byte(str))
 		b[17] = '\x00'
 		copy(b[18:], id[:])
@@ -720,7 +720,7 @@ func parseElementTest(t *testing.T) {
 		b[0] = '\x0D'
 		copy(b[1:7], []byte(key))
 		b[7] = '\x00'
-		binary.LittleEndian.PutUint32(b[8:12], uint32(len(js)))
+		binary.LittleEndian.PutUint32(b[8:12], uint32(len(js)+1))
 		copy(b[12:32], []byte(js))
 		b[32] = byte('\x00')
 		return b
@@ -732,7 +732,7 @@ func parseElementTest(t *testing.T) {
 		b[0] = '\x0E'
 		copy(b[1:7], []byte(key))
 		b[7] = '\x00'
-		binary.LittleEndian.PutUint32(b[8:12], uint32(len(js)))
+		binary.LittleEndian.PutUint32(b[8:12], uint32(len(js)+1))
 		copy(b[12:17], []byte(js))
 		b[17] = byte('\x00')
 		return b
@@ -745,7 +745,7 @@ func parseElementTest(t *testing.T) {
 		copy(b[1:7], []byte(key))
 		b[7] = '\x00'
 		binary.LittleEndian.PutUint32(b[8:12], uint32(4+len(js)+1+5))
-		binary.LittleEndian.PutUint32(b[12:16], uint32(len(js)))
+		binary.LittleEndian.PutUint32(b[12:16], uint32(len(js)+1))
 		copy(b[16:36], []byte(js))
 		b[36] = byte('\x00')
 		binary.LittleEndian.PutUint32(b[37:41], 5)
@@ -829,7 +829,7 @@ func parseElementTest(t *testing.T) {
 			Array: &ast.Document{Length: 5, EList: []ast.Element{}}},
 			arrayBytes(),
 		},
-		{"binary", &ast.DataElement{
+		{"binary", &ast.BinaryElement{
 			Name: &ast.ElementKeyName{Key: "foobar"},
 			Binary: &ast.Binary{
 				Subtype: ast.SubtypeGeneric, Data: []byte{'\x00', '\x01', '\x02'},
@@ -889,7 +889,7 @@ func parseElementTest(t *testing.T) {
 			String: `12345`},
 			symbolBytes(),
 		},
-		{"code-with-scope", &ast.JavaScriptScopeElement{
+		{"code-with-scope", &ast.CodeWithScopeElement{
 			Name: &ast.ElementKeyName{Key: "foobar"},
 			CodeWithScope: &ast.CodeWithScope{
 				String: `var hello = "world";`,

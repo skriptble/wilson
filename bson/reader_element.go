@@ -93,7 +93,7 @@ func (e *ReaderElement) validateValue(recursive bool) (uint32, error) {
 	switch e.data[e.start] {
 	case '\x06', '\x0A', '\xFF', '\x7F':
 	case '\x01':
-		if int(e.value+8) >= len(e.data) {
+		if int(e.value+8) > len(e.data) {
 			return total, ErrTooSmall
 		}
 		total += 8

@@ -20,7 +20,7 @@ func (*DocumentElement) elementNode()      {}
 func (*ArrayElement) elementNode()         {}
 func (*BinaryElement) elementNode()        {}
 func (*UndefinedElement) elementNode()     {}
-func (*ObjectIdElement) elementNode()      {}
+func (*ObjectIDElement) elementNode()      {}
 func (*BoolElement) elementNode()          {}
 func (*DateTimeElement) elementNode()      {}
 func (*NullElement) elementNode()          {}
@@ -71,8 +71,8 @@ type UndefinedElement struct {
 	Name *ElementKeyName
 }
 
-// ObjectIdElement represents a BSON objectID element.
-type ObjectIdElement struct {
+// ObjectIDElement represents a BSON objectID element.
+type ObjectIDElement struct {
 	Name *ElementKeyName
 	ID   [12]byte
 }

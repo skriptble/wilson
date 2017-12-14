@@ -54,8 +54,8 @@ func (p *Parser) readUint64() (uint64, error) {
 	return u, err
 }
 
-// readObjectId reads a single objectID from the parser's reader.
-func (p *Parser) readObjectId() ([12]byte, error) {
+// readObjectID reads a single objectID from the parser's reader.
+func (p *Parser) readObjectID() ([12]byte, error) {
 	var id [12]byte
 	b := make([]byte, 12)
 	_, err := io.ReadFull(p.r, b)
@@ -209,11 +209,11 @@ func (p *Parser) ParseElement() (ast.Element, error) {
 			Name: key,
 		}
 	case '\x07':
-		id, err := p.readObjectId()
+		id, err := p.readObjectID()
 		if err != nil {
 			return nil, err
 		}
-		el = &ast.ObjectIdElement{
+		el = &ast.ObjectIDElement{
 			Name: key,
 			ID:   id,
 		}
@@ -258,7 +258,7 @@ func (p *Parser) ParseElement() (ast.Element, error) {
 		if err != nil {
 			return nil, err
 		}
-		pointer, err := p.readObjectId()
+		pointer, err := p.readObjectID()
 		if err != nil {
 			return nil, err
 		}
