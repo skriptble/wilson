@@ -114,6 +114,8 @@ func (ot outType) String() string {
 		return "docBuilder"
 	case extJson:
 		return "extJson"
+	case reader:
+		return "reader"
 	default:
 		panic(fmt.Sprintf("Unknown outType. Val: %d", ot))
 	}
