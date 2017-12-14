@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"reflect"
-	"runtime"
 	"testing"
 )
 
@@ -300,10 +299,10 @@ func ExampleDocument() {
 				C.String("version", internalVersion),
 			),
 			C.SubDocumentFromElements("os",
-				C.String("type", runtime.GOOS),
-				C.String("architecture", runtime.GOARCH),
+				C.String("type", "darwin"),
+				C.String("architecture", "amd64"),
 			),
-			C.String("platform", runtime.Version()),
+			C.String("platform", "go1.9.2"),
 		)
 		if appName != "" {
 			doc.Append(C.SubDocumentFromElements("application", C.String("name", appName)))
@@ -331,10 +330,10 @@ func BenchmarkDocument(b *testing.B) {
 				C.String("version", internalVersion),
 			),
 			C.SubDocumentFromElements("os",
-				C.String("type", runtime.GOOS),
-				C.String("architecture", runtime.GOARCH),
+				C.String("type", "darwin"),
+				C.String("architecture", "amd64"),
 			),
-			C.String("platform", runtime.Version()),
+			C.String("platform", "go1.9.2"),
 		)
 		doc.MarshalBSON()
 	}

@@ -1529,10 +1529,10 @@ func ExampleDocumentBuilder() {
 				C.String("version", internalVersion),
 			),
 			C.SubDocumentWithElements("os",
-				C.String("type", runtime.GOOS),
-				C.String("architecture", runtime.GOARCH),
+				C.String("type", "darwin"),
+				C.String("architecture", "amd64"),
 			),
-			C.String("platform", runtime.Version()),
+			C.String("platform", "go1.9.2"),
 		)
 		if appName != "" {
 			builder.Append(C.SubDocumentWithElements("application", C.String("name", appName)))
