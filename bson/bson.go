@@ -11,6 +11,30 @@ package bson
 // could result in parsing errors.
 type node [2]uint32
 
+const (
+	TypeDouble           = '\x01'
+	TypeString           = '\x02'
+	TypeEmbeddedDocument = '\x03'
+	TypeArray            = '\x04'
+	TypeBinary           = '\x05'
+	TypeUndefined        = '\x06'
+	TypeObjectID         = '\x07'
+	TypeBoolean          = '\x08'
+	TypeDateTime         = '\x09'
+	TypeNull             = '\x0A'
+	TypeRegex            = '\x0B'
+	TypeDBPointer        = '\x0C'
+	TypeJavaScript       = '\x0D'
+	TypeSymbol           = '\x0E'
+	TypeCodeWithScope    = '\x0F'
+	TypeInt32            = '\x10'
+	TypeTimestamp        = '\x11'
+	TypeInt64            = '\x12'
+	TypeDecimal128       = '\x13'
+	TypeMinKey           = '\xFF'
+	TypeMaxKey           = '\x7F'
+)
+
 type BSONType byte
 
 func (bt BSONType) String() string {
@@ -19,6 +43,44 @@ func (bt BSONType) String() string {
 		return "double"
 	case '\x02':
 		return "string"
+	case '\x03':
+		return "embedded document"
+	case '\x04':
+		return "array"
+	case '\x05':
+		return "binary"
+	case '\x06':
+		return "undefined"
+	case '\x07':
+		return "ObjectId"
+	case '\x08':
+		return "boolean"
+	case '\x09':
+		return "UTC datetime"
+	case '\x0A':
+		return "null"
+	case '\x0B':
+		return "regex"
+	case '\x0C':
+		return "DBPointer"
+	case '\x0D':
+		return "javascript"
+	case '\x0E':
+		return "symbol"
+	case '\x0F':
+		return "code with scope"
+	case '\x10':
+		return "32-bit integer"
+	case '\x11':
+		return "timestamp"
+	case '\x12':
+		return "64-bit integer"
+	case '\x13':
+		return "128-bit decimal"
+	case '\xFF':
+		return "min key"
+	case '\x7F':
+		return "max key"
 	default:
 		return "invalid"
 	}
