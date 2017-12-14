@@ -80,11 +80,42 @@ func (Constructor) Array(key string, d *Document) *Element {
 func (c Constructor) ArrayFromElements(key string, elems ...*Element) *Element {
 	return c.Array(key, NewDocument().Append(elems...))
 }
-func (Constructor) Binary(key string, b []byte, btype uint) *Element { return nil }
-func (Constructor) Undefined(key string) *Element                    { return nil }
-func (Constructor) ObjectID(key string, obj [12]byte) *Element       { return nil }
-func (Constructor) Boolean(key string, b bool) *Element              { return nil }
-func (Constructor) DateTime(key string, dt int64) *Element           { return nil }
+
+func (Constructor) Binary(key string, b []byte, btype byte) *Element {
+	size := uint32(1 + len(key) + 1 + 4 + 1 + len(b))
+	buf := make([]byte, size)
+	elem := new(Element)
+	elem.start = 0
+	elem.value = uint32(1 + len(key) + 1)
+	_, err := elements.Binary.Element(0, buf, key, b, btype)
+	if err != nil {
+		panic(err)
+	}
+	elem.data = b
+	return elem
+}
+
+func (Constructor) Undefined(key string) *Element {
+	size := uint32(1 + len(key) + 1)
+	b := make([]byte, size)
+	elem := new(Element)
+	elem.start = 0
+	elem.value = uint32(1 + len(key) + 1)
+	_, err := elements.Byte.Encode(0, b, '\x06')
+	if err != nil {
+		panic(err)
+	}
+	_, err = elements.CString.Encode(1, b, key)
+	if err != nil {
+		panic(err)
+	}
+	elem.data = b
+	return elem
+}
+
+func (Constructor) ObjectID(key string, obj [12]byte) *Element { return nil }
+func (Constructor) Boolean(key string, b bool) *Element        { return nil }
+func (Constructor) DateTime(key string, dt int64) *Element     { return nil }
 func (Constructor) Null(key string) *Element {
 	size := uint32(1 + len(key) + 1)
 	b := make([]byte, size)
