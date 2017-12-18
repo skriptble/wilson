@@ -2,7 +2,6 @@ package bson
 
 import (
 	"bytes"
-	"encoding/binary"
 	"errors"
 	"io"
 	"sort"
@@ -14,25 +13,32 @@ var ErrInvalidReadOnlyDocument = errors.New("Invalid read-only document")
 var ErrInvalidKey = errors.New("invalid document key")
 var ErrInvalidLength = errors.New("document length is invalid")
 var ErrEmptyKey = errors.New("empty key provided")
+var ErrNilElement = errors.New("nil Element provided")
+var ErrInvalidDepthTraversal = errors.New("Invalid depth traversal")
+var ErrElementNotFound = errors.New("Element not found")
+var ErrOutOfBounds = errors.New("Out of bounds")
 
+// Document is a mutable ordered map that compactly represents a BSON document.
 type Document struct {
-	// TODO(skriptble): I'm not sure how useful this is, but I'm having trouble
-	// justifying adding an error to the return value of the Append and Prepend
-	// methods since there is only a single failure case, i.e. a nil element
-	// provided. If there is a nil element 4 elements into an 8 element array
-	// this seems like a severe application error and there doesn't seem to be
-	// a general way to handle that. This seems to support a panic if there is
-	// a nil. This bool would allow users to explicitly exempt out of that
-	// behavior.
+	// The default behavior or Append, Prepend, and Replace is to panic on the
+	// insertion of a nil element. Setting IgnoreNilInsert to true will instead
+	// silently ignore any nil parameters to these methods.
 	IgnoreNilInsert bool
 	elems           []*Element
 	index           []uint32
 }
 
-func NewDocument() *Document {
-	return new(Document)
+// NewDocument creates an empty Document. The numberOfElems parameter will
+// preallocate the underlying storage which can prevent extra allocations.
+func NewDocument(numberOfElems uint) *Document {
+	return &Document{
+		elems: make([]*Element, 0, numberOfElems),
+		index: make([]uint32, 0, numberOfElems),
+	}
 }
 
+// ReadDocument will create a Document using the provided slice of bytes. If the
+// slice of bytes is not a valid BSON document, this method will return an error.
 func ReadDocument(b []byte) (*Document, error) {
 	var doc = new(Document)
 	err := doc.UnmarshalBSON(b)
@@ -42,14 +48,14 @@ func ReadDocument(b []byte) (*Document, error) {
 	return doc, nil
 }
 
-// TODO(skriptble): Perhaps we should let the user pass in a []string and put
-// as many keys as we can inside?
-// TODO(skriptble): Should we even bother getting recursive keys? This seems
-// like an edge case but maybe not.
+// Keys returns all of the element keys for this document. If recursive is true,
+// this method will also return the keys of any subdocuments or arrays.
 func (d *Document) Keys(recursive bool) (Keys, error) {
 	return d.recursiveKeys(recursive)
 }
 
+// recursiveKeys handles the recursion case for retrieving all of a Document's
+// keys.
 func (d *Document) recursiveKeys(recursive bool, prefix ...string) (Keys, error) {
 	ks := make(Keys, 0, len(d.elems))
 	for _, elem := range d.elems {
@@ -58,6 +64,8 @@ func (d *Document) recursiveKeys(recursive bool, prefix ...string) (Keys, error)
 		if !recursive {
 			continue
 		}
+		// TODO(skriptble): Should we support getting the keys of a code with
+		// scope document?
 		switch elem.Type() {
 		case '\x03':
 			subprefix := append(prefix, key)
@@ -79,7 +87,11 @@ func (d *Document) recursiveKeys(recursive bool, prefix ...string) (Keys, error)
 }
 
 // Appends each element to the document, in order. If a nil element is passed
-// as a parameter and IgnoreNilInsert is set to false, this method will panic.
+// as a parameter this method will panic. To change this behavior to silently
+// ignore a nil element, set IgnoreNilInsert to true on the Document.
+//
+// If a nil element is inserted and this method panics, it does not remove the
+// previously added elements.
 func (d *Document) Append(elems ...*Element) *Document {
 	for _, elem := range elems {
 		if elem == nil {
@@ -88,7 +100,7 @@ func (d *Document) Append(elems ...*Element) *Document {
 			}
 			// TODO(skriptble): Maybe Append and Prepend should return an error
 			// instead of panicking here.
-			panic(errors.New("nil Element provided"))
+			panic(ErrNilElement)
 		}
 		d.elems = append(d.elems, elem)
 		i := sort.Search(len(d.index), func(i int) bool {
@@ -107,7 +119,11 @@ func (d *Document) Append(elems ...*Element) *Document {
 }
 
 // Prepends each element to the document, in order. If a nil element is passed
-// as a parameter and IgnoreNilInsert is set to false, this method will panic.
+// as a parameter this method will panic. To change this behavior to silently
+// ignore a nil element, set IgnoreNilInsert to true on the Document.
+//
+// If a nil element is inserted and this method panics, it does not remove the
+// previously added elements.
 func (d *Document) Prepend(elems ...*Element) *Document {
 	// In order to insert the prepended elements in order we need to make space
 	// at the front of the elements slice.
@@ -130,7 +146,7 @@ func (d *Document) Prepend(elems ...*Element) *Document {
 				d.elems[len(d.elems)-1] = nil
 				d.elems = d.elems[:len(d.elems)-1]
 			}
-			panic(errors.New("nil Element provided"))
+			panic(ErrNilElement)
 		}
 		remaining--
 		d.elems[idx] = elem
@@ -149,26 +165,91 @@ func (d *Document) Prepend(elems ...*Element) *Document {
 	return d
 }
 
+// Replaces the elements of a document. If an element with a matching key is
+// found, the element will be replaced with the one provided. If the document
+// does not have an element with that key, the element is appended to the
+// document instead. If a nil element is passed as a parameter this method will
+// panic. To change this behavior to silently ignore a nil element, set
+// IgnoreNilInsert to true on the Document.
+//
+// If a nil element is inserted and this method panics, it does not remove the
+// previously added elements.
+//
+// TODO(skriptble): Do we need to panic on a nil element? Semantically, if you
+// ask to replace an element in the document with a nil element, you aren't
+// asking for anything to be done.
 func (d *Document) Replace(elems ...*Element) *Document {
+	for _, elem := range elems {
+		if elem == nil {
+			if d.IgnoreNilInsert {
+				continue
+			}
+			panic(ErrNilElement)
+		}
+		key := elem.Key() + "\x00"
+		i := sort.Search(len(d.index), func(i int) bool { return bytes.Compare(d.keyFromIndex(i), []byte(key)) >= 0 })
+		if i < len(d.index) && bytes.Compare(d.keyFromIndex(i), []byte(key)) == 0 {
+			d.elems[i] = elem
+			continue
+		}
+		d.elems = append(d.elems, elem)
+		position := uint32(len(d.elems) - 1)
+		if i < len(d.index) {
+			d.index = append(d.index, 0)
+			copy(d.index[i+1:], d.index[i:])
+			d.index[i] = position
+		} else {
+			d.index = append(d.index, position)
+		}
+	}
 	return d
 }
 
-// TODO: Do we really need an error here? It doesn't seem possible to insert a nil element.
+// Lookup searches the document and potentially subdocuments or arrays for the
+// provided key. Each key provided to this method represents a layer of depth.
 func (d *Document) Lookup(key ...string) (*Element, error) {
 	if len(key) == 0 {
 		return nil, ErrEmptyKey
 	}
+	var elem *Element
+	var err error
 	first := []byte(key[0] + "\x00")
 	i := sort.Search(len(d.index), func(i int) bool { return bytes.Compare(d.keyFromIndex(i), first) >= 0 })
 	if i < len(d.index) && bytes.Compare(d.keyFromIndex(i), first) == 0 {
-		return d.elems[d.index[i]], nil
+		elem = d.elems[d.index[i]]
+		if len(key) == 1 {
+			return elem, nil
+		}
+		switch elem.Type() {
+		case '\x03':
+			elem, err = elem.Document().Lookup(key[1:]...)
+		case '\x04':
+			elem, err = elem.Array().Document.Lookup(key[1:]...)
+		default:
+			// TODO(skriptble): This error message should be more clear, e.g.
+			// include information about what depth was reached, what the
+			// incorrect type was, etc...
+			err = ErrInvalidDepthTraversal
+		}
 	}
-	return nil, errors.New("Not found")
+	if err != nil {
+		return nil, err
+	}
+	if elem == nil {
+		// TODO(skriptble): This should also be a clearer error message.
+		// Preferably we should track the depth at which the key was not found.
+		return nil, ErrElementNotFound
+	}
+	return elem, nil
 }
 
-// Delete will delete the key from the Document. The deleted element is
+// Deletes the key from the Document. The deleted element is
 // returned. If the key does not exist, then nil is returned and the delete is
-// a no-op.
+// a no-op. The same is true if something along the depth tree does not exist
+// or is not a traversable type.
+//
+// TODO(skriptble): This method differs from Lookup when it comes to errors.
+// Should this method return errors to be consistent?
 func (d *Document) Delete(key ...string) *Element {
 	if len(key) == 0 {
 		return nil
@@ -198,15 +279,23 @@ func (d *Document) Delete(key ...string) *Element {
 	return elem
 }
 
+// ElementAt retrieves the element at the given index in a Document.
+//
+// TODO(skriptble): This method could be variadic and return the element at the
+// provided depth.
 func (d *Document) ElementAt(index uint) (*Element, error) {
 	if int(index) >= len(d.elems) {
-		return nil, errors.New("Out of bounds")
+		return nil, ErrOutOfBounds
 	}
 	return d.elems[index], nil
 }
 
-func (d *Document) Iterator() *Iterator {
-	return nil
+// Iterator creates an Iterator for this document and returns it.
+//
+// TODO(skriptble): Do we need this method? It will just call NewIterator(d)
+// which seems like something users can easily do.
+func (d *Document) Iterator() (*Iterator, error) {
+	return NewIterator(d)
 }
 
 // Combine will take the keys from the provided document and append them onto
@@ -253,7 +342,12 @@ func (d *Document) validate(currentDepth, maxDepth uint32) (uint32, error) {
 
 // WriteTo implements the io.WriterTo interface.
 func (d *Document) WriteTo(w io.Writer) (int64, error) {
-	return d.WriteDocument(0, w)
+	b, err := d.MarshalBSON()
+	if err != nil {
+		return 0, err
+	}
+	n, err := w.Write(b)
+	return int64(n), err
 }
 
 // WriteDocument will serialize this document to the provided writer beginning
@@ -331,40 +425,9 @@ func (d *Document) UnmarshalBSON(b []byte) error {
 	//   - Update the index with the key of the element
 	//   TODO: Maybe do 2 pass and alloc the elems and index once?
 	// 		   We should benchmark 2 pass vs multiple allocs for growing the slice
-	if len(b) < 5 {
-		return ErrTooSmall
-	}
-	givenLength := int32(binary.LittleEndian.Uint32(b[0:4]))
-	if len(b) < int(givenLength) {
-		return ErrInvalidLength
-	}
-	var pos uint32 = 4
-	var elemStart, elemValStart uint32
-	var elem *Element
-	for {
-		if int(pos) >= len(b) {
-			return ErrInvalidReadOnlyDocument
-		}
-		if b[pos] == '\x00' {
-			break
-		}
-		elemStart = pos
-		pos++
-		n, err := keyLength(pos, b)
-		pos += n
-		if err != nil {
-			return err
-		}
-		elem = new(Element)
-		elemValStart = pos
-		elem.start = elemStart
-		elem.value = elemValStart
-		elem.data = b
-		n, err = elem.validateValue(true)
-		pos += n
-		if err != nil {
-			return err
-		}
+	_, err := Reader(b).readElements(func(relem *ReaderElement) error {
+		elem := new(Element)
+		elem.ReaderElement = *relem
 		d.elems = append(d.elems, elem)
 		i := sort.Search(len(d.index), func(i int) bool {
 			return bytes.Compare(
@@ -377,29 +440,30 @@ func (d *Document) UnmarshalBSON(b []byte) error {
 		} else {
 			d.index = append(d.index, uint32(len(d.elems)-1))
 		}
-		pos++
-	}
-	return nil
+		return nil
+	})
+	return err
 }
 
 // ReadFrom will read one BSON document from the given io.Reader.
 func (d *Document) ReadFrom(r io.Reader) (int64, error) {
-	return 0, nil
-}
-
-// keyLength attempts to read a c style string starting at pos from the byte
-// slice b. This method returns the number of bytes read and an error.
-func keyLength(pos uint32, b []byte) (uint32, error) {
-	// Read a CString, return the length, including the '\x00'
-	var total uint32 = 0
-	for ; pos < uint32(len(b)) && b[pos] != '\x00'; pos++ {
-		total++
+	var total int64
+	sizeBuf := make([]byte, 4)
+	n, err := io.ReadFull(r, sizeBuf)
+	total += int64(n)
+	if err != nil {
+		return total, err
 	}
-	if pos == uint32(len(b)) || b[pos] != '\x00' {
-		return total, ErrInvalidKey
+	givenLength := readi32(sizeBuf)
+	b := make([]byte, givenLength)
+	copy(b[0:4], sizeBuf)
+	n, err = io.ReadFull(r, b[4:])
+	total += int64(n)
+	if err != nil {
+		return total, err
 	}
-	total++
-	return total, nil
+	err = d.UnmarshalBSON(b)
+	return total, err
 }
 
 // keyFromIndex returns the key for the element. The idx parameter is the

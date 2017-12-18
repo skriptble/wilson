@@ -3,6 +3,10 @@ package bson
 type Iterator struct {
 }
 
+func NewIterator(d *Document) (*Iterator, error) {
+	return nil, nil
+}
+
 func (itr *Iterator) Next() bool {
 	return false
 }

@@ -4,8 +4,11 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"reflect"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestDocument(t *testing.T) {
@@ -58,15 +61,58 @@ func TestDocument(t *testing.T) {
 		})
 		testCases := []struct {
 			name string
-		}{}
+			b    []byte
+			want *Document
+			err  error
+		}{
+			{"empty document", []byte{'\x05', '\x00', '\x00', '\x00', '\x00'}, &Document{}, nil},
+		}
 
 		for _, tc := range testCases {
-			t.Run(tc.name, func(t *testing.T) {})
+			t.Run(tc.name, func(t *testing.T) {
+				got, err := ReadDocument(tc.b)
+				if err != tc.err {
+					t.Errorf("Did not get expected error. got %v; want %v", err, tc.err)
+				}
+				if diff := cmp.Diff(got, tc.want, cmp.AllowUnexported(Document{})); diff != "" {
+					t.Errorf("Documents differ: (-got +want)\n%s", diff)
+				}
+			})
 		}
 	})
-	t.Run("Walk", func(t *testing.T) {})
 	t.Run("Keys", testDocumentKeys)
 	t.Run("Append", func(t *testing.T) {
+		t.Run("Nil Insert", func(t *testing.T) {
+			func() {
+				defer func() {
+					r := recover()
+					if r != ErrNilElement {
+						t.Errorf("Did not received expected error from panic. got %v; want %v", r, ErrNilElement)
+					}
+				}()
+				d := NewDocument(0)
+				d.Append(nil)
+			}()
+		})
+		t.Run("Ignore Nil Insert", func(t *testing.T) {
+			func() {
+				defer func() {
+					r := recover()
+					if r != nil {
+						t.Errorf("Recieved unexpected panic from nil insert. got %v; want %v", r, nil)
+					}
+				}()
+				want := NewDocument(0)
+				want.IgnoreNilInsert = true
+
+				got := NewDocument(0)
+				got.IgnoreNilInsert = true
+				got.Append(nil)
+				if diff := cmp.Diff(got, want, cmp.AllowUnexported(Document{})); diff != "" {
+					t.Errorf("Documents differ: (-got +want)\n%s", diff)
+				}
+			}()
+		})
 		testCases := []struct {
 			name  string
 			elems [][]*Element
@@ -78,7 +124,7 @@ func TestDocument(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				d := NewDocument()
+				d := NewDocument(0)
 				for _, elems := range tc.elems {
 					d.Append(elems...)
 				}
@@ -93,6 +139,63 @@ func TestDocument(t *testing.T) {
 		}
 	})
 	t.Run("Prepend", func(t *testing.T) {
+		t.Run("Nil Insert", func(t *testing.T) {
+			testCases := []struct {
+				name  string
+				elems []*Element
+				want  *Document
+			}{
+				{"first element nil", []*Element{nil}, &Document{elems: make([]*Element, 0), index: make([]uint32, 0)}},
+			}
+
+			for _, tc := range testCases {
+				var got *Document
+				func() {
+					defer func() {
+						r := recover()
+						if r != ErrNilElement {
+							t.Errorf("Did not received expected error from panic. got %v; want %v", r, ErrNilElement)
+						}
+						if diff := cmp.Diff(got, tc.want, cmp.AllowUnexported(Document{})); diff != "" {
+							t.Errorf("Documents differ: (-got +want)\n%s", diff)
+						}
+					}()
+					got = NewDocument(0)
+					got.Prepend(tc.elems...)
+				}()
+			}
+		})
+		t.Run("Ignore Nil Insert", func(t *testing.T) {
+			testCases := []struct {
+				name  string
+				elems []*Element
+				want  *Document
+			}{
+				{"first element nil", []*Element{nil},
+					&Document{
+						IgnoreNilInsert: true,
+						elems:           make([]*Element, 0), index: make([]uint32, 0)},
+				},
+			}
+
+			for _, tc := range testCases {
+				var got *Document
+				func() {
+					defer func() {
+						r := recover()
+						if r != nil {
+							t.Errorf("Did not received expected error from panic. got %v; want %v", r, nil)
+						}
+						if diff := cmp.Diff(got, tc.want, cmp.AllowUnexported(Document{})); diff != "" {
+							t.Errorf("Documents differ: (-got +want)\n%s", diff)
+						}
+					}()
+					got = NewDocument(0)
+					got.IgnoreNilInsert = true
+					got.Prepend(tc.elems...)
+				}()
+			}
+		})
 		testCases := []struct {
 			name  string
 			elems [][]*Element
@@ -104,7 +207,7 @@ func TestDocument(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				d := NewDocument()
+				d := NewDocument(0)
 				for _, elems := range tc.elems {
 					d.Prepend(elems...)
 				}
@@ -118,7 +221,104 @@ func TestDocument(t *testing.T) {
 			})
 		}
 	})
+	t.Run("Replace", func(t *testing.T) {
+		t.Run("Nil Insert", func(t *testing.T) {
+			testCases := []struct {
+				name  string
+				elems []*Element
+				want  *Document
+			}{
+				{"first element nil", []*Element{nil}, &Document{elems: make([]*Element, 0), index: make([]uint32, 0)}},
+			}
+
+			for _, tc := range testCases {
+				var got *Document
+				func() {
+					defer func() {
+						r := recover()
+						if r != ErrNilElement {
+							t.Errorf("Did not receive expected error from panic. got %v; want %v", r, ErrNilElement)
+						}
+						if diff := cmp.Diff(got, tc.want, cmp.AllowUnexported(Document{})); diff != "" {
+							t.Errorf("Documents differ: (-got +want)\n%s", diff)
+						}
+					}()
+					got = NewDocument(0)
+					got.Replace(tc.elems...)
+				}()
+			}
+		})
+		t.Run("Ignore Nil Insert", func(t *testing.T) {
+			testCases := []struct {
+				name  string
+				elems []*Element
+				want  *Document
+			}{
+				{"first element nil", []*Element{nil},
+					&Document{
+						IgnoreNilInsert: true,
+						elems:           make([]*Element, 0), index: make([]uint32, 0)},
+				},
+			}
+
+			for _, tc := range testCases {
+				var got *Document
+				func() {
+					defer func() {
+						r := recover()
+						if r != nil {
+							t.Errorf("Did not received expected error from panic. got %v; want %v", r, nil)
+						}
+						if diff := cmp.Diff(got, tc.want, cmp.AllowUnexported(Document{})); diff != "" {
+							t.Errorf("Documents differ: (-got +want)\n%s", diff)
+						}
+					}()
+					got = NewDocument(0)
+					got.IgnoreNilInsert = true
+					got.Replace(tc.elems...)
+				}()
+			}
+		})
+		testCases := []struct {
+			name  string
+			d     *Document
+			elems []*Element
+			want  *Document
+		}{
+			{"first", (&Document{}).Append(C.Double("x", 3.14)), []*Element{C.Double("x", 3.14159)},
+				(&Document{}).Append(C.Double("x", 3.14159)),
+			},
+			{"second", (&Document{}).Append(C.Double("x", 3.14159), C.String("y", "z")),
+				[]*Element{C.Double("y", 1.2345)},
+				(&Document{}).Append(C.Double("x", 3.14159), C.Double("y", 1.2345)),
+			},
+			{"append", (&Document{}).Append(C.Null("x")),
+				[]*Element{C.Null("y")},
+				(&Document{}).Append(C.Null("x"), C.Null("y")),
+			},
+			{"append-in-middle", (&Document{}).Append(C.Null("w"), C.Null("y"), C.Null("z")),
+				[]*Element{C.Null("x")},
+				(&Document{}).Append(C.Null("w"), C.Null("y"), C.Null("z"), C.Null("x")),
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				got := tc.d.Replace(tc.elems...)
+				if diff := cmp.Diff(got, tc.want, cmp.AllowUnexported(Document{}, Element{}, ReaderElement{})); diff != "" {
+					t.Errorf("Documents differ: (-got +want)\n%s", diff)
+				}
+			})
+		}
+	})
 	t.Run("Lookup", func(t *testing.T) {
+		t.Run("empty key", func(t *testing.T) {
+			d := NewDocument(0)
+			_, err := d.Lookup()
+			if err != ErrEmptyKey {
+				t.Errorf("Empty key lookup did not return expected result. got %v; want %v", err, ErrEmptyKey)
+			}
+		})
 		testCases := []struct {
 			name string
 			d    *Document
@@ -127,7 +327,20 @@ func TestDocument(t *testing.T) {
 			err  error
 		}{
 			{"first", (&Document{}).Append(C.Null("x")), []string{"x"},
-				&Element{ReaderElement: ReaderElement{start: 0, value: 3}}, nil},
+				&Element{ReaderElement: ReaderElement{start: 0, value: 3}}, nil,
+			},
+			{"depth-one", (&Document{}).Append(C.SubDocumentFromElements("x", C.Null("y"))),
+				[]string{"x", "y"},
+				&Element{ReaderElement: ReaderElement{start: 0, value: 3}}, nil,
+			},
+			{"invalid-depth-traversal", (&Document{}).Append(C.Null("x")),
+				[]string{"x", "y"},
+				nil, ErrInvalidDepthTraversal,
+			},
+			{"not-found", (&Document{}).Append(C.Null("x")),
+				[]string{"y"},
+				nil, ErrElementNotFound,
+			},
 		}
 
 		for _, tc := range testCases {
@@ -143,22 +356,268 @@ func TestDocument(t *testing.T) {
 		}
 	})
 	t.Run("Delete", func(t *testing.T) {
+		t.Run("empty key", func(t *testing.T) {
+			d := NewDocument(0)
+			var want *Element = nil
+			got := d.Delete()
+			if got != want {
+				t.Errorf("Delete should return nil element when deleting with empty key", got, want)
+			}
+		})
 		testCases := []struct {
 			name string
-			doc  *Document
+			d    *Document
 			key  []string
-			want []byte
-		}{}
+			want *Element
+		}{
+			{"first", (&Document{}).Append(C.Null("x")), []string{"x"},
+				&Element{ReaderElement: ReaderElement{start: 0, value: 3}},
+			},
+			{"depth-one", (&Document{}).Append(C.SubDocumentFromElements("x", C.Null("y"))),
+				[]string{"x", "y"},
+				&Element{ReaderElement: ReaderElement{start: 0, value: 3}},
+			},
+			{"invalid-depth-traversal", (&Document{}).Append(C.Null("x")),
+				[]string{"x", "y"},
+				nil,
+			},
+			{"not-found", (&Document{}).Append(C.Null("x")),
+				[]string{"y"},
+				nil,
+			},
+		}
 
 		for _, tc := range testCases {
-			t.Run(tc.name, func(t *testing.T) {})
+			t.Run(tc.name, func(t *testing.T) {
+				got := tc.d.Delete(tc.key...)
+				if !elementEqual(got, tc.want) {
+					t.Errorf("Returned element does not match expected element. got %v; want %v", got, tc.want)
+				}
+			})
 		}
 	})
-	t.Run("Update", func(t *testing.T) {})
-	t.Run("Err", func(t *testing.T) {})
-	t.Run("ElementAt", func(t *testing.T) {})
+	t.Run("ElementAt", func(t *testing.T) {
+		t.Run("Out of bounds", func(t *testing.T) {
+			d := NewDocument(3)
+			d.Append(C.Null("x"), C.Null("y"), C.Null("z"))
+			_, err := d.ElementAt(3)
+			if err != ErrOutOfBounds {
+				t.Errorf("Out of bounds should be returned when accessing element beyond end of document. got %v; want %v", err, ErrOutOfBounds)
+			}
+		})
+		testCases := []struct {
+			name  string
+			elems []*Element
+			index uint
+			want  *Element
+		}{
+			{"first", []*Element{C.Null("x"), C.Null("y"), C.Null("z")}, 0, C.Null("x")},
+			{"second", []*Element{C.Null("x"), C.Null("y"), C.Null("z")}, 1, C.Null("y")},
+			{"third", []*Element{C.Null("x"), C.Null("y"), C.Null("z")}, 2, C.Null("z")},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				d := NewDocument(uint(len(tc.elems))).Append(tc.elems...)
+				got, err := d.ElementAt(tc.index)
+				if err != nil {
+					t.Errorf("Unexpected error from ElementAt: %s", err)
+				}
+				if diff := cmp.Diff(got, tc.want, cmp.AllowUnexported(Element{}, ReaderElement{})); diff != "" {
+					t.Errorf("Documents differ: (-got +want)\n%s", diff)
+				}
+			})
+		}
+	})
 	t.Run("Iterator", func(t *testing.T) {})
 	t.Run("Combine", func(t *testing.T) {})
+	t.Run("Reset", func(t *testing.T) {
+		d := NewDocument(5).Append(C.Null("a"), C.Null("b"), C.Null("c"), C.Null("d"), C.Null("e"))
+		gotSlc := d.elems
+		d.Reset()
+		wantSlc := make([]*Element, 5)
+		if diff := cmp.Diff(gotSlc, wantSlc, cmp.AllowUnexported(Element{})); diff != "" {
+			t.Error("Pointers to elements should be cleared on Reset.")
+			t.Errorf("Element slices differ: (-got +want)\n%s", diff)
+		}
+		if len(d.elems) != 0 {
+			t.Errorf("Expected length of elements slice to be 0. got %d; want %d", len(d.elems), 0)
+		}
+		if len(d.index) != 0 {
+			t.Errorf("Expected length of index slice to be 0. got %d; want %d", len(d.elems), 0)
+		}
+	})
+	t.Run("WriteTo", func(t *testing.T) {
+		testCases := []struct {
+			name string
+			d    *Document
+			want []byte
+			n    int64
+			err  error
+		}{
+			{"empty-document", NewDocument(0), []byte{'\x05', '\x00', '\x00', '\x00', '\x00'}, 5, nil},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				var buf bytes.Buffer
+				n, err := tc.d.WriteTo(&buf)
+				if n != tc.n {
+					t.Errorf("Number of bytes written does not match. got %d; want %d", n, tc.n)
+				}
+				if err != tc.err {
+					t.Errorf("Returned error does not match expected error. got %s; want %s", err, tc.err)
+				}
+				if diff := cmp.Diff(buf.Bytes(), tc.want); diff != "" {
+					t.Errorf("Written bytes differ: (-got +want)\n%s", diff)
+				}
+			})
+		}
+	})
+	t.Run("WriteDocument", func(t *testing.T) {
+		t.Run("invalid-document", func(t *testing.T) {
+			d := NewDocument(1).Append(C.Double("", 3.14159))
+			d.elems[0].data = d.elems[0].data[:3]
+			b := make([]byte, 15)
+			_, err := d.WriteDocument(0, b)
+			if err != ErrTooSmall {
+				t.Errorf("Expected error not returned. got %s; want %s", err, ErrTooSmall)
+			}
+		})
+		t.Run("[]byte-too-small", func(t *testing.T) {
+			d := NewDocument(1).Append(C.Double("", 3.14159))
+			b := make([]byte, 5)
+			_, err := d.WriteDocument(0, b)
+			if err != ErrTooSmall {
+				t.Errorf("Expected error not returned. got %s; want %s", err, ErrTooSmall)
+			}
+		})
+		t.Run("invalid-writer", func(t *testing.T) {
+			d := NewDocument(1).Append(C.Double("", 3.14159))
+			var buf bytes.Buffer
+			_, err := d.WriteDocument(0, buf)
+			if err != ErrInvalidWriter {
+				t.Errorf("Expected error not returned. got %s; want %s", err, ErrTooSmall)
+			}
+		})
+
+		testCases := []struct {
+			name  string
+			d     *Document
+			start uint
+			want  []byte
+			n     int64
+			err   error
+		}{
+			{"empty-document", NewDocument(0), 0, []byte{'\x05', '\x00', '\x00', '\x00', '\x00'}, 5, nil},
+		}
+
+		for _, tc := range testCases {
+			b := make([]byte, tc.n)
+			n, err := tc.d.WriteDocument(tc.start, b)
+			if n != tc.n {
+				t.Errorf("Number of bytes written does not match. got %d; want %d", n, tc.n)
+			}
+			if err != tc.err {
+				t.Errorf("Returned error does not match expected error. got %s; want %s", err, tc.err)
+			}
+			if diff := cmp.Diff(b, tc.want); diff != "" {
+				t.Errorf("Written bytes differ: (-got +want)\n%s", diff)
+			}
+		}
+	})
+	t.Run("MarshalBSON", func(t *testing.T) {})
+	t.Run("writeByteSlice", func(t *testing.T) {})
+	t.Run("UnmarshalBSON", func(t *testing.T) {
+		testCases := []struct {
+			name string
+			b    []byte
+			want *Document
+			err  error
+		}{
+			{"four",
+				[]byte{
+					'\x11', '\x00', '\x00', '\x00',
+					'\x0A', 'x', '\x00', '\x0A', 'y', '\x00', '\x0A', 'z', '\x00', '\x0A', 'w', '\x00',
+					'\x00',
+				},
+				NewDocument(4).Append(C.Null("x"), C.Null("y"), C.Null("z"), C.Null("w")),
+				nil,
+			},
+		}
+
+		for _, tc := range testCases {
+			d := NewDocument(0)
+			err := d.UnmarshalBSON(tc.b)
+			if err != tc.err {
+				t.Errorf("Expected error not returned. got %s; want %s", err, tc.err)
+			}
+			if diff := cmp.Diff(d, tc.want, cmp.Comparer(documentComparer)); diff != "" {
+				t.Errorf("Documents differ: (-got +want)\n%s", diff)
+				t.Errorf("\n%v\n%v", d, tc.want)
+			}
+
+		}
+	})
+	t.Run("ReadFrom", func(t *testing.T) {
+		t.Run("[]byte-too-small", func(t *testing.T) {
+			var buf bytes.Buffer
+			_, err := NewDocument(0).ReadFrom(&buf)
+			if err != io.EOF {
+				t.Errorf("Expected error not returned. got %s; want %s", err, io.EOF)
+			}
+		})
+		t.Run("incorrect-length", func(t *testing.T) {
+			var buf bytes.Buffer
+			err := binary.Write(&buf, binary.LittleEndian, uint32(10))
+			if err != nil {
+				t.Errorf("Unexepected error while writing length: %s", err)
+			}
+			_, err = NewDocument(0).ReadFrom(&buf)
+			if err != io.EOF {
+				t.Errorf("Expected error not returned. got %s; want %s", err, io.EOF)
+			}
+		})
+		t.Run("invalid-document", func(t *testing.T) {
+			var buf bytes.Buffer
+			_, err := (&buf).Write([]byte{'\x07', '\x00', '\x00', '\x00', '\x01', '\x00', '\x00'})
+			if err != nil {
+				t.Errorf("Unexpected error while writing document to buffer: %s", err)
+			}
+			_, err = NewDocument(0).ReadFrom(&buf)
+			if err != ErrTooSmall {
+				t.Errorf("Expected error not returned. got %s; want %s", err, ErrTooSmall)
+			}
+		})
+		testCases := []struct {
+			name string
+			b    []byte
+			want *Document
+			n    int64
+			err  error
+		}{
+			{"empty-document", []byte{'\x05', '\x00', '\x00', '\x00', '\x00'}, NewDocument(0), 5, nil},
+		}
+
+		for _, tc := range testCases {
+			var buf bytes.Buffer
+			_, err := (&buf).Write(tc.b)
+			if err != nil {
+				t.Errorf("Unexpected error while writing document to buffer: %s", err)
+			}
+			d := NewDocument(0)
+			n, err := d.ReadFrom(&buf)
+			if n != tc.n {
+				t.Errorf("Number of bytes written does not match. got %d; want %d", n, tc.n)
+			}
+			if err != tc.err {
+				t.Errorf("Returned error does not match expected error. got %s; want %s", err, tc.err)
+			}
+			if diff := cmp.Diff(d, tc.want, cmp.AllowUnexported(Document{}, ReaderElement{})); diff != "" {
+				t.Errorf("Written bytes differ: (-got +want)\n%s", diff)
+			}
+		}
+	})
 }
 
 func testDocumentKeys(t *testing.T) {
@@ -292,7 +751,7 @@ func ExampleDocument() {
 	internalVersion := "1234567"
 
 	f := func(appName string) *Document {
-		doc := NewDocument()
+		doc := NewDocument(4)
 		doc.Append(
 			C.SubDocumentFromElements("driver",
 				C.String("name", "mongo-go-driver"),
@@ -323,7 +782,7 @@ func BenchmarkDocument(b *testing.B) {
 	b.ReportAllocs()
 	internalVersion := "1234567"
 	for i := 0; i < b.N; i++ {
-		doc := NewDocument()
+		doc := NewDocument(4)
 		doc.Append(
 			C.SubDocumentFromElements("driver",
 				C.String("name", "mongo-go-driver"),
@@ -340,11 +799,41 @@ func BenchmarkDocument(b *testing.B) {
 }
 
 func elementEqual(e1, e2 *Element) bool {
+	if e1 == nil && e2 == nil {
+		return true
+	}
+	if e1 == nil || e2 == nil {
+		return false
+	}
 	if e1.start != e2.start {
 		return false
 	}
 	if e1.value != e2.value {
 		return false
+	}
+	return true
+}
+
+func documentComparer(d1, d2 *Document) bool {
+	if (len(d1.elems) != len(d2.elems)) || (len(d1.index) != len(d2.index)) {
+		return false
+	}
+	for index := range d1.elems {
+		b1, err := d1.elems[index].MarshalBSON()
+		if err != nil {
+			return false
+		}
+		b2, err := d2.elems[index].MarshalBSON()
+		if err != nil {
+			return false
+		}
+		if !bytes.Equal(b1, b2) {
+			return false
+		}
+
+		if d1.index[index] != d2.index[index] {
+			return false
+		}
 	}
 	return true
 }
