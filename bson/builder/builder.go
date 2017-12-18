@@ -3,8 +3,8 @@ package builder
 import (
 	"errors"
 
-	"github.com/skriptble/wilson/elements"
-	"github.com/skriptble/wilson/parser/ast"
+	"github.com/skriptble/wilson/bson/elements"
+	"github.com/skriptble/wilson/bson/parser/ast"
 )
 
 var ErrTooShort = errors.New("builder: The provided slice's length is too short")

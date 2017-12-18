@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/skriptble/wilson/parser"
-	"github.com/skriptble/wilson/parser/ast"
+	"github.com/skriptble/wilson/bson/parser"
+	"github.com/skriptble/wilson/bson/parser/ast"
 )
 
 type extJsonWriter struct {

@@ -3,7 +3,7 @@ package builder
 import (
 	"strconv"
 
-	"github.com/skriptble/wilson/parser/ast"
+	"github.com/skriptble/wilson/bson/parser/ast"
 )
 
 type ArrayElementer interface {

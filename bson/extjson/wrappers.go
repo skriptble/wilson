@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/skriptble/wilson/bson/builder"
 	"github.com/skriptble/wilson/bson/internal/jsonparser"
-	"github.com/skriptble/wilson/builder"
-	"github.com/skriptble/wilson/parser/ast"
+	"github.com/skriptble/wilson/bson/parser/ast"
 )
 
 type wrapperType byte

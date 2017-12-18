@@ -27,7 +27,7 @@ import (
 	"math"
 	"unsafe"
 
-	"github.com/skriptble/wilson/parser/ast"
+	"github.com/skriptble/wilson/bson/parser/ast"
 )
 
 var ErrInvalidWriter = errors.New("element: Invalid writer provided")

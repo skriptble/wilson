@@ -1,8 +1,8 @@
 package bson
 
 import (
-	"github.com/skriptble/wilson/elements"
-	"github.com/skriptble/wilson/parser/ast"
+	"github.com/skriptble/wilson/bson/elements"
+	"github.com/skriptble/wilson/bson/parser/ast"
 )
 
 var C Constructor

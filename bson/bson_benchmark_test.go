@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	"github.com/10gen/mongo-go-driver/bson"
+	"github.com/skriptble/wilson/bson/builder"
 	"github.com/skriptble/wilson/bson/extjson"
-	"github.com/skriptble/wilson/builder"
 	"github.com/stretchr/testify/require"
 )
 

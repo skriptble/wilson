@@ -7,8 +7,8 @@ import (
 
 	"strconv"
 
+	"github.com/skriptble/wilson/bson/builder"
 	"github.com/skriptble/wilson/bson/internal/jsonparser"
-	"github.com/skriptble/wilson/builder"
 )
 
 type docElementParser func([]byte, []byte, jsonparser.ValueType, int) error

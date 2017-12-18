@@ -7,7 +7,7 @@ import (
 	"io"
 	"sort"
 
-	"github.com/skriptble/wilson/elements"
+	"github.com/skriptble/wilson/bson/elements"
 )
 
 var ErrInvalidReadOnlyDocument = errors.New("Invalid read-only document")

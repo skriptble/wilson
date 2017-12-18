@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/skriptble/wilson/parser/ast"
+	"github.com/skriptble/wilson/bson/parser/ast"
 )
 
 func TestDocumentBuilder(t *testing.T) {
