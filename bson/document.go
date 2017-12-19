@@ -14,6 +14,9 @@ var ErrInvalidKey = errors.New("invalid document key")
 var ErrInvalidLength = errors.New("document length is invalid")
 var ErrEmptyKey = errors.New("empty key provided")
 var ErrNilElement = errors.New("nil Element provided")
+
+// TODO(skriptble): This error message is pretty awful.
+// Please fix.
 var ErrInvalidDepthTraversal = errors.New("Invalid depth traversal")
 var ErrElementNotFound = errors.New("Element not found")
 var ErrOutOfBounds = errors.New("Out of bounds")

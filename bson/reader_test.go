@@ -1,10 +1,13 @@
 package bson
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"reflect"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func ExampleReaderValidate() {
@@ -200,6 +203,48 @@ func TestReader(t *testing.T) {
 		}
 	})
 	t.Run("Lookup", func(t *testing.T) {
+		t.Run("empty-key", func(t *testing.T) {
+			rdr := Reader{'\x05', '\x00', '\x00', '\x00', '\x00'}
+			_, err := rdr.Lookup()
+			if err != ErrEmptyKey {
+				t.Errorf("Empty key lookup did not return expected result. got %v; want %v", err, ErrEmptyKey)
+			}
+		})
+		t.Run("corrupted-subdocument", func(t *testing.T) {
+			rdr := Reader{
+				'\x0D', '\x00', '\x00', '\x00',
+				'\x03', 'x', '\x00',
+				'\x06', '\x00', '\x00', '\x00',
+				'\x01',
+				'\x00',
+				'\x00',
+			}
+			_, err := rdr.Lookup("x", "y")
+			if err != ErrTooSmall {
+				t.Errorf("Empty key lookup did not return expected result. got %v; want %v", err, ErrTooSmall)
+			}
+		})
+		t.Run("corrupted-array", func(t *testing.T) {
+			rdr := Reader{
+				'\x0D', '\x00', '\x00', '\x00',
+				'\x04', 'x', '\x00',
+				'\x06', '\x00', '\x00', '\x00',
+				'\x01',
+				'\x00',
+				'\x00',
+			}
+			_, err := rdr.Lookup("x", "y")
+			if err != ErrTooSmall {
+				t.Errorf("Empty key lookup did not return expected result. got %v; want %v", err, ErrTooSmall)
+			}
+		})
+		t.Run("invalid-traversal", func(t *testing.T) {
+			rdr := Reader{'\x08', '\x00', '\x00', '\x00', '\x0A', 'x', '\x00', '\x00'}
+			_, err := rdr.Lookup("x", "y")
+			if err != ErrInvalidDepthTraversal {
+				t.Errorf("Empty key lookup did not return expected result. got %v; want %v", err, ErrInvalidDepthTraversal)
+			}
+		})
 		testCases := []struct {
 			name string
 			r    Reader
@@ -250,7 +295,50 @@ func TestReader(t *testing.T) {
 			})
 		}
 	})
-	t.Run("ElementAt", func(t *testing.T) {})
+	t.Run("ElementAt", func(t *testing.T) {
+		t.Run("Out of bounds", func(t *testing.T) {
+			rdr := Reader{0xe, 0x0, 0x0, 0x0, 0xa, 0x78, 0x0, 0xa, 0x79, 0x0, 0xa, 0x7a, 0x0, 0x0}
+			_, err := rdr.ElementAt(3)
+			if err != ErrOutOfBounds {
+				t.Errorf("Out of bounds should be returned when accessing element beyond end of document. got %v; want %v", err, ErrOutOfBounds)
+			}
+		})
+		t.Run("Validation Error", func(t *testing.T) {
+			rdr := Reader{0x07, 0x00, 0x00, 0x00, 0x00}
+			_, err := rdr.ElementAt(1)
+			if err != ErrInvalidLength {
+				t.Errorf("Did not receive expected error. got %v; want %v", err, ErrInvalidLength)
+			}
+		})
+		testCases := []struct {
+			name  string
+			rdr   Reader
+			index uint
+			want  *ReaderElement
+		}{
+			{"first",
+				Reader{0xe, 0x0, 0x0, 0x0, 0xa, 0x78, 0x0, 0xa, 0x79, 0x0, 0xa, 0x7a, 0x0, 0x0},
+				0, fromElement(C.Null("x"))},
+			{"second",
+				Reader{0xe, 0x0, 0x0, 0x0, 0xa, 0x78, 0x0, 0xa, 0x79, 0x0, 0xa, 0x7a, 0x0, 0x0},
+				1, fromElement(C.Null("y"))},
+			{"third",
+				Reader{0xe, 0x0, 0x0, 0x0, 0xa, 0x78, 0x0, 0xa, 0x79, 0x0, 0xa, 0x7a, 0x0, 0x0},
+				2, fromElement(C.Null("z"))},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				got, err := tc.rdr.ElementAt(tc.index)
+				if err != nil {
+					t.Errorf("Unexpected error from ElementAt: %s", err)
+				}
+				if diff := cmp.Diff(got, tc.want, cmp.Comparer(readerElementComparer)); diff != "" {
+					t.Errorf("Documents differ: (-got +want)\n%s", diff)
+				}
+			})
+		}
+	})
 	t.Run("Iterator", func(t *testing.T) {})
 }
 
@@ -262,4 +350,24 @@ func readerElementEqual(e1, e2 *ReaderElement) bool {
 		return false
 	}
 	return true
+}
+
+func readerElementComparer(e1, e2 *ReaderElement) bool {
+	b1, err := e1.MarshalBSON()
+	if err != nil {
+		return false
+	}
+	b2, err := e2.MarshalBSON()
+	if err != nil {
+		return false
+	}
+	if !bytes.Equal(b1, b2) {
+		return false
+	}
+
+	return true
+}
+
+func fromElement(e *Element) *ReaderElement {
+	return (*ReaderElement)(&e.ReaderElement)
 }

@@ -55,7 +55,7 @@ func (r Reader) keySize(pos, end uint32) (uint32, error) {
 // key not found.
 func (r Reader) Lookup(key ...string) (*ReaderElement, error) {
 	if len(key) < 1 {
-		return nil, nil
+		return nil, ErrEmptyKey
 	}
 
 	var elem *ReaderElement
@@ -78,9 +78,7 @@ func (r Reader) Lookup(key ...string) (*ReaderElement, error) {
 					elem = e
 					return validateDone
 				default:
-					// TODO(skriptble): This error message is pretty awful.
-					// Please fix.
-					return errors.New("Incorrect type for depth")
+					return ErrInvalidDepthTraversal
 				}
 			}
 			elem = e
@@ -94,9 +92,6 @@ func (r Reader) Lookup(key ...string) (*ReaderElement, error) {
 // ElementAt searches for a retrieves the element at the given index. This
 // method will validate all the elements up to and including the element at
 // the given index.
-//
-// TODO(skriptble): Should this be zero indexed? Prevents the error case and
-// aligns with byte slice style access pattern.
 func (r Reader) ElementAt(index uint) (*ReaderElement, error) {
 	var current uint
 	var elem *ReaderElement
@@ -112,7 +107,7 @@ func (r Reader) ElementAt(index uint) (*ReaderElement, error) {
 		return nil, err
 	}
 	if elem == nil {
-		return nil, errors.New("index out of bounds")
+		return nil, ErrOutOfBounds
 	}
 	return elem, nil
 }

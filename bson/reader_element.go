@@ -234,6 +234,30 @@ func (e *ReaderElement) validateValue(recursive bool) (uint32, error) {
 	return total, nil
 }
 
+// writeByteSlice handles writing this element to a slice of bytes.
+func (e *ReaderElement) writeByteSlice(start uint, size uint32, b []byte) (int64, error) {
+	if len(b) < int(size)+int(start) {
+		return 0, ErrTooSmall
+	}
+	var n int
+	n = copy(b[start:start+uint(size)], e.data[e.start:e.start+size])
+	return int64(n), nil
+}
+
+// MarshalBSON implements the Marshaler interface.
+func (e *ReaderElement) MarshalBSON() ([]byte, error) {
+	size, err := e.Validate()
+	if err != nil {
+		return nil, err
+	}
+	b := make([]byte, size)
+	_, err = e.writeByteSlice(0, size, b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
 // Key returns the key for this element.
 // It panics if e is uninitialized.
 func (e *ReaderElement) Key() string {
