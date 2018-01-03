@@ -87,7 +87,7 @@ func TestElement(t *testing.T) {
 			'\x00',
 		}
 		e := &ReaderElement{start: 4, value: 9, data: buf}
-		binary.LittleEndian.PutUint32(buf[9:13], 3)
+		binary.LittleEndian.PutUint32(buf[9:13], 4)
 		want := "bar"
 		got := e.StringValue()
 		if got != want {
