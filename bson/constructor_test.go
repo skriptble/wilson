@@ -75,7 +75,7 @@ func TestConstructor(t *testing.T) {
 			// key
 			0x66, 0x6f, 0x6f, 0x0,
 		}
-		d := NewDocument()
+		d := NewDocument(1)
 		d.Append(C.String("bar", "baz"))
 
 		expected := &Element{ReaderElement: ReaderElement{start: 0, value: 5, data: buf}, d: d}
@@ -92,7 +92,7 @@ func TestConstructor(t *testing.T) {
 			0x66, 0x6f, 0x6f, 0x0,
 		}
 		e := C.String("bar", "baz")
-		d := NewDocument()
+		d := NewDocument(1)
 		d.Append(e)
 
 		expected := &Element{ReaderElement: ReaderElement{start: 0, value: 5, data: buf}, d: d}
@@ -320,7 +320,7 @@ func TestConstructor(t *testing.T) {
 			// value - code
 			0x76, 0x61, 0x72, 0x20, 0x62, 0x61, 0x72, 0x20, 0x3d, 0x20, 0x78, 0x3b, 0x0,
 		}
-		scope := NewDocument()
+		scope := NewDocument(1)
 		scope.Append(C.Null("x"))
 
 		expected := &Element{ReaderElement: ReaderElement{start: 0, value: 5, data: buf}, d: scope}
