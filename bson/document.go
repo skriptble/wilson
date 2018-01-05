@@ -13,7 +13,8 @@ var ErrInvalidReadOnlyDocument = errors.New("Invalid read-only document")
 var ErrInvalidKey = errors.New("invalid document key")
 var ErrInvalidLength = errors.New("document length is invalid")
 var ErrEmptyKey = errors.New("empty key provided")
-var ErrNilElement = errors.New("nil Element provided")
+var ErrNilElement = errors.New("Element is nil")
+var ErrNilDocument = errors.New("Document is nil")
 
 // TODO(skriptble): This error message is pretty awful.
 // Please fix.
@@ -72,14 +73,14 @@ func (d *Document) recursiveKeys(recursive bool, prefix ...string) (Keys, error)
 		switch elem.Type() {
 		case '\x03':
 			subprefix := append(prefix, key)
-			subkeys, err := elem.Document().recursiveKeys(recursive, subprefix...)
+			subkeys, err := elem.MutableDocument().recursiveKeys(recursive, subprefix...)
 			if err != nil {
 				return nil, err
 			}
 			ks = append(ks, subkeys...)
 		case '\x04':
 			subprefix := append(prefix, key)
-			subkeys, err := elem.Array().recursiveKeys(recursive, subprefix...)
+			subkeys, err := elem.MutableArray().recursiveKeys(recursive, subprefix...)
 			if err != nil {
 				return nil, err
 			}
@@ -225,9 +226,9 @@ func (d *Document) Lookup(key ...string) (*Element, error) {
 		}
 		switch elem.Type() {
 		case '\x03':
-			elem, err = elem.Document().Lookup(key[1:]...)
+			elem, err = elem.MutableDocument().Lookup(key[1:]...)
 		case '\x04':
-			elem, err = elem.Array().Document.Lookup(key[1:]...)
+			elem, err = elem.MutableArray().Document.Lookup(key[1:]...)
 		default:
 			// TODO(skriptble): This error message should be more clear, e.g.
 			// include information about what depth was reached, what the
@@ -272,9 +273,9 @@ func (d *Document) Delete(key ...string) *Element {
 		}
 		switch elem.Type() {
 		case '\x03':
-			elem = elem.Document().Delete(key[1:]...)
+			elem = elem.MutableDocument().Delete(key[1:]...)
 		case '\x04':
-			elem = elem.Array().Document.Delete(key[1:]...)
+			elem = elem.MutableArray().Document.Delete(key[1:]...)
 		default:
 			elem = nil
 		}
@@ -328,7 +329,7 @@ func (d *Document) Validate() (uint32, error) {
 	// Header and Footer
 	var size uint32 = 4 + 1
 	for _, elem := range d.elems {
-		n, err := elem.Validate(true)
+		n, err := elem.Validate()
 		if err != nil {
 			return 0, err
 		}
@@ -428,9 +429,7 @@ func (d *Document) UnmarshalBSON(b []byte) error {
 	//   - Update the index with the key of the element
 	//   TODO: Maybe do 2 pass and alloc the elems and index once?
 	// 		   We should benchmark 2 pass vs multiple allocs for growing the slice
-	_, err := Reader(b).readElements(func(relem *ReaderElement) error {
-		elem := new(Element)
-		elem.ReaderElement = *relem
+	_, err := Reader(b).readElements(func(elem *Element) error {
 		d.elems = append(d.elems, elem)
 		i := sort.Search(len(d.index), func(i int) bool {
 			return bytes.Compare(

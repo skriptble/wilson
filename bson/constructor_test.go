@@ -45,7 +45,7 @@ func TestConstructor(t *testing.T) {
 				0x21, 0x9, 0x40,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 5, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 5, data: buf, d: nil}
 			actual := C.Double("foo", 3.14159)
 
 			requireElementsEqual(t, expected, actual)
@@ -63,7 +63,7 @@ func TestConstructor(t *testing.T) {
 				0x62, 0x61, 0x72, 0x0,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 5, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 5, data: buf, d: nil}
 			actual := C.String("foo", "bar")
 
 			requireElementsEqual(t, expected, actual)
@@ -79,7 +79,7 @@ func TestConstructor(t *testing.T) {
 			d := NewDocument(1)
 			d.Append(C.String("bar", "baz"))
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 5, data: buf}, d: d}
+			expected := &Element{start: 0, value: 5, data: buf, d: d}
 			actual := C.SubDocument("foo", d)
 
 			requireElementsEqual(t, expected, actual)
@@ -96,7 +96,7 @@ func TestConstructor(t *testing.T) {
 			d := NewDocument(1)
 			d.Append(e)
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 5, data: buf}, d: d}
+			expected := &Element{start: 0, value: 5, data: buf, d: d}
 			actual := C.SubDocumentFromElements("foo", e)
 
 			requireElementsEqual(t, expected, actual)
@@ -112,7 +112,7 @@ func TestConstructor(t *testing.T) {
 			d := NewDocument(2)
 			d.Append(AC.String("bar"), AC.Double(-2.7))
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 5, data: buf}, d: d}
+			expected := &Element{start: 0, value: 5, data: buf, d: d}
 			actual := C.Array("foo", d)
 
 			requireElementsEqual(t, expected, actual)
@@ -130,7 +130,7 @@ func TestConstructor(t *testing.T) {
 			d := NewDocument(2)
 			d.Append(e1, e2)
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 5, data: buf}, d: d}
+			expected := &Element{start: 0, value: 5, data: buf, d: d}
 			actual := C.ArrayFromElements("foo", e1, e2)
 
 			requireElementsEqual(t, expected, actual)
@@ -150,7 +150,7 @@ func TestConstructor(t *testing.T) {
 				0x8, 0x6, 0x7, 0x5, 0x3, 0x0, 0x9,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 5, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 5, data: buf, d: nil}
 			actual := C.Binary("foo", []byte{8, 6, 7, 5, 3, 0, 9})
 
 			requireElementsEqual(t, expected, actual)
@@ -172,7 +172,7 @@ func TestConstructor(t *testing.T) {
 				0x8, 0x6, 0x7, 0x5, 0x3, 0x0, 0x9,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 5, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 5, data: buf, d: nil}
 			actual := C.BinaryWithSubtype("foo", []byte{8, 6, 7, 5, 3, 0, 9}, 2)
 
 			requireElementsEqual(t, expected, actual)
@@ -186,7 +186,7 @@ func TestConstructor(t *testing.T) {
 				0x66, 0x6f, 0x6f, 0x0,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 5, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 5, data: buf, d: nil}
 			actual := C.Undefined("foo")
 
 			requireElementsEqual(t, expected, actual)
@@ -202,7 +202,7 @@ func TestConstructor(t *testing.T) {
 				0x5a, 0x15, 0xd0, 0xa4, 0xd5, 0xda, 0xa5, 0xf1, 0x0a, 0x5e, 0x10, 0x89,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 5, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 5, data: buf, d: nil}
 			actual := C.ObjectID(
 				"foo",
 				[12]byte{0x5a, 0x15, 0xd0, 0xa4, 0xd5, 0xda, 0xa5, 0xf1, 0x0a, 0x5e, 0x10, 0x89},
@@ -221,7 +221,7 @@ func TestConstructor(t *testing.T) {
 				0x0,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 5, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 5, data: buf, d: nil}
 			actual := C.Boolean("foo", false)
 
 			requireElementsEqual(t, expected, actual)
@@ -237,7 +237,7 @@ func TestConstructor(t *testing.T) {
 				0x11, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 5, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 5, data: buf, d: nil}
 			actual := C.DateTime("foo", 17)
 
 			requireElementsEqual(t, expected, actual)
@@ -251,7 +251,7 @@ func TestConstructor(t *testing.T) {
 				0x66, 0x6f, 0x6f, 0x0,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 5, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 5, data: buf, d: nil}
 			actual := C.Null("foo")
 
 			requireElementsEqual(t, expected, actual)
@@ -269,7 +269,7 @@ func TestConstructor(t *testing.T) {
 				0x69, 0x0,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 5, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 5, data: buf, d: nil}
 			actual := C.Regex("foo", "bar", "i")
 
 			requireElementsEqual(t, expected, actual)
@@ -289,7 +289,7 @@ func TestConstructor(t *testing.T) {
 				0x5a, 0x15, 0xd0, 0xa4, 0xd5, 0xda, 0xa5, 0xf1, 0x0a, 0x5e, 0x10, 0x89,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 5, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 5, data: buf, d: nil}
 			actual := C.DBPointer(
 				"foo",
 				"bar",
@@ -311,7 +311,7 @@ func TestConstructor(t *testing.T) {
 				0x76, 0x61, 0x72, 0x20, 0x62, 0x61, 0x72, 0x20, 0x3d, 0x20, 0x33, 0x3b, 0x0,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 5, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 5, data: buf, d: nil}
 			actual := C.Javascript("foo", "var bar = 3;")
 
 			requireElementsEqual(t, expected, actual)
@@ -329,7 +329,7 @@ func TestConstructor(t *testing.T) {
 				0x62, 0x61, 0x72, 0x0,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 5, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 5, data: buf, d: nil}
 			actual := C.Symbol("foo", "bar")
 
 			requireElementsEqual(t, expected, actual)
@@ -350,7 +350,7 @@ func TestConstructor(t *testing.T) {
 			scope := NewDocument(1)
 			scope.Append(C.Null("x"))
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 5, data: buf}, d: scope}
+			expected := &Element{start: 0, value: 5, data: buf, d: scope}
 			actual := C.CodeWithScope("foo", "var bar = x;", scope)
 
 			requireElementsEqual(t, expected, actual)
@@ -366,7 +366,7 @@ func TestConstructor(t *testing.T) {
 				0xe5, 0xff, 0xff, 0xff,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 5, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 5, data: buf, d: nil}
 			actual := C.Int32("foo", -27)
 
 			requireElementsEqual(t, expected, actual)
@@ -382,7 +382,7 @@ func TestConstructor(t *testing.T) {
 				0x11, 0x0, 0x0, 0x0, 0x8, 0x0, 0x0, 0x0,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 5, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 5, data: buf, d: nil}
 			actual := C.Timestamp("foo", 8, 17)
 
 			requireElementsEqual(t, expected, actual)
@@ -398,7 +398,7 @@ func TestConstructor(t *testing.T) {
 				0xe5, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 5, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 5, data: buf, d: nil}
 			actual := C.Int64("foo", -27)
 
 			requireElementsEqual(t, expected, actual)
@@ -416,7 +416,7 @@ func TestConstructor(t *testing.T) {
 			}
 			d, _ := ast.ParseDecimal128("-7.50")
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 5, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 5, data: buf, d: nil}
 			actual := C.Decimal128("foo", d)
 
 			requireElementsEqual(t, expected, actual)
@@ -430,7 +430,7 @@ func TestConstructor(t *testing.T) {
 				0x66, 0x6f, 0x6f, 0x0,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 5, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 5, data: buf, d: nil}
 			actual := C.MinKey("foo")
 
 			requireElementsEqual(t, expected, actual)
@@ -444,7 +444,7 @@ func TestConstructor(t *testing.T) {
 				0x66, 0x6f, 0x6f, 0x0,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 5, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 5, data: buf, d: nil}
 			actual := C.MaxKey("foo")
 
 			requireElementsEqual(t, expected, actual)
@@ -463,7 +463,7 @@ func TestConstructor(t *testing.T) {
 				0x21, 0x9, 0x40,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 3, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 3, data: buf, d: nil}
 			actual := AC.Double(3.14159)
 
 			requireElementsEqual(t, expected, actual)
@@ -481,7 +481,7 @@ func TestConstructor(t *testing.T) {
 				0x62, 0x61, 0x72, 0x0,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 3, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 3, data: buf, d: nil}
 			actual := AC.String("bar")
 
 			requireElementsEqual(t, expected, actual)
@@ -497,7 +497,7 @@ func TestConstructor(t *testing.T) {
 			d := NewDocument(1)
 			d.Append(C.String("bar", "baz"))
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 3, data: buf}, d: d}
+			expected := &Element{start: 0, value: 3, data: buf, d: d}
 			actual := AC.Document(d)
 
 			requireElementsEqual(t, expected, actual)
@@ -514,7 +514,7 @@ func TestConstructor(t *testing.T) {
 			d := NewDocument(1)
 			d.Append(e)
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 3, data: buf}, d: d}
+			expected := &Element{start: 0, value: 3, data: buf, d: d}
 			actual := AC.DocumentFromElements(e)
 
 			requireElementsEqual(t, expected, actual)
@@ -530,7 +530,7 @@ func TestConstructor(t *testing.T) {
 			d := NewDocument(2)
 			d.Append(AC.String("bar"), AC.Double(-2.7))
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 3, data: buf}, d: d}
+			expected := &Element{start: 0, value: 3, data: buf, d: d}
 			actual := AC.Array(d)
 
 			requireElementsEqual(t, expected, actual)
@@ -548,7 +548,7 @@ func TestConstructor(t *testing.T) {
 			d := NewDocument(2)
 			d.Append(e1, e2)
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 3, data: buf}, d: d}
+			expected := &Element{start: 0, value: 3, data: buf, d: d}
 			actual := AC.ArrayFromElements(e1, e2)
 
 			requireElementsEqual(t, expected, actual)
@@ -568,7 +568,7 @@ func TestConstructor(t *testing.T) {
 				0x8, 0x6, 0x7, 0x5, 0x3, 0x0, 0x9,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 3, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 3, data: buf, d: nil}
 			actual := AC.Binary([]byte{8, 6, 7, 5, 3, 0, 9})
 
 			requireElementsEqual(t, expected, actual)
@@ -590,7 +590,7 @@ func TestConstructor(t *testing.T) {
 				0x8, 0x6, 0x7, 0x5, 0x3, 0x0, 0x9,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 3, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 3, data: buf, d: nil}
 			actual := AC.BinaryWithSubtype([]byte{8, 6, 7, 5, 3, 0, 9}, 2)
 
 			requireElementsEqual(t, expected, actual)
@@ -604,7 +604,7 @@ func TestConstructor(t *testing.T) {
 				0x30, 0x0,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 3, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 3, data: buf, d: nil}
 			actual := AC.Undefined()
 
 			requireElementsEqual(t, expected, actual)
@@ -620,7 +620,7 @@ func TestConstructor(t *testing.T) {
 				0x5a, 0x15, 0xd0, 0xa4, 0xd5, 0xda, 0xa5, 0xf1, 0x0a, 0x5e, 0x10, 0x89,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 3, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 3, data: buf, d: nil}
 			actual := AC.ObjectID(
 
 				[12]byte{0x5a, 0x15, 0xd0, 0xa4, 0xd5, 0xda, 0xa5, 0xf1, 0x0a, 0x5e, 0x10, 0x89},
@@ -639,7 +639,7 @@ func TestConstructor(t *testing.T) {
 				0x0,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 3, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 3, data: buf, d: nil}
 			actual := AC.Boolean(false)
 
 			requireElementsEqual(t, expected, actual)
@@ -655,7 +655,7 @@ func TestConstructor(t *testing.T) {
 				0x11, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 3, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 3, data: buf, d: nil}
 			actual := AC.DateTime(17)
 
 			requireElementsEqual(t, expected, actual)
@@ -669,7 +669,7 @@ func TestConstructor(t *testing.T) {
 				0x30, 0x0,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 3, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 3, data: buf, d: nil}
 			actual := AC.Null()
 
 			requireElementsEqual(t, expected, actual)
@@ -687,7 +687,7 @@ func TestConstructor(t *testing.T) {
 				0x69, 0x0,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 3, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 3, data: buf, d: nil}
 			actual := AC.Regex("bar", "i")
 
 			requireElementsEqual(t, expected, actual)
@@ -707,7 +707,7 @@ func TestConstructor(t *testing.T) {
 				0x5a, 0x15, 0xd0, 0xa4, 0xd5, 0xda, 0xa5, 0xf1, 0x0a, 0x5e, 0x10, 0x89,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 3, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 3, data: buf, d: nil}
 			actual := AC.DBPointer(
 
 				"bar",
@@ -729,7 +729,7 @@ func TestConstructor(t *testing.T) {
 				0x76, 0x61, 0x72, 0x20, 0x62, 0x61, 0x72, 0x20, 0x3d, 0x20, 0x33, 0x3b, 0x0,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 3, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 3, data: buf, d: nil}
 			actual := AC.Javascript("var bar = 3;")
 
 			requireElementsEqual(t, expected, actual)
@@ -747,7 +747,7 @@ func TestConstructor(t *testing.T) {
 				0x62, 0x61, 0x72, 0x0,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 3, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 3, data: buf, d: nil}
 			actual := AC.Symbol("bar")
 
 			requireElementsEqual(t, expected, actual)
@@ -768,7 +768,7 @@ func TestConstructor(t *testing.T) {
 			scope := NewDocument(1)
 			scope.Append(C.Null("x"))
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 3, data: buf}, d: scope}
+			expected := &Element{start: 0, value: 3, data: buf, d: scope}
 			actual := AC.CodeWithScope("var bar = x;", scope)
 
 			requireElementsEqual(t, expected, actual)
@@ -784,7 +784,7 @@ func TestConstructor(t *testing.T) {
 				0xe5, 0xff, 0xff, 0xff,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 3, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 3, data: buf, d: nil}
 			actual := AC.Int32(-27)
 
 			requireElementsEqual(t, expected, actual)
@@ -800,7 +800,7 @@ func TestConstructor(t *testing.T) {
 				0x11, 0x0, 0x0, 0x0, 0x8, 0x0, 0x0, 0x0,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 3, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 3, data: buf, d: nil}
 			actual := AC.Timestamp(8, 17)
 
 			requireElementsEqual(t, expected, actual)
@@ -816,7 +816,7 @@ func TestConstructor(t *testing.T) {
 				0xe5, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 3, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 3, data: buf, d: nil}
 			actual := AC.Int64(-27)
 
 			requireElementsEqual(t, expected, actual)
@@ -834,7 +834,7 @@ func TestConstructor(t *testing.T) {
 			}
 			d, _ := ast.ParseDecimal128("-7.50")
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 3, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 3, data: buf, d: nil}
 			actual := AC.Decimal128(d)
 
 			requireElementsEqual(t, expected, actual)
@@ -848,7 +848,7 @@ func TestConstructor(t *testing.T) {
 				0x30, 0x0,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 3, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 3, data: buf, d: nil}
 			actual := AC.MinKey()
 
 			requireElementsEqual(t, expected, actual)
@@ -862,7 +862,7 @@ func TestConstructor(t *testing.T) {
 				0x30, 0x0,
 			}
 
-			expected := &Element{ReaderElement: ReaderElement{start: 0, value: 3, data: buf}, d: nil}
+			expected := &Element{start: 0, value: 3, data: buf, d: nil}
 			actual := AC.MaxKey()
 
 			requireElementsEqual(t, expected, actual)

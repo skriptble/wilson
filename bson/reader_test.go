@@ -249,7 +249,7 @@ func TestReader(t *testing.T) {
 			name string
 			r    Reader
 			key  []string
-			want *ReaderElement
+			want *Element
 			err  error
 		}{
 			{"first",
@@ -257,7 +257,7 @@ func TestReader(t *testing.T) {
 					'\x08', '\x00', '\x00', '\x00', '\x0A', 'x', '\x00', '\x00',
 				},
 				[]string{"x"},
-				&ReaderElement{start: 4, value: 7}, nil,
+				&Element{start: 4, value: 7}, nil,
 			},
 			{"first-second",
 				Reader{
@@ -268,7 +268,7 @@ func TestReader(t *testing.T) {
 					'\x0A', 'b', '\x00', '\x00', '\x00',
 				},
 				[]string{"foo", "b"},
-				&ReaderElement{start: 7, value: 10}, nil,
+				&Element{start: 7, value: 10}, nil,
 			},
 			{"first-second-array",
 				Reader{
@@ -279,7 +279,7 @@ func TestReader(t *testing.T) {
 					'\x0A', '2', '\x00', '\x00', '\x00',
 				},
 				[]string{"foo", "2"},
-				&ReaderElement{start: 7, value: 10}, nil,
+				&Element{start: 7, value: 10}, nil,
 			},
 		}
 
@@ -314,7 +314,7 @@ func TestReader(t *testing.T) {
 			name  string
 			rdr   Reader
 			index uint
-			want  *ReaderElement
+			want  *Element
 		}{
 			{"first",
 				Reader{0xe, 0x0, 0x0, 0x0, 0xa, 0x78, 0x0, 0xa, 0x79, 0x0, 0xa, 0x7a, 0x0, 0x0},
@@ -342,7 +342,7 @@ func TestReader(t *testing.T) {
 	t.Run("Iterator", func(t *testing.T) {})
 }
 
-func readerElementEqual(e1, e2 *ReaderElement) bool {
+func readerElementEqual(e1, e2 *Element) bool {
 	if e1.start != e2.start {
 		return false
 	}
@@ -352,7 +352,7 @@ func readerElementEqual(e1, e2 *ReaderElement) bool {
 	return true
 }
 
-func readerElementComparer(e1, e2 *ReaderElement) bool {
+func readerElementComparer(e1, e2 *Element) bool {
 	b1, err := e1.MarshalBSON()
 	if err != nil {
 		return false
@@ -368,6 +368,6 @@ func readerElementComparer(e1, e2 *ReaderElement) bool {
 	return true
 }
 
-func fromElement(e *Element) *ReaderElement {
-	return (*ReaderElement)(&e.ReaderElement)
+func fromElement(e *Element) *Element {
+	return (*Element)(e)
 }

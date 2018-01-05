@@ -4,7 +4,7 @@ type ReaderIterator struct {
 	r    Reader
 	pos  uint32
 	end  uint32
-	elem *ReaderElement
+	elem *Element
 	err  error
 }
 
@@ -21,7 +21,7 @@ func NewReadIterator(r Reader) (*ReaderIterator, error) {
 	itr.r = r
 	itr.pos = 4
 	itr.end = uint32(givenLength)
-	itr.elem = new(ReaderElement)
+	itr.elem = new(Element)
 
 	return itr, nil
 }
@@ -56,7 +56,7 @@ func (itr *ReaderIterator) Next() bool {
 	return true
 }
 
-func (itr *ReaderIterator) Element() *ReaderElement {
+func (itr *ReaderIterator) Element() *Element {
 	return itr.elem
 }
 

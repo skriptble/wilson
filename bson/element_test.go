@@ -9,15 +9,15 @@ import (
 func TestReaderElement(t *testing.T) {
 	t.Run("Validate", func(t *testing.T) {
 		t.Run("nil ReaderElement", func(t *testing.T) {
-			rdr := (*ReaderElement)(nil)
-			want := ErrNilReaderElement
+			rdr := (*Element)(nil)
+			want := ErrNilElement
 			_, got := rdr.Validate()
 			if got != want {
 				t.Errorf("Did not receive expected error. got %s; want %s", got, want)
 			}
 		})
 		t.Run("keySize error", func(t *testing.T) {
-			rdr := ReaderElement{start: 0, value: 1, data: []byte{0x0A, 'x'}}
+			rdr := Element{start: 0, value: 1, data: []byte{0x0A, 'x'}}
 			want := ErrInvalidKey
 			_, got := rdr.Validate()
 			if got != want {
@@ -25,7 +25,7 @@ func TestReaderElement(t *testing.T) {
 			}
 		})
 		t.Run("validateValue error", func(t *testing.T) {
-			rdr := ReaderElement{start: 0, value: 3, data: []byte{0x01, 'x', 0x00, 0x00}}
+			rdr := Element{start: 0, value: 3, data: []byte{0x01, 'x', 0x00, 0x00}}
 			want := ErrTooSmall
 			_, got := rdr.Validate()
 			if got != want {
@@ -34,18 +34,18 @@ func TestReaderElement(t *testing.T) {
 		})
 		testCases := []struct {
 			name string
-			elem *ReaderElement
+			elem *Element
 			size uint32
 			err  error
 		}{
 			{"string",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 3,
 					data: []byte{0x02, 'x', 0x00, 0x02, 0x00, 0x00, 0x00, 'y', 0x00},
 				},
 				9, nil,
 			},
-			{"null", &ReaderElement{value: 3, data: []byte{0x0A, 'x', 0x00}}, 3, nil},
+			{"null", &Element{value: 3, data: []byte{0x0A, 'x', 0x00}}, 3, nil},
 		}
 
 		for _, tc := range testCases {
@@ -63,26 +63,26 @@ func TestReaderElement(t *testing.T) {
 	t.Run("keySize", func(t *testing.T) {
 		testCases := []struct {
 			name  string
-			elem  *ReaderElement
+			elem  *Element
 			total uint32
 			err   error
 		}{
 			{
-				"does not run off end of data", &ReaderElement{start: 0, value: 100, data: []byte{0x0A, 'f', 'o', 'o'}},
+				"does not run off end of data", &Element{start: 0, value: 100, data: []byte{0x0A, 'f', 'o', 'o'}},
 				3, ErrInvalidKey,
 			},
 			{
 				"stops iteration at start of value",
-				&ReaderElement{start: 0, value: 4, data: []byte{0x0A, 'f', 'o', 'o', 0x00}},
+				&Element{start: 0, value: 4, data: []byte{0x0A, 'f', 'o', 'o', 0x00}},
 				3, ErrInvalidKey,
 			},
 			{
-				"returns invalid key error", &ReaderElement{start: 0, value: 4, data: []byte{0x0A, 'f', 'o', 'o'}},
+				"returns invalid key error", &Element{start: 0, value: 4, data: []byte{0x0A, 'f', 'o', 'o'}},
 				3, ErrInvalidKey,
 			},
 			{
 				"returns correct size on success",
-				&ReaderElement{start: 0, value: 5, data: []byte{0x0A, 'f', 'o', 'o', 0x00}},
+				&Element{start: 0, value: 5, data: []byte{0x0A, 'f', 'o', 'o', 0x00}},
 				4, nil,
 			},
 		}
@@ -103,15 +103,15 @@ func TestReaderElement(t *testing.T) {
 		t.Run("returns too small", func(t *testing.T) {
 			testCases := []struct {
 				name string
-				elem *ReaderElement
+				elem *Element
 				size uint32
 			}{
-				{"subdoc <4", &ReaderElement{start: 0, value: 2, data: []byte{0x03, 0x00, 0x00, 0x00}}, 0},
-				{"array <4", &ReaderElement{start: 0, value: 2, data: []byte{0x04, 0x00, 0x00, 0x00}}, 0},
-				{"code-with-scope <4", &ReaderElement{start: 0, value: 2, data: []byte{0x0F, 0x00, 0x00, 0x00}}, 0},
-				{"subdoc >4", &ReaderElement{start: 0, value: 2, data: []byte{0x03, 0x00, 0xFF, 0x00, 0x00, 0x00}}, 4},
-				{"array >4", &ReaderElement{start: 0, value: 2, data: []byte{0x04, 0x00, 0xFF, 0x00, 0x00, 0x00}}, 4},
-				{"code-with-scope >4", &ReaderElement{start: 0, value: 2, data: []byte{0x0F, 0x00, 0xFF, 0x00, 0x00, 0x00}}, 4},
+				{"subdoc <4", &Element{start: 0, value: 2, data: []byte{0x03, 0x00, 0x00, 0x00}}, 0},
+				{"array <4", &Element{start: 0, value: 2, data: []byte{0x04, 0x00, 0x00, 0x00}}, 0},
+				{"code-with-scope <4", &Element{start: 0, value: 2, data: []byte{0x0F, 0x00, 0x00, 0x00}}, 0},
+				{"subdoc >4", &Element{start: 0, value: 2, data: []byte{0x03, 0x00, 0xFF, 0x00, 0x00, 0x00}}, 4},
+				{"array >4", &Element{start: 0, value: 2, data: []byte{0x04, 0x00, 0xFF, 0x00, 0x00, 0x00}}, 4},
+				{"code-with-scope >4", &Element{start: 0, value: 2, data: []byte{0x0F, 0x00, 0xFF, 0x00, 0x00, 0x00}}, 4},
 			}
 
 			for _, tc := range testCases {
@@ -134,23 +134,23 @@ func TestReaderElement(t *testing.T) {
 		t.Run("Double", func(t *testing.T) {
 			testCases := []struct {
 				name  string
-				elem  *ReaderElement
+				elem  *Element
 				val   float64
 				fault error
 			}{
 				{"Nil Element", nil, 0, ErrUninitializedElement},
 				{"Empty Element value",
-					&ReaderElement{start: 0, value: 0, data: nil}, 0, ErrUninitializedElement,
+					&Element{start: 0, value: 0, data: nil}, 0, ErrUninitializedElement,
 				},
 				{"Empty Element data",
-					&ReaderElement{start: 0, value: 2, data: nil}, 0, ErrUninitializedElement,
+					&Element{start: 0, value: 2, data: nil}, 0, ErrUninitializedElement,
 				},
 				{"Not Double",
-					&ReaderElement{start: 0, value: 2, data: []byte{0x02, 0x00}}, 0,
+					&Element{start: 0, value: 2, data: []byte{0x02, 0x00}}, 0,
 					ElementTypeError{"compact.Element.Double", BSONType(0x02)},
 				},
 				{"Success",
-					&ReaderElement{
+					&Element{
 						start: 0, value: 2,
 						data: []byte{0x01, 0x00, 0x6E, 0x86, 0x1B, 0xF0, 0xF9, 0x21, 0x9, 0x40},
 					},
@@ -177,23 +177,23 @@ func TestReaderElement(t *testing.T) {
 		t.Run("String", func(t *testing.T) {
 			testCases := []struct {
 				name  string
-				elem  *ReaderElement
+				elem  *Element
 				val   string
 				fault error
 			}{
 				{"Nil Element", nil, "", ErrUninitializedElement},
 				{"Empty Element value",
-					&ReaderElement{start: 0, value: 0, data: nil}, "", ErrUninitializedElement,
+					&Element{start: 0, value: 0, data: nil}, "", ErrUninitializedElement,
 				},
 				{"Empty Element data",
-					&ReaderElement{start: 0, value: 2, data: nil}, "", ErrUninitializedElement,
+					&Element{start: 0, value: 2, data: nil}, "", ErrUninitializedElement,
 				},
 				{"Not String",
-					&ReaderElement{start: 0, value: 2, data: []byte{0x01, 0x00}}, "",
+					&Element{start: 0, value: 2, data: []byte{0x01, 0x00}}, "",
 					ElementTypeError{"compact.Element.String", BSONType(0x01)},
 				},
 				{"Success",
-					&ReaderElement{
+					&Element{
 						start: 0, value: 2,
 						data: []byte{0x02, 0x00, 0x04, 0x00, 0x00, 0x00, 'f', 'o', 'o', 0x00},
 					},
@@ -220,23 +220,23 @@ func TestReaderElement(t *testing.T) {
 		t.Run("Embedded Document", func(t *testing.T) {
 			testCases := []struct {
 				name  string
-				elem  *ReaderElement
+				elem  *Element
 				val   Reader
 				fault error
 			}{
 				{"Nil Element", nil, nil, ErrUninitializedElement},
 				{"Empty Element value",
-					&ReaderElement{start: 0, value: 0, data: nil}, nil, ErrUninitializedElement,
+					&Element{start: 0, value: 0, data: nil}, nil, ErrUninitializedElement,
 				},
 				{"Empty Element data",
-					&ReaderElement{start: 0, value: 2, data: nil}, nil, ErrUninitializedElement,
+					&Element{start: 0, value: 2, data: nil}, nil, ErrUninitializedElement,
 				},
 				{"Not Document",
-					&ReaderElement{start: 0, value: 2, data: []byte{0x01, 0x00}}, nil,
+					&Element{start: 0, value: 2, data: []byte{0x01, 0x00}}, nil,
 					ElementTypeError{"compact.Element.Document", BSONType(0x01)},
 				},
 				{"Success",
-					&ReaderElement{
+					&Element{
 						start: 0, value: 2,
 						data: []byte{0x03, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00},
 					},
@@ -253,7 +253,7 @@ func TestReaderElement(t *testing.T) {
 						}
 					}()
 
-					val := tc.elem.Document()
+					val := tc.elem.ReaderDocument()
 					if !bytes.Equal(val, tc.val) {
 						t.Errorf("Did not return correct value. got %v; want %v", val, tc.val)
 					}
@@ -263,23 +263,23 @@ func TestReaderElement(t *testing.T) {
 		t.Run("Array", func(t *testing.T) {
 			testCases := []struct {
 				name  string
-				elem  *ReaderElement
+				elem  *Element
 				val   Reader
 				fault error
 			}{
 				{"Nil Element", nil, nil, ErrUninitializedElement},
 				{"Empty Element value",
-					&ReaderElement{start: 0, value: 0, data: nil}, nil, ErrUninitializedElement,
+					&Element{start: 0, value: 0, data: nil}, nil, ErrUninitializedElement,
 				},
 				{"Empty Element data",
-					&ReaderElement{start: 0, value: 2, data: nil}, nil, ErrUninitializedElement,
+					&Element{start: 0, value: 2, data: nil}, nil, ErrUninitializedElement,
 				},
 				{"Not Array",
-					&ReaderElement{start: 0, value: 2, data: []byte{0x01, 0x00}}, nil,
+					&Element{start: 0, value: 2, data: []byte{0x01, 0x00}}, nil,
 					ElementTypeError{"compact.Element.Array", BSONType(0x01)},
 				},
 				{"Success",
-					&ReaderElement{
+					&Element{
 						start: 0, value: 2,
 						data: []byte{0x04, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00},
 					},
@@ -296,7 +296,7 @@ func TestReaderElement(t *testing.T) {
 						}
 					}()
 
-					val := tc.elem.Array()
+					val := tc.elem.ReaderArray()
 					if !bytes.Equal(val, tc.val) {
 						t.Errorf("Did not return correct value. got %v; want %v", val, tc.val)
 					}
@@ -306,24 +306,24 @@ func TestReaderElement(t *testing.T) {
 		t.Run("Binary", func(t *testing.T) {
 			testCases := []struct {
 				name    string
-				elem    *ReaderElement
+				elem    *Element
 				subtype byte
 				val     []byte
 				fault   error
 			}{
 				{"Nil Element", nil, 0x00, nil, ErrUninitializedElement},
 				{"Empty Element value",
-					&ReaderElement{start: 0, value: 0, data: nil}, 0x00, nil, ErrUninitializedElement,
+					&Element{start: 0, value: 0, data: nil}, 0x00, nil, ErrUninitializedElement,
 				},
 				{"Empty Element data",
-					&ReaderElement{start: 0, value: 2, data: nil}, 0x00, nil, ErrUninitializedElement,
+					&Element{start: 0, value: 2, data: nil}, 0x00, nil, ErrUninitializedElement,
 				},
 				{"Not Binary",
-					&ReaderElement{start: 0, value: 2, data: []byte{0x01, 0x00}}, 0x00, nil,
+					&Element{start: 0, value: 2, data: []byte{0x01, 0x00}}, 0x00, nil,
 					ElementTypeError{"compact.Element.Binary", BSONType(0x01)},
 				},
 				{"Success",
-					&ReaderElement{
+					&Element{
 						start: 0, value: 2,
 						data: []byte{0x05, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 'f', 'o', 'o'},
 					},
@@ -354,23 +354,23 @@ func TestReaderElement(t *testing.T) {
 			var empty [12]byte
 			testCases := []struct {
 				name  string
-				elem  *ReaderElement
+				elem  *Element
 				val   [12]byte
 				fault error
 			}{
 				{"Nil Element", nil, empty, ErrUninitializedElement},
 				{"Empty Element value",
-					&ReaderElement{start: 0, value: 0, data: nil}, empty, ErrUninitializedElement,
+					&Element{start: 0, value: 0, data: nil}, empty, ErrUninitializedElement,
 				},
 				{"Empty Element data",
-					&ReaderElement{start: 0, value: 2, data: nil}, empty, ErrUninitializedElement,
+					&Element{start: 0, value: 2, data: nil}, empty, ErrUninitializedElement,
 				},
 				{"Not ObjectID",
-					&ReaderElement{start: 0, value: 2, data: []byte{0x01, 0x00}}, empty,
+					&Element{start: 0, value: 2, data: []byte{0x01, 0x00}}, empty,
 					ElementTypeError{"compact.Element.ObejctID", BSONType(0x01)},
 				},
 				{"Success",
-					&ReaderElement{
+					&Element{
 						start: 0, value: 2,
 						data: []byte{
 							0x07, 0x00,
@@ -404,23 +404,23 @@ func TestReaderElement(t *testing.T) {
 		t.Run("Boolean", func(t *testing.T) {
 			testCases := []struct {
 				name  string
-				elem  *ReaderElement
+				elem  *Element
 				val   bool
 				fault error
 			}{
 				{"Nil Element", nil, false, ErrUninitializedElement},
 				{"Empty Element value",
-					&ReaderElement{start: 0, value: 0, data: nil}, false, ErrUninitializedElement,
+					&Element{start: 0, value: 0, data: nil}, false, ErrUninitializedElement,
 				},
 				{"Empty Element data",
-					&ReaderElement{start: 0, value: 2, data: nil}, false, ErrUninitializedElement,
+					&Element{start: 0, value: 2, data: nil}, false, ErrUninitializedElement,
 				},
 				{"Not Boolean",
-					&ReaderElement{start: 0, value: 2, data: []byte{0x01, 0x00}}, false,
+					&Element{start: 0, value: 2, data: []byte{0x01, 0x00}}, false,
 					ElementTypeError{"compact.Element.Boolean", BSONType(0x01)},
 				},
 				{"Success",
-					&ReaderElement{
+					&Element{
 						start: 0, value: 2,
 						data: []byte{0x08, 0x00, 0x01},
 					},
@@ -448,23 +448,23 @@ func TestReaderElement(t *testing.T) {
 			var empty time.Time
 			testCases := []struct {
 				name  string
-				elem  *ReaderElement
+				elem  *Element
 				val   time.Time
 				fault error
 			}{
 				{"Nil Element", nil, empty, ErrUninitializedElement},
 				{"Empty Element value",
-					&ReaderElement{start: 0, value: 0, data: nil}, empty, ErrUninitializedElement,
+					&Element{start: 0, value: 0, data: nil}, empty, ErrUninitializedElement,
 				},
 				{"Empty Element data",
-					&ReaderElement{start: 0, value: 2, data: nil}, empty, ErrUninitializedElement,
+					&Element{start: 0, value: 2, data: nil}, empty, ErrUninitializedElement,
 				},
 				{"Not UTC DateTime",
-					&ReaderElement{start: 0, value: 2, data: []byte{0x01, 0x00}}, empty,
+					&Element{start: 0, value: 2, data: []byte{0x01, 0x00}}, empty,
 					ElementTypeError{"compact.Element.DateTime", BSONType(0x01)},
 				},
 				{"Success",
-					&ReaderElement{
+					&Element{
 						start: 0, value: 2,
 						data: []byte{0x09, 0x00, 0x80, 0x38, 0x17, 0xB0, 0x60, 0x01, 0x00, 0x00},
 					},
@@ -491,24 +491,24 @@ func TestReaderElement(t *testing.T) {
 		t.Run("Regex", func(t *testing.T) {
 			testCases := []struct {
 				name    string
-				elem    *ReaderElement
+				elem    *Element
 				pattern string
 				options string
 				fault   error
 			}{
 				{"Nil Element", nil, "", "", ErrUninitializedElement},
 				{"Empty Element value",
-					&ReaderElement{start: 0, value: 0, data: nil}, "", "", ErrUninitializedElement,
+					&Element{start: 0, value: 0, data: nil}, "", "", ErrUninitializedElement,
 				},
 				{"Empty Element data",
-					&ReaderElement{start: 0, value: 2, data: nil}, "", "", ErrUninitializedElement,
+					&Element{start: 0, value: 2, data: nil}, "", "", ErrUninitializedElement,
 				},
 				{"Not Regex",
-					&ReaderElement{start: 0, value: 2, data: []byte{0x01, 0x00}}, "", "",
+					&Element{start: 0, value: 2, data: []byte{0x01, 0x00}}, "", "",
 					ElementTypeError{"compact.Element.Regex", BSONType(0x01)},
 				},
 				{"Success",
-					&ReaderElement{
+					&Element{
 						start: 0, value: 2,
 						data: []byte{0x0B, 0x00, 'f', 'o', 'o', 0x00, 'b', 'a', 'r', 0x00},
 					},
@@ -539,24 +539,24 @@ func TestReaderElement(t *testing.T) {
 			var empty [12]byte
 			testCases := []struct {
 				name    string
-				elem    *ReaderElement
+				elem    *Element
 				ns      string
 				pointer [12]byte
 				fault   error
 			}{
 				{"Nil Element", nil, "", empty, ErrUninitializedElement},
 				{"Empty Element value",
-					&ReaderElement{start: 0, value: 0, data: nil}, "", empty, ErrUninitializedElement,
+					&Element{start: 0, value: 0, data: nil}, "", empty, ErrUninitializedElement,
 				},
 				{"Empty Element data",
-					&ReaderElement{start: 0, value: 2, data: nil}, "", empty, ErrUninitializedElement,
+					&Element{start: 0, value: 2, data: nil}, "", empty, ErrUninitializedElement,
 				},
 				{"Not DBPointer",
-					&ReaderElement{start: 0, value: 2, data: []byte{0x01, 0x00}}, "", empty,
+					&Element{start: 0, value: 2, data: []byte{0x01, 0x00}}, "", empty,
 					ElementTypeError{"compact.Element.DBPointer", BSONType(0x01)},
 				},
 				{"Success",
-					&ReaderElement{
+					&Element{
 						start: 0, value: 2,
 						data: []byte{
 							0x0C, 0x00,
@@ -595,23 +595,23 @@ func TestReaderElement(t *testing.T) {
 		t.Run("JavaScript", func(t *testing.T) {
 			testCases := []struct {
 				name  string
-				elem  *ReaderElement
+				elem  *Element
 				val   string
 				fault error
 			}{
 				{"Nil Element", nil, "", ErrUninitializedElement},
 				{"Empty Element value",
-					&ReaderElement{start: 0, value: 0, data: nil}, "", ErrUninitializedElement,
+					&Element{start: 0, value: 0, data: nil}, "", ErrUninitializedElement,
 				},
 				{"Empty Element data",
-					&ReaderElement{start: 0, value: 2, data: nil}, "", ErrUninitializedElement,
+					&Element{start: 0, value: 2, data: nil}, "", ErrUninitializedElement,
 				},
 				{"Not Javascript",
-					&ReaderElement{start: 0, value: 2, data: []byte{0x01, 0x00}}, "",
+					&Element{start: 0, value: 2, data: []byte{0x01, 0x00}}, "",
 					ElementTypeError{"compact.Element.Javascript", BSONType(0x01)},
 				},
 				{"Success",
-					&ReaderElement{
+					&Element{
 						start: 0, value: 2,
 						data: []byte{0x0D, 0x00, 0x04, 0x00, 0x00, 0x00, 'f', 'o', 'o', 0x00},
 					},
@@ -638,23 +638,23 @@ func TestReaderElement(t *testing.T) {
 		t.Run("Symbol", func(t *testing.T) {
 			testCases := []struct {
 				name  string
-				elem  *ReaderElement
+				elem  *Element
 				val   string
 				fault error
 			}{
 				{"Nil Element", nil, "", ErrUninitializedElement},
 				{"Empty Element value",
-					&ReaderElement{start: 0, value: 0, data: nil}, "", ErrUninitializedElement,
+					&Element{start: 0, value: 0, data: nil}, "", ErrUninitializedElement,
 				},
 				{"Empty Element data",
-					&ReaderElement{start: 0, value: 2, data: nil}, "", ErrUninitializedElement,
+					&Element{start: 0, value: 2, data: nil}, "", ErrUninitializedElement,
 				},
 				{"Not Javascript",
-					&ReaderElement{start: 0, value: 2, data: []byte{0x01, 0x00}}, "",
+					&Element{start: 0, value: 2, data: []byte{0x01, 0x00}}, "",
 					ElementTypeError{"compact.Element.Symbol", BSONType(0x01)},
 				},
 				{"Success",
-					&ReaderElement{
+					&Element{
 						start: 0, value: 2,
 						data: []byte{0x0E, 0x00, 0x04, 0x00, 0x00, 0x00, 'f', 'o', 'o', 0x00},
 					},
@@ -681,24 +681,24 @@ func TestReaderElement(t *testing.T) {
 		t.Run("Code With Scope", func(t *testing.T) {
 			testCases := []struct {
 				name  string
-				elem  *ReaderElement
+				elem  *Element
 				code  string
 				scope Reader
 				fault error
 			}{
 				{"Nil Element", nil, "", nil, ErrUninitializedElement},
 				{"Empty Element value",
-					&ReaderElement{start: 0, value: 0, data: nil}, "", nil, ErrUninitializedElement,
+					&Element{start: 0, value: 0, data: nil}, "", nil, ErrUninitializedElement,
 				},
 				{"Empty Element data",
-					&ReaderElement{start: 0, value: 2, data: nil}, "", nil, ErrUninitializedElement,
+					&Element{start: 0, value: 2, data: nil}, "", nil, ErrUninitializedElement,
 				},
 				{"Not JavascriptWithScope",
-					&ReaderElement{start: 0, value: 2, data: []byte{0x01, 0x00}}, "", nil,
+					&Element{start: 0, value: 2, data: []byte{0x01, 0x00}}, "", nil,
 					ElementTypeError{"compact.Element.JavascriptWithScope", BSONType(0x01)},
 				},
 				{"Success",
-					&ReaderElement{
+					&Element{
 						start: 0, value: 2,
 						data: []byte{
 							0x0F, 0x00,
@@ -720,7 +720,7 @@ func TestReaderElement(t *testing.T) {
 						}
 					}()
 
-					code, scope := tc.elem.JavascriptWithScope()
+					code, scope := tc.elem.ReaderJavascriptWithScope()
 					if code != tc.code {
 						t.Errorf("Did not return correct code. got %s; want %s", code, tc.code)
 					}
@@ -733,23 +733,23 @@ func TestReaderElement(t *testing.T) {
 		t.Run("Int32", func(t *testing.T) {
 			testCases := []struct {
 				name  string
-				elem  *ReaderElement
+				elem  *Element
 				val   int32
 				fault error
 			}{
 				{"Nil Element", nil, 0, ErrUninitializedElement},
 				{"Empty Element value",
-					&ReaderElement{start: 0, value: 0, data: nil}, 0, ErrUninitializedElement,
+					&Element{start: 0, value: 0, data: nil}, 0, ErrUninitializedElement,
 				},
 				{"Empty Element data",
-					&ReaderElement{start: 0, value: 2, data: nil}, 0, ErrUninitializedElement,
+					&Element{start: 0, value: 2, data: nil}, 0, ErrUninitializedElement,
 				},
 				{"Not Int32",
-					&ReaderElement{start: 0, value: 2, data: []byte{0x02, 0x00}}, 0,
+					&Element{start: 0, value: 2, data: []byte{0x02, 0x00}}, 0,
 					ElementTypeError{"compact.Element.Int32", BSONType(0x02)},
 				},
 				{"Success",
-					&ReaderElement{
+					&Element{
 						start: 0, value: 2,
 						data: []byte{0x10, 0x00, 0xFF, 0x00, 0x00, 0x00},
 					},
@@ -776,23 +776,23 @@ func TestReaderElement(t *testing.T) {
 		t.Run("Timestamp", func(t *testing.T) {
 			testCases := []struct {
 				name  string
-				elem  *ReaderElement
+				elem  *Element
 				val   uint64
 				fault error
 			}{
 				{"Nil Element", nil, 0, ErrUninitializedElement},
 				{"Empty Element value",
-					&ReaderElement{start: 0, value: 0, data: nil}, 0, ErrUninitializedElement,
+					&Element{start: 0, value: 0, data: nil}, 0, ErrUninitializedElement,
 				},
 				{"Empty Element data",
-					&ReaderElement{start: 0, value: 2, data: nil}, 0, ErrUninitializedElement,
+					&Element{start: 0, value: 2, data: nil}, 0, ErrUninitializedElement,
 				},
 				{"Not Timestamp",
-					&ReaderElement{start: 0, value: 2, data: []byte{0x02, 0x00}}, 0,
+					&Element{start: 0, value: 2, data: []byte{0x02, 0x00}}, 0,
 					ElementTypeError{"compact.Element.Timestamp", BSONType(0x02)},
 				},
 				{"Success",
-					&ReaderElement{
+					&Element{
 						start: 0, value: 2,
 						data: []byte{0x11, 0x00, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 					},
@@ -819,23 +819,23 @@ func TestReaderElement(t *testing.T) {
 		t.Run("Int64", func(t *testing.T) {
 			testCases := []struct {
 				name  string
-				elem  *ReaderElement
+				elem  *Element
 				val   int64
 				fault error
 			}{
 				{"Nil Element", nil, 0, ErrUninitializedElement},
 				{"Empty Element value",
-					&ReaderElement{start: 0, value: 0, data: nil}, 0, ErrUninitializedElement,
+					&Element{start: 0, value: 0, data: nil}, 0, ErrUninitializedElement,
 				},
 				{"Empty Element data",
-					&ReaderElement{start: 0, value: 2, data: nil}, 0, ErrUninitializedElement,
+					&Element{start: 0, value: 2, data: nil}, 0, ErrUninitializedElement,
 				},
 				{"Not Int64",
-					&ReaderElement{start: 0, value: 2, data: []byte{0x02, 0x00}}, 0,
+					&Element{start: 0, value: 2, data: []byte{0x02, 0x00}}, 0,
 					ElementTypeError{"compact.Element.Int64", BSONType(0x02)},
 				},
 				{"Success",
-					&ReaderElement{
+					&Element{
 						start: 0, value: 2,
 						data: []byte{0x12, 0x00, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 					},
@@ -863,23 +863,23 @@ func TestReaderElement(t *testing.T) {
 			var empty Decimal128
 			testCases := []struct {
 				name  string
-				elem  *ReaderElement
+				elem  *Element
 				val   Decimal128
 				fault error
 			}{
 				{"Nil Element", nil, empty, ErrUninitializedElement},
 				{"Empty Element value",
-					&ReaderElement{start: 0, value: 0, data: nil}, empty, ErrUninitializedElement,
+					&Element{start: 0, value: 0, data: nil}, empty, ErrUninitializedElement,
 				},
 				{"Empty Element data",
-					&ReaderElement{start: 0, value: 2, data: nil}, empty, ErrUninitializedElement,
+					&Element{start: 0, value: 2, data: nil}, empty, ErrUninitializedElement,
 				},
 				{"Not Int64",
-					&ReaderElement{start: 0, value: 2, data: []byte{0x02, 0x00}}, empty,
+					&Element{start: 0, value: 2, data: []byte{0x02, 0x00}}, empty,
 					ElementTypeError{"compact.Element.Decimal128", BSONType(0x02)},
 				},
 				{"Success",
-					&ReaderElement{
+					&Element{
 						start: 0, value: 2,
 						data: []byte{
 							0x13, 0x00,
@@ -911,19 +911,19 @@ func TestReaderElement(t *testing.T) {
 	t.Run("Key", func(t *testing.T) {
 		testCases := []struct {
 			name  string
-			elem  *ReaderElement
+			elem  *Element
 			key   string
 			fault error
 		}{
 			{"Nil Element", nil, "", ErrUninitializedElement},
 			{"Empty Element value",
-				&ReaderElement{start: 0, value: 0, data: nil}, "", ErrUninitializedElement,
+				&Element{start: 0, value: 0, data: nil}, "", ErrUninitializedElement,
 			},
 			{"Empty Element data",
-				&ReaderElement{start: 0, value: 2, data: nil}, "", ErrUninitializedElement,
+				&Element{start: 0, value: 2, data: nil}, "", ErrUninitializedElement,
 			},
 			{"Success",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 5,
 					data: []byte{0x01, 'f', 'o', 'o', 0x00, 0x6E, 0x86, 0x1B, 0xF0, 0xF9, 0x21, 0x9, 0x40},
 				},
@@ -950,19 +950,19 @@ func TestReaderElement(t *testing.T) {
 	t.Run("Type", func(t *testing.T) {
 		testCases := []struct {
 			name  string
-			elem  *ReaderElement
+			elem  *Element
 			etype byte
 			fault error
 		}{
 			{"Nil Element", nil, 0x0, ErrUninitializedElement},
 			{"Empty Element value",
-				&ReaderElement{start: 0, value: 0, data: nil}, 0x00, ErrUninitializedElement,
+				&Element{start: 0, value: 0, data: nil}, 0x00, ErrUninitializedElement,
 			},
 			{"Empty Element data",
-				&ReaderElement{start: 0, value: 2, data: nil}, 0x00, ErrUninitializedElement,
+				&Element{start: 0, value: 2, data: nil}, 0x00, ErrUninitializedElement,
 			},
 			{"Success",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 5,
 					data: []byte{0x01, 'f', 'o', 'o', 0x00, 0x6E, 0x86, 0x1B, 0xF0, 0xF9, 0x21, 0x9, 0x40},
 				},
@@ -992,19 +992,19 @@ func testValidateValue(t *testing.T) {
 	t.Run("Double", func(t *testing.T) {
 		testCases := []struct {
 			name string
-			elem *ReaderElement
+			elem *Element
 			size uint32
 			err  error
 		}{
 			{"Too Small",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2,
 					data: []byte{0x01, 0x00, 0x00, 0x00},
 				},
 				0, ErrTooSmall,
 			},
 			{"Success",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2,
 					data: []byte{0x01, 0x00, 0x6E, 0x86, 0x1B, 0xF0, 0xF9, 0x21, 0x9, 0x40},
 				},
@@ -1025,38 +1025,38 @@ func testValidateValue(t *testing.T) {
 	t.Run("String", func(t *testing.T) {
 		testCases := []struct {
 			name string
-			elem *ReaderElement
+			elem *Element
 			deep bool
 			size uint32
 			err  error
 		}{
 			{"Too Small <4",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2,
 					data: []byte{0x02, 0x00, 0x00, 0x00},
 				},
-				false, 0, ErrTooSmall,
+				true, 0, ErrTooSmall,
 			},
 			{"Too Small >4",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2,
 					data: []byte{0x02, 0x00, 0xFF, 0x00, 0x00, 0x00, 'f', 'o', 'o', 0x00},
 				},
-				false, 4, ErrTooSmall,
+				true, 4, ErrTooSmall,
 			},
 			{"Invalid String Value",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2,
 					data: []byte{0x02, 0x00, 0x03, 0x00, 0x00, 0x00, 'f', 'o', 'o'},
 				},
-				true, 4, ErrInvalidString,
+				false, 4, ErrInvalidString,
 			},
 			{"Shouldn't Deep Validate",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2,
 					data: []byte{0x02, 0x00, 0x03, 0x00, 0x00, 0x00, 'f', 'o', 'o'},
 				},
-				false, 7, nil,
+				true, 7, nil,
 			},
 		}
 
@@ -1075,70 +1075,70 @@ func testValidateValue(t *testing.T) {
 	t.Run("Embedded Document/Array", func(t *testing.T) {
 		testCases := []struct {
 			name string
-			elem *ReaderElement
+			elem *Element
 			deep bool
 			size uint32
 			err  error
 		}{
 			{"Document/too small <4",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{0x03, 0x00, 0x00, 0x00},
-				}, false, 0, ErrTooSmall,
+				}, true, 0, ErrTooSmall,
 			},
 			{"Document/too small >4",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{0x03, 0x00, 0xFF, 0x00, 0x00, 0x00, 'f', 'o', 'o', 0x00},
-				}, false, 4, ErrTooSmall,
+				}, true, 4, ErrTooSmall,
 			},
 			{"Document/invalid document <5",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{0x03, 0x00, 0x03, 0x00, 0x00, 0x00, 'f', 'o', 'o'},
-				}, false, 4, ErrInvalidReadOnlyDocument,
+				}, true, 4, ErrInvalidReadOnlyDocument,
 			},
 			{"Document/shouldn't deep validate",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{0x03, 0x00, 0x09, 0x00, 0x00, 0x00, 'f', 'o', 'o', 'o', 'o'},
-				}, false, 9, nil,
+				}, true, 9, nil,
 			},
 			{"Document/should deep validate",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{0x03, 0x00, 0x09, 0x00, 0x00, 0x00, 'f', 'o', 'o', 'o', 'o'},
-				}, true, 9, ErrInvalidKey,
+				}, false, 9, ErrInvalidKey,
 			},
 			{"Document/success",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{0x03, 0x00, 0x0A, 0x00, 0x00, 0x00, 0x0A, 'f', 'o', 'o', 0x00, 0x00},
-				}, true, 10, nil,
+				}, false, 10, nil,
 			},
 			{"Array/too small <4",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{0x04, 0x00, 0x00, 0x00},
-				}, false, 0, ErrTooSmall,
+				}, true, 0, ErrTooSmall,
 			},
 			{"Array/too small >4",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{0x04, 0x00, 0xFF, 0x00, 0x00, 0x00, 'f', 'o', 'o', 0x00},
-				}, false, 4, ErrTooSmall,
+				}, true, 4, ErrTooSmall,
 			},
 			{"Array/invalid document <5",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{0x04, 0x00, 0x03, 0x00, 0x00, 0x00, 'f', 'o', 'o'},
-				}, false, 4, ErrInvalidReadOnlyDocument,
+				}, true, 4, ErrInvalidReadOnlyDocument,
 			},
 			{"Array/shouldn't deep validate",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{0x04, 0x00, 0x09, 0x00, 0x00, 0x00, 'f', 'o', 'o', 'o', 'o'},
-				}, false, 9, nil,
+				}, true, 9, nil,
 			},
 			{"Array/should deep validate",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{0x04, 0x00, 0x09, 0x00, 0x00, 0x00, 'f', 'o', 'o', 'o', 'o'},
-				}, true, 9, ErrInvalidKey,
+				}, false, 9, ErrInvalidKey,
 			},
 			{"Array/success",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{0x04, 0x00, 0x08, 0x00, 0x00, 0x00, 0x0A, '0', 0x00, 0x00},
-				}, true, 8, nil,
+				}, false, 8, nil,
 			},
 		}
 
@@ -1158,30 +1158,30 @@ func testValidateValue(t *testing.T) {
 	t.Run("Binary", func(t *testing.T) {
 		testCases := []struct {
 			name string
-			elem *ReaderElement
+			elem *Element
 			size uint32
 			err  error
 		}{
 			{"Value Too Small",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{0x05, 0x00, 0x00},
 				},
 				0, ErrTooSmall,
 			},
 			{"Invalid Binary Subtype",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7F},
 				},
 				5, ErrInvalidBinarySubtype,
 			},
 			{"Length Too Small",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{0x05, 0x00, 0xFF, 0x00, 0x00, 0x00, 0x00},
 				},
 				5, ErrTooSmall,
 			},
 			{"Success",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{0x05, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 'h', 'i'},
 				},
 				7, nil,
@@ -1203,12 +1203,12 @@ func testValidateValue(t *testing.T) {
 	t.Run("Undefined", func(t *testing.T) {
 		testCases := []struct {
 			name string
-			elem *ReaderElement
+			elem *Element
 			size uint32
 			err  error
 		}{
 			{"Success",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{0x06, 0x00},
 				},
 				0, nil,
@@ -1230,18 +1230,18 @@ func testValidateValue(t *testing.T) {
 	t.Run("ObjectID", func(t *testing.T) {
 		testCases := []struct {
 			name string
-			elem *ReaderElement
+			elem *Element
 			size uint32
 			err  error
 		}{
 			{"Value Too Small",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{0x07, 0x00, 0x00},
 				},
 				0, ErrTooSmall,
 			},
 			{"Success",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{
 						0x07, 0x00,
 						0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -1267,30 +1267,30 @@ func testValidateValue(t *testing.T) {
 	t.Run("Boolean", func(t *testing.T) {
 		testCases := []struct {
 			name string
-			elem *ReaderElement
+			elem *Element
 			size uint32
 			err  error
 		}{
 			{"Too Small",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{0x08, 0x00},
 				},
 				0, ErrTooSmall,
 			},
 			{"Invalid Binary Type",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{0x08, 0x00, 0x03},
 				},
 				1, ErrInvalidBooleanType,
 			},
 			{"True",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{0x08, 0x00, 0x01},
 				},
 				1, nil,
 			},
 			{"False",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{0x08, 0x00, 0x00},
 				},
 				1, nil,
@@ -1312,18 +1312,18 @@ func testValidateValue(t *testing.T) {
 	t.Run("UTC DateTime", func(t *testing.T) {
 		testCases := []struct {
 			name string
-			elem *ReaderElement
+			elem *Element
 			size uint32
 			err  error
 		}{
 			{"Too Small",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{0x09, 0x00},
 				},
 				0, ErrTooSmall,
 			},
 			{"Success",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{
 						0x09, 0x00,
 						0x01, 0x02, 0x03, 0x04,
@@ -1349,12 +1349,12 @@ func testValidateValue(t *testing.T) {
 	t.Run("Null", func(t *testing.T) {
 		testCases := []struct {
 			name string
-			elem *ReaderElement
+			elem *Element
 			size uint32
 			err  error
 		}{
 			{"Success",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{0x0A, 0x00},
 				},
 				0, nil,
@@ -1376,24 +1376,24 @@ func testValidateValue(t *testing.T) {
 	t.Run("Regex", func(t *testing.T) {
 		testCases := []struct {
 			name string
-			elem *ReaderElement
+			elem *Element
 			size uint32
 			err  error
 		}{
 			{"First Invalid String",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{0x0B, 0x00, 'f', 'o', 'o'},
 				},
 				3, ErrInvalidString,
 			},
 			{"Second Invalid String",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{0x0B, 0x00, 'f', 'o', 'o', 0x00, 'b', 'a', 'r'},
 				},
 				7, ErrInvalidString,
 			},
 			{"Success",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{0x0B, 0x00, 'f', 'o', 'o', 0x00, 'b', 'a', 'r', 0x00},
 				},
 				8, nil,
@@ -1415,24 +1415,24 @@ func testValidateValue(t *testing.T) {
 	t.Run("DBPointer", func(t *testing.T) {
 		testCases := []struct {
 			name string
-			elem *ReaderElement
+			elem *Element
 			size uint32
 			err  error
 		}{
 			{"Too Small",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{0x0C, 0x00},
 				},
 				0, ErrTooSmall,
 			},
 			{"Length Too Large",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{0x0C, 0x00, 0xFF, 0x00, 0x00, 0x00, 0x00},
 				},
 				4, ErrTooSmall,
 			},
 			{"Success",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{
 						0x0C, 0x00,
 						0x04, 0x00, 0x00, 0x00, 'f', 'o', 'o', 0x00,
@@ -1460,38 +1460,38 @@ func testValidateValue(t *testing.T) {
 	t.Run("JavaScript", func(t *testing.T) {
 		testCases := []struct {
 			name string
-			elem *ReaderElement
+			elem *Element
 			deep bool
 			size uint32
 			err  error
 		}{
 			{"Too Small <4",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2,
 					data: []byte{0x0D, 0x00, 0x00, 0x00},
 				},
-				false, 0, ErrTooSmall,
+				true, 0, ErrTooSmall,
 			},
 			{"Too Small >4",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2,
 					data: []byte{0x0D, 0x00, 0xFF, 0x00, 0x00, 0x00, 'f', 'o', 'o', 0x00},
 				},
-				false, 4, ErrTooSmall,
+				true, 4, ErrTooSmall,
 			},
 			{"Invalid String Value",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2,
 					data: []byte{0x0D, 0x00, 0x03, 0x00, 0x00, 0x00, 'f', 'o', 'o'},
 				},
-				true, 4, ErrInvalidString,
+				false, 4, ErrInvalidString,
 			},
 			{"Shouldn't Deep Validate",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2,
 					data: []byte{0x0D, 0x00, 0x03, 0x00, 0x00, 0x00, 'f', 'o', 'o'},
 				},
-				false, 7, nil,
+				true, 7, nil,
 			},
 		}
 
@@ -1510,38 +1510,38 @@ func testValidateValue(t *testing.T) {
 	t.Run("Symbol", func(t *testing.T) {
 		testCases := []struct {
 			name string
-			elem *ReaderElement
+			elem *Element
 			deep bool
 			size uint32
 			err  error
 		}{
 			{"Too Small <4",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2,
 					data: []byte{0x0E, 0x00, 0x00, 0x00},
 				},
-				false, 0, ErrTooSmall,
+				true, 0, ErrTooSmall,
 			},
 			{"Too Small >4",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2,
 					data: []byte{0x0E, 0x00, 0xFF, 0x00, 0x00, 0x00, 'f', 'o', 'o', 0x00},
 				},
-				false, 4, ErrTooSmall,
+				true, 4, ErrTooSmall,
 			},
 			{"Invalid String Value",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2,
 					data: []byte{0x0E, 0x00, 0x03, 0x00, 0x00, 0x00, 'f', 'o', 'o'},
 				},
-				true, 4, ErrInvalidString,
+				false, 4, ErrInvalidString,
 			},
 			{"Shouldn't Deep Validate",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2,
 					data: []byte{0x0E, 0x00, 0x03, 0x00, 0x00, 0x00, 'f', 'o', 'o'},
 				},
-				false, 7, nil,
+				true, 7, nil,
 			},
 		}
 
@@ -1560,34 +1560,34 @@ func testValidateValue(t *testing.T) {
 	t.Run("Code With Scope", func(t *testing.T) {
 		testCases := []struct {
 			name string
-			elem *ReaderElement
+			elem *Element
 			deep bool
 			size uint32
 			err  error
 		}{
 			{"Too Small <4",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2,
 					data: []byte{0x0F, 0x00, 0x00, 0x00},
 				},
-				false, 0, ErrTooSmall,
+				true, 0, ErrTooSmall,
 			},
 			{"Too Small >4",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2,
 					data: []byte{0x0F, 0x00, 0xFF, 0x00, 0x00, 0x00, 'f', 'o', 'o', 0x00},
 				},
-				false, 4, ErrTooSmall,
+				true, 4, ErrTooSmall,
 			},
 			{"Shouldn't Deep Validate",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2,
 					data: []byte{0x0F, 0x00, 0x07, 0x00, 0x00, 0x00, 'f', 'o', 'o'},
 				},
-				false, 7, nil,
+				true, 7, nil,
 			},
 			{"Deep Validate String Too Large",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2,
 					data: []byte{
 						0x0F, 0x00,
@@ -1595,10 +1595,10 @@ func testValidateValue(t *testing.T) {
 						0xFF, 0x00, 0x00, 0x00, 'f', 'o', 'o', 0x00,
 					},
 				},
-				true, 8, ErrStringLargerThanContainer,
+				false, 8, ErrStringLargerThanContainer,
 			},
 			{"Deep Validate Invalid String",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2,
 					data: []byte{
 						0x0F, 0x00,
@@ -1607,10 +1607,10 @@ func testValidateValue(t *testing.T) {
 						0xFF, 0x01, 0x02, 0x03, 0x04,
 					},
 				},
-				true, 8, ErrInvalidString,
+				false, 8, ErrInvalidString,
 			},
 			{"Deep Validate Invalid Document",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2,
 					data: []byte{
 						0x0F, 0x00,
@@ -1619,10 +1619,10 @@ func testValidateValue(t *testing.T) {
 						0xFF, 0x00, 0x00, 0x00, 0x00,
 					},
 				},
-				true, 12, ErrInvalidLength,
+				false, 12, ErrInvalidLength,
 			},
 			{"Success",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2,
 					data: []byte{
 						0x0F, 0x00,
@@ -1631,7 +1631,7 @@ func testValidateValue(t *testing.T) {
 						0x05, 0x00, 0x00, 0x00, 0x00,
 					},
 				},
-				true, 17, nil,
+				false, 17, nil,
 			},
 		}
 
@@ -1650,19 +1650,19 @@ func testValidateValue(t *testing.T) {
 	t.Run("Int32", func(t *testing.T) {
 		testCases := []struct {
 			name string
-			elem *ReaderElement
+			elem *Element
 			size uint32
 			err  error
 		}{
 			{"Too Small",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2,
 					data: []byte{0x10, 0x00, 0x00, 0x00},
 				},
 				0, ErrTooSmall,
 			},
 			{"Success",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2,
 					data: []byte{0x10, 0x00, 0x01, 0x02, 0x03, 0x04},
 				},
@@ -1685,19 +1685,19 @@ func testValidateValue(t *testing.T) {
 	t.Run("Timestamp", func(t *testing.T) {
 		testCases := []struct {
 			name string
-			elem *ReaderElement
+			elem *Element
 			size uint32
 			err  error
 		}{
 			{"Too Small",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2,
 					data: []byte{0x11, 0x00, 0x00, 0x00},
 				},
 				0, ErrTooSmall,
 			},
 			{"Success",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2,
 					data: []byte{0x11, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08},
 				},
@@ -1720,19 +1720,19 @@ func testValidateValue(t *testing.T) {
 	t.Run("Int64", func(t *testing.T) {
 		testCases := []struct {
 			name string
-			elem *ReaderElement
+			elem *Element
 			size uint32
 			err  error
 		}{
 			{"Too Small",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2,
 					data: []byte{0x12, 0x00, 0x00, 0x00},
 				},
 				0, ErrTooSmall,
 			},
 			{"Success",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2,
 					data: []byte{0x12, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08},
 				},
@@ -1755,19 +1755,19 @@ func testValidateValue(t *testing.T) {
 	t.Run("Decimal128", func(t *testing.T) {
 		testCases := []struct {
 			name string
-			elem *ReaderElement
+			elem *Element
 			size uint32
 			err  error
 		}{
 			{"Too Small",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2,
 					data: []byte{0x13, 0x00, 0x00, 0x00},
 				},
 				0, ErrTooSmall,
 			},
 			{"Success",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2,
 					data: []byte{
 						0x13, 0x00,
@@ -1794,12 +1794,12 @@ func testValidateValue(t *testing.T) {
 	t.Run("MinKey", func(t *testing.T) {
 		testCases := []struct {
 			name string
-			elem *ReaderElement
+			elem *Element
 			size uint32
 			err  error
 		}{
 			{"Success",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{0xFF, 0x00},
 				},
 				0, nil,
@@ -1821,12 +1821,12 @@ func testValidateValue(t *testing.T) {
 	t.Run("MaxKey", func(t *testing.T) {
 		testCases := []struct {
 			name string
-			elem *ReaderElement
+			elem *Element
 			size uint32
 			err  error
 		}{
 			{"Success",
-				&ReaderElement{
+				&Element{
 					start: 0, value: 2, data: []byte{0x7F, 0x00},
 				},
 				0, nil,
@@ -1848,7 +1848,7 @@ func testValidateValue(t *testing.T) {
 	t.Run("Invalid Element", func(t *testing.T) {
 		want := ErrInvalidElement
 		var wantSize uint32 = 0
-		gotSize, got := (&ReaderElement{start: 0, value: 2, data: []byte{0xEE, 0x00}}).validateValue(false)
+		gotSize, got := (&Element{start: 0, value: 2, data: []byte{0xEE, 0x00}}).validateValue(false)
 		if gotSize != wantSize {
 			t.Errorf("Did not return correct number of bytes read. got %d; want %d", gotSize, wantSize)
 		}

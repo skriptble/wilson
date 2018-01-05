@@ -17,13 +17,13 @@ type Reader []byte
 // Validates the document. This method only validates the first document in
 // the slice, to validate other documents, the slice must be resliced.
 func (r Reader) Validate() (size uint32, err error) {
-	return r.readElements(func(elem *ReaderElement) error {
+	return r.readElements(func(elem *Element) error {
 		var err error
 		switch elem.Type() {
 		case '\x03':
-			_, err = elem.Document().Validate()
+			_, err = elem.ReaderDocument().Validate()
 		case '\x04':
-			_, err = elem.Array().Validate()
+			_, err = elem.ReaderArray().Validate()
 		}
 		return err
 	})
@@ -53,25 +53,25 @@ func (r Reader) keySize(pos, end uint32) (uint32, error) {
 //
 // TODO(skriptble): Determine if this should return an error on empty key and
 // key not found.
-func (r Reader) Lookup(key ...string) (*ReaderElement, error) {
+func (r Reader) Lookup(key ...string) (*Element, error) {
 	if len(key) < 1 {
 		return nil, ErrEmptyKey
 	}
 
-	var elem *ReaderElement
-	_, err := r.readElements(func(e *ReaderElement) error {
+	var elem *Element
+	_, err := r.readElements(func(e *Element) error {
 		if key[0] == e.Key() {
 			if len(key) > 1 {
 				switch e.Type() {
 				case '\x03':
-					e, err := e.Document().Lookup(key[1:]...)
+					e, err := e.ReaderDocument().Lookup(key[1:]...)
 					if err != nil {
 						return err
 					}
 					elem = e
 					return validateDone
 				case '\x04':
-					e, err := e.Array().Lookup(key[1:]...)
+					e, err := e.ReaderArray().Lookup(key[1:]...)
 					if err != nil {
 						return err
 					}
@@ -92,10 +92,10 @@ func (r Reader) Lookup(key ...string) (*ReaderElement, error) {
 // ElementAt searches for a retrieves the element at the given index. This
 // method will validate all the elements up to and including the element at
 // the given index.
-func (r Reader) ElementAt(index uint) (*ReaderElement, error) {
+func (r Reader) ElementAt(index uint) (*Element, error) {
 	var current uint
-	var elem *ReaderElement
-	_, err := r.readElements(func(e *ReaderElement) error {
+	var elem *Element
+	_, err := r.readElements(func(e *Element) error {
 		if current != index {
 			current++
 			return nil
@@ -130,21 +130,21 @@ func (r Reader) Keys(recursive bool) (Keys, error) {
 // function to facilitate recursive calls.
 func (r Reader) recursiveKeys(recursive bool, prefix ...string) (Keys, error) {
 	ks := make(Keys, 0)
-	_, err := r.readElements(func(elem *ReaderElement) error {
+	_, err := r.readElements(func(elem *Element) error {
 		key := elem.Key()
 		ks = append(ks, Key{Prefix: prefix, Name: key})
 		if recursive {
 			switch elem.Type() {
 			case '\x03':
 				recursivePrefix := append(prefix, key)
-				recurKeys, err := elem.Document().recursiveKeys(recursive, recursivePrefix...)
+				recurKeys, err := elem.ReaderDocument().recursiveKeys(recursive, recursivePrefix...)
 				if err != nil {
 					return err
 				}
 				ks = append(ks, recurKeys...)
 			case '\x04':
 				recursivePrefix := append(prefix, key)
-				recurKeys, err := elem.Array().recursiveKeys(recursive, recursivePrefix...)
+				recurKeys, err := elem.ReaderArray().recursiveKeys(recursive, recursivePrefix...)
 				if err != nil {
 					return err
 				}
@@ -165,7 +165,7 @@ func (r Reader) recursiveKeys(recursive bool, prefix ...string) (Keys, error) {
 // from the function, this method will return. This method will return nil when
 // the function returns validateDone, in all other cases a non-nil error will
 // be returned by this method.
-func (r Reader) readElements(f func(e *ReaderElement) error) (uint32, error) {
+func (r Reader) readElements(f func(e *Element) error) (uint32, error) {
 	if len(r) < 5 {
 		return 0, ErrTooSmall
 	}
@@ -178,7 +178,7 @@ func (r Reader) readElements(f func(e *ReaderElement) error) (uint32, error) {
 	}
 	var pos uint32 = 4
 	var elemStart, elemValStart uint32
-	var elem = new(ReaderElement)
+	var elem *Element
 	end := uint32(givenLength)
 	for {
 		if pos >= end {
@@ -197,10 +197,11 @@ func (r Reader) readElements(f func(e *ReaderElement) error) (uint32, error) {
 			return pos, err
 		}
 		elemValStart = pos
+		elem = new(Element)
 		elem.start = elemStart
 		elem.value = elemValStart
 		elem.data = r
-		n, err = elem.validateValue(false)
+		n, err = elem.validateValue(true)
 		pos += n
 		if err != nil {
 			return pos, err

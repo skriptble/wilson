@@ -305,7 +305,7 @@ func TestDocument(t *testing.T) {
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				got := tc.d.Replace(tc.elems...)
-				if diff := cmp.Diff(got, tc.want, cmp.AllowUnexported(Document{}, Element{}, ReaderElement{})); diff != "" {
+				if diff := cmp.Diff(got, tc.want, cmp.AllowUnexported(Document{}, Element{})); diff != "" {
 					t.Errorf("Documents differ: (-got +want)\n%s", diff)
 				}
 			})
@@ -327,11 +327,11 @@ func TestDocument(t *testing.T) {
 			err  error
 		}{
 			{"first", (&Document{}).Append(C.Null("x")), []string{"x"},
-				&Element{ReaderElement: ReaderElement{start: 0, value: 3}}, nil,
+				&Element{start: 0, value: 3}, nil,
 			},
 			{"depth-one", (&Document{}).Append(C.SubDocumentFromElements("x", C.Null("y"))),
 				[]string{"x", "y"},
-				&Element{ReaderElement: ReaderElement{start: 0, value: 3}}, nil,
+				&Element{start: 0, value: 3}, nil,
 			},
 			{"invalid-depth-traversal", (&Document{}).Append(C.Null("x")),
 				[]string{"x", "y"},
@@ -371,11 +371,11 @@ func TestDocument(t *testing.T) {
 			want *Element
 		}{
 			{"first", (&Document{}).Append(C.Null("x")), []string{"x"},
-				&Element{ReaderElement: ReaderElement{start: 0, value: 3}},
+				&Element{start: 0, value: 3},
 			},
 			{"depth-one", (&Document{}).Append(C.SubDocumentFromElements("x", C.Null("y"))),
 				[]string{"x", "y"},
-				&Element{ReaderElement: ReaderElement{start: 0, value: 3}},
+				&Element{start: 0, value: 3},
 			},
 			{"invalid-depth-traversal", (&Document{}).Append(C.Null("x")),
 				[]string{"x", "y"},
@@ -423,7 +423,7 @@ func TestDocument(t *testing.T) {
 				if err != nil {
 					t.Errorf("Unexpected error from ElementAt: %s", err)
 				}
-				if diff := cmp.Diff(got, tc.want, cmp.AllowUnexported(Element{}, ReaderElement{})); diff != "" {
+				if diff := cmp.Diff(got, tc.want, cmp.AllowUnexported(Element{})); diff != "" {
 					t.Errorf("Documents differ: (-got +want)\n%s", diff)
 				}
 			})
@@ -613,7 +613,7 @@ func TestDocument(t *testing.T) {
 			if err != tc.err {
 				t.Errorf("Returned error does not match expected error. got %s; want %s", err, tc.err)
 			}
-			if diff := cmp.Diff(d, tc.want, cmp.AllowUnexported(Document{}, ReaderElement{})); diff != "" {
+			if diff := cmp.Diff(d, tc.want, cmp.AllowUnexported(Document{}, Element{})); diff != "" {
 				t.Errorf("Written bytes differ: (-got +want)\n%s", diff)
 			}
 		}
