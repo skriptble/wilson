@@ -8,7 +8,6 @@ import (
 )
 
 var ErrTooShort = errors.New("builder: The provided slice's length is too short")
-var ErrInvalidWriter = errors.New("builder: Invalid writer provided")
 
 var C Constructor
 var AC ArrayConstructor
@@ -33,16 +32,7 @@ func (ef ElementFunc) Element() (ElementSizer, ElementWriter) {
 // type Element func() (length uint, ew ElementWriter)
 
 // ElementWriter handles writing an element's BSON representation to a writer.
-//
-// writer can be:
-//
-// - []byte
-// - io.WriterAt
-// - io.WriteSeeker
-// - io.Writer
-//
-// If it is not one of these values, the implementations should panic.
-type ElementWriter func(start uint, writer interface{}) (n int, err error)
+type ElementWriter func(start uint, writer []byte) (n int, err error)
 
 // ElementSizer handles retrieving the size of an element's BSON representation.
 type ElementSizer func() (size uint)
@@ -91,7 +81,7 @@ func (db *DocumentBuilder) Append(elems ...Elementer) *DocumentBuilder {
 
 func (db *DocumentBuilder) documentHeader() (ElementSizer, ElementWriter) {
 	return func() uint { return 5 },
-		func(start uint, writer interface{}) (n int, err error) {
+		func(start uint, writer []byte) (n int, err error) {
 			return elements.Int32.Encode(start, writer, int32(db.RequiredBytes()))
 		}
 }
@@ -121,17 +111,17 @@ func (db *DocumentBuilder) requiredSize(embedded bool) uint {
 }
 
 func (db *DocumentBuilder) Element() (ElementSizer, ElementWriter) {
-	return db.embeddedSize, func(start uint, writer interface{}) (n int, err error) {
+	return db.embeddedSize, func(start uint, writer []byte) (n int, err error) {
 		return db.writeDocument(start, writer, true)
 	}
 }
 
-func (db *DocumentBuilder) WriteDocument(writer interface{}) (int64, error) {
+func (db *DocumentBuilder) WriteDocument(writer []byte) (int64, error) {
 	n, err := db.writeDocument(0, writer, false)
 	return int64(n), err
 }
 
-func (db *DocumentBuilder) writeDocument(start uint, writer interface{}, embedded bool) (int, error) {
+func (db *DocumentBuilder) writeDocument(start uint, writer []byte, embedded bool) (int, error) {
 	db.Init()
 	// This calculates db.required
 	db.requiredSize(embedded)
@@ -139,10 +129,8 @@ func (db *DocumentBuilder) writeDocument(start uint, writer interface{}, embedde
 	var total, n int
 	var err error
 
-	if b, ok := writer.([]byte); ok {
-		if uint(len(b)) < start+db.required {
-			return 0, ErrTooShort
-		}
+	if uint(len(writer)) < start+db.required {
+		return 0, ErrTooShort
 	}
 	if embedded {
 		n, err = elements.Byte.Encode(start, writer, '\x03')
@@ -171,7 +159,7 @@ func (db *DocumentBuilder) writeDocument(start uint, writer interface{}, embedde
 	return total, err
 }
 
-func (db *DocumentBuilder) writeElements(start uint, writer interface{}) (total int, err error) {
+func (db *DocumentBuilder) writeElements(start uint, writer []byte) (total int, err error) {
 	for idx := range db.funcs {
 		n, err := db.funcs[idx](start, writer)
 		total += n
@@ -198,7 +186,7 @@ func (c Constructor) Array(key string, array *ArrayBuilder) ElementFunc {
 		return func() uint {
 				return 2 + uint(len(key)) + array.RequiredBytes()
 			},
-			func(start uint, writer interface{}) (int, error) {
+			func(start uint, writer []byte) (int, error) {
 				arrayBytes := make([]byte, array.RequiredBytes())
 				_, err := array.WriteDocument(arrayBytes)
 				if err != nil {
@@ -224,7 +212,7 @@ func (Constructor) Double(key string, f float64) ElementFunc {
 		return func() uint {
 				return uint(10 + len(key))
 			},
-			func(start uint, writer interface{}) (int, error) {
+			func(start uint, writer []byte) (int, error) {
 				return elements.Double.Element(start, writer, key, f)
 			}
 	}
@@ -236,7 +224,7 @@ func (Constructor) String(key string, value string) ElementFunc {
 		return func() uint {
 				return uint(7 + len(key) + len(value))
 			},
-			func(start uint, writer interface{}) (int, error) {
+			func(start uint, writer []byte) (int, error) {
 				return elements.String.Element(start, writer, key, value)
 			}
 	}
@@ -258,7 +246,7 @@ func (Constructor) BinaryWithSubtype(key string, b []byte, btype byte) ElementFu
 
 				return uint(7 + len(key) + len(b))
 			},
-			func(start uint, writer interface{}) (int, error) {
+			func(start uint, writer []byte) (int, error) {
 				return elements.Binary.Element(start, writer, key, b, btype)
 			}
 	}
@@ -270,7 +258,7 @@ func (Constructor) Undefined(key string) ElementFunc {
 		return func() uint {
 				return uint(2 + len(key))
 			},
-			func(start uint, writer interface{}) (int, error) {
+			func(start uint, writer []byte) (int, error) {
 				var total int
 
 				n, err := elements.Byte.Encode(start, writer, '\x06')
@@ -298,7 +286,7 @@ func (Constructor) ObjectId(key string, oid [12]byte) ElementFunc {
 		return func() uint {
 				return uint(14 + len(key))
 			},
-			func(start uint, writer interface{}) (int, error) {
+			func(start uint, writer []byte) (int, error) {
 				return elements.ObjectId.Element(start, writer, key, oid)
 			}
 	}
@@ -310,7 +298,7 @@ func (Constructor) Boolean(key string, b bool) ElementFunc {
 		return func() uint {
 				return uint(3 + len(key))
 			},
-			func(start uint, writer interface{}) (int, error) {
+			func(start uint, writer []byte) (int, error) {
 				return elements.Boolean.Element(start, writer, key, b)
 			}
 	}
@@ -322,7 +310,7 @@ func (Constructor) DateTime(key string, dt int64) ElementFunc {
 		return func() uint {
 				return uint(10 + len(key))
 			},
-			func(start uint, writer interface{}) (int, error) {
+			func(start uint, writer []byte) (int, error) {
 				return elements.DateTime.Element(start, writer, key, dt)
 			}
 	}
@@ -334,7 +322,7 @@ func (Constructor) Null(key string) ElementFunc {
 		return func() uint {
 				return uint(2 + len(key))
 			},
-			func(start uint, writer interface{}) (int, error) {
+			func(start uint, writer []byte) (int, error) {
 				var total int
 
 				n, err := elements.Byte.Encode(start, writer, '\x0A')
@@ -362,7 +350,7 @@ func (Constructor) Regex(key string, pattern, options string) ElementFunc {
 		return func() uint {
 				return uint(4 + len(key) + len(pattern) + len(options))
 			},
-			func(start uint, writer interface{}) (int, error) {
+			func(start uint, writer []byte) (int, error) {
 				return elements.Regex.Element(start, writer, key, pattern, options)
 			}
 	}
@@ -374,7 +362,7 @@ func (Constructor) DBPointer(key string, ns string, oid [12]byte) ElementFunc {
 		return func() uint {
 				return uint(19 + len(key) + len(ns))
 			},
-			func(start uint, writer interface{}) (int, error) {
+			func(start uint, writer []byte) (int, error) {
 				return elements.DBPointer.Element(start, writer, key, ns, oid)
 			}
 	}
@@ -386,7 +374,7 @@ func (Constructor) JavaScriptCode(key string, code string) ElementFunc {
 		return func() uint {
 				return uint(7 + len(key) + len(code))
 			},
-			func(start uint, writer interface{}) (int, error) {
+			func(start uint, writer []byte) (int, error) {
 				return elements.Javascript.Element(start, writer, key, code)
 			}
 	}
@@ -398,7 +386,7 @@ func (Constructor) Symbol(key string, symbol string) ElementFunc {
 		return func() uint {
 				return uint(7 + len(key) + len(symbol))
 			},
-			func(start uint, writer interface{}) (int, error) {
+			func(start uint, writer []byte) (int, error) {
 				return elements.Symbol.Element(start, writer, key, symbol)
 			}
 	}
@@ -410,7 +398,7 @@ func (Constructor) CodeWithScope(key string, code string, scope []byte) ElementF
 		return func() uint {
 				return uint(11 + len(key) + len(code) + len(scope))
 			},
-			func(start uint, writer interface{}) (int, error) {
+			func(start uint, writer []byte) (int, error) {
 				return elements.CodeWithScope.Element(start, writer, key, code, scope)
 			}
 	}
@@ -422,7 +410,7 @@ func (Constructor) Int32(key string, i int32) ElementFunc {
 		return func() uint {
 				return uint(6 + len(key))
 			},
-			func(start uint, writer interface{}) (int, error) {
+			func(start uint, writer []byte) (int, error) {
 				return elements.Int32.Element(start, writer, key, i)
 			}
 	}
@@ -434,7 +422,7 @@ func (Constructor) Timestamp(key string, t uint32, i uint32) ElementFunc {
 		return func() uint {
 				return uint(10 + len(key))
 			},
-			func(start uint, writer interface{}) (int, error) {
+			func(start uint, writer []byte) (int, error) {
 				return elements.Timestamp.Element(start, writer, key, t, i)
 			}
 	}
@@ -446,7 +434,7 @@ func (Constructor) Int64(key string, i int64) ElementFunc {
 		return func() uint {
 				return uint(10 + len(key))
 			},
-			func(start uint, writer interface{}) (int, error) {
+			func(start uint, writer []byte) (int, error) {
 				return elements.Int64.Element(start, writer, key, i)
 			}
 	}
@@ -458,7 +446,7 @@ func (Constructor) Decimal(key string, d ast.Decimal128) ElementFunc {
 		return func() uint {
 				return uint(18 + len(key))
 			},
-			func(start uint, writer interface{}) (int, error) {
+			func(start uint, writer []byte) (int, error) {
 				return elements.Decimal128.Element(start, writer, key, d)
 			}
 	}
@@ -470,7 +458,7 @@ func (Constructor) MinKey(key string) ElementFunc {
 		return func() uint {
 				return uint(2 + len(key))
 			},
-			func(start uint, writer interface{}) (int, error) {
+			func(start uint, writer []byte) (int, error) {
 				var total int
 
 				n, err := elements.Byte.Encode(start, writer, '\xFF')
@@ -498,7 +486,7 @@ func (Constructor) MaxKey(key string) ElementFunc {
 		return func() uint {
 				return uint(2 + len(key))
 			},
-			func(start uint, writer interface{}) (int, error) {
+			func(start uint, writer []byte) (int, error) {
 				var total int
 
 				n, err := elements.Byte.Encode(start, writer, '\x7F')
