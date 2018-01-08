@@ -53,7 +53,7 @@ func (Constructor) SubDocument(key string, d *Document) *Element {
 func (c Constructor) SubDocumentFromElements(key string, elems ...*Element) *Element {
 	return c.SubDocument(key, NewDocument(uint(len(elems))).Append(elems...))
 }
-func (Constructor) Array(key string, d *Document) *Element {
+func (Constructor) Array(key string, a *Array) *Element {
 	size := uint32(1 + len(key) + 1)
 	b := make([]byte, size)
 	elem := newElement(0, size)
@@ -66,11 +66,11 @@ func (Constructor) Array(key string, d *Document) *Element {
 		panic(err)
 	}
 	elem.value.data = b
-	elem.value.d = d
+	elem.value.d = a.doc
 	return elem
 }
-func (c Constructor) ArrayFromElements(key string, elems ...*Element) *Element {
-	return c.Array(key, NewDocument(uint(len(elems))).Append(elems...))
+func (c Constructor) ArrayFromElements(key string, values ...*Value) *Element {
+	return c.Array(key, NewArray(uint(len(values))).Append(values...))
 }
 
 func (c Constructor) Binary(key string, b []byte) *Element {
@@ -344,21 +344,16 @@ func (ArrayConstructor) Document(d *Document) *Value {
 	return C.SubDocument("", d).value
 }
 
-func (ArrayConstructor) DocumentFromElements(elems ...*Element) *Element {
-	return C.SubDocumentFromElements("", elems...)
+func (ArrayConstructor) DocumentFromElements(elems ...*Element) *Value {
+	return C.SubDocumentFromElements("", elems...).value
 }
 
-func (ArrayConstructor) Array(d *Document) *Value {
-	return C.Array("", d).value
+func (ArrayConstructor) Array(a *Array) *Value {
+	return C.Array("", a).value
 }
 
-func (ArrayConstructor) ArrayFromValues(values ...*Value) *Element {
-	elems := make([]*Element, len(values))
-	for i, v := range values {
-		elems[i] = &Element{v}
-	}
-
-	return C.ArrayFromElements("", elems...)
+func (ArrayConstructor) ArrayFromValues(values ...*Value) *Value {
+	return C.ArrayFromElements("", values...).value
 }
 
 func (ac ArrayConstructor) Binary(b []byte) *Value {

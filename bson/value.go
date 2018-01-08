@@ -32,6 +32,7 @@ func (v *Value) validate(sizeOnly bool) (uint32, error) {
 	}
 
 	var total uint32 = 0
+
 	switch v.data[v.start] {
 	case '\x06', '\x0A', '\xFF', '\x7F':
 	case '\x01':
@@ -57,8 +58,6 @@ func (v *Value) validate(sizeOnly bool) (uint32, error) {
 		}
 		total += uint32(l)
 	case '\x03', '\x04':
-		// TODO(skriptble): We need to validate the keys of an array are in the
-		// correct order. Do this once the array type is completed.
 		if v.d != nil {
 			n, err := v.d.Validate()
 			total += uint32(n)
@@ -224,6 +223,7 @@ func (v *Value) validate(sizeOnly bool) (uint32, error) {
 			return total, ErrTooSmall
 		}
 		total += 16
+
 	default:
 		return total, ErrInvalidElement
 	}

@@ -80,7 +80,7 @@ func (d *Document) recursiveKeys(recursive bool, prefix ...string) (Keys, error)
 			ks = append(ks, subkeys...)
 		case '\x04':
 			subprefix := append(prefix, key)
-			subkeys, err := elem.value.MutableArray().recursiveKeys(recursive, subprefix...)
+			subkeys, err := elem.value.MutableArray().doc.recursiveKeys(recursive, subprefix...)
 			if err != nil {
 				return nil, err
 			}
@@ -182,30 +182,31 @@ func (d *Document) Prepend(elems ...*Element) *Document {
 // TODO(skriptble): Do we need to panic on a nil element? Semantically, if you
 // ask to replace an element in the document with a nil element, you aren't
 // asking for anything to be done.
-func (d *Document) Replace(elems ...*Element) *Document {
-	for _, elem := range elems {
-		if elem == nil {
-			if d.IgnoreNilInsert {
-				continue
-			}
-			panic(ErrNilElement)
+func (d *Document) Set(elem *Element) *Document {
+	if elem == nil {
+		if d.IgnoreNilInsert {
+			return d
 		}
-		key := elem.Key() + "\x00"
-		i := sort.Search(len(d.index), func(i int) bool { return bytes.Compare(d.keyFromIndex(i), []byte(key)) >= 0 })
-		if i < len(d.index) && bytes.Compare(d.keyFromIndex(i), []byte(key)) == 0 {
-			d.elems[i] = elem
-			continue
-		}
-		d.elems = append(d.elems, elem)
-		position := uint32(len(d.elems) - 1)
-		if i < len(d.index) {
-			d.index = append(d.index, 0)
-			copy(d.index[i+1:], d.index[i:])
-			d.index[i] = position
-		} else {
-			d.index = append(d.index, position)
-		}
+		panic(ErrNilElement)
 	}
+
+	key := elem.Key() + "\x00"
+	i := sort.Search(len(d.index), func(i int) bool { return bytes.Compare(d.keyFromIndex(i), []byte(key)) >= 0 })
+	if i < len(d.index) && bytes.Compare(d.keyFromIndex(i), []byte(key)) == 0 {
+		d.elems[i] = elem
+		return d
+	}
+
+	d.elems = append(d.elems, elem)
+	position := uint32(len(d.elems) - 1)
+	if i < len(d.index) {
+		d.index = append(d.index, 0)
+		copy(d.index[i+1:], d.index[i:])
+		d.index[i] = position
+	} else {
+		d.index = append(d.index, position)
+	}
+
 	return d
 }
 
@@ -228,7 +229,7 @@ func (d *Document) Lookup(key ...string) (*Element, error) {
 		case '\x03':
 			elem, err = elem.value.MutableDocument().Lookup(key[1:]...)
 		case '\x04':
-			elem, err = elem.value.MutableArray().Document.Lookup(key[1:]...)
+			elem, err = elem.value.MutableArray().doc.Lookup(key[1:]...)
 		default:
 			// TODO(skriptble): This error message should be more clear, e.g.
 			// include information about what depth was reached, what the
@@ -275,7 +276,7 @@ func (d *Document) Delete(key ...string) *Element {
 		case '\x03':
 			elem = elem.value.MutableDocument().Delete(key[1:]...)
 		case '\x04':
-			elem = elem.value.MutableArray().Document.Delete(key[1:]...)
+			elem = elem.value.MutableArray().doc.Delete(key[1:]...)
 		default:
 			elem = nil
 		}
@@ -296,7 +297,7 @@ func (d *Document) ElementAt(index uint) (*Element, error) {
 
 // Iterator creates an Iterator for this document and returns it.
 //
-// TODO(skriptble): Do we need this method? It will just call NewIterator(d)
+// TODO(skriptble): Do we need this method? It will just call NewIterator(a)
 // which seems like something users can easily do.
 func (d *Document) Iterator() (*Iterator, error) {
 	return NewIterator(d)
@@ -358,7 +359,7 @@ func (d *Document) WriteTo(w io.Writer) (int64, error) {
 // at the provided start position.
 func (d *Document) WriteDocument(start uint, writer interface{}) (int64, error) {
 	var total int64
-	var pos uint = start
+	var pos = start
 	size, err := d.Validate()
 	if err != nil {
 		return total, err
@@ -377,25 +378,11 @@ func (d *Document) WriteDocument(start uint, writer interface{}) (int64, error) 
 	return total, nil
 }
 
-// MarshalBSON implements the Marshaler interface.
-func (d *Document) MarshalBSON() ([]byte, error) {
-	size, err := d.Validate()
-	if err != nil {
-		return nil, err
-	}
-	b := make([]byte, size)
-	_, err = d.writeByteSlice(0, size, b)
-	if err != nil {
-		return nil, err
-	}
-	return b, nil
-}
-
 // writeByteSlice handles serializing this document to a slice of bytes starting
 // at the given start position.
 func (d *Document) writeByteSlice(start uint, size uint32, b []byte) (int64, error) {
 	var total int64
-	var pos uint = start
+	var pos = start
 	if len(b) < int(start)+int(size) {
 		return 0, ErrTooSmall
 	}
@@ -406,13 +393,14 @@ func (d *Document) writeByteSlice(start uint, size uint32, b []byte) (int64, err
 		return total, err
 	}
 	for _, elem := range d.elems {
-		n, err := elem.WriteElement(pos, b)
+		n, err := elem.writeElement(true, pos, b)
 		total += int64(n)
 		pos += uint(n)
 		if err != nil {
 			return total, err
 		}
 	}
+
 	n, err = elements.Byte.Encode(pos, b, '\x00')
 	total += int64(n)
 	pos += uint(n)
@@ -420,6 +408,21 @@ func (d *Document) writeByteSlice(start uint, size uint32, b []byte) (int64, err
 		return total, err
 	}
 	return total, nil
+}
+
+// MarshalBSON implements the Marshaler interface.
+func (d *Document) MarshalBSON() ([]byte, error) {
+	size, err := d.Validate()
+
+	if err != nil {
+		return nil, err
+	}
+	b := make([]byte, size)
+	_, err = d.writeByteSlice(0, size, b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
 // UnmarshalBSON implements the Unmarshaler interface.

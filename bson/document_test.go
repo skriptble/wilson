@@ -17,7 +17,7 @@ func TestDocument(t *testing.T) {
 			want := ErrTooSmall
 			_, got := ReadDocument([]byte{'\x00', '\x00'})
 			if got != want {
-				t.Errorf("Did not get expected error. got %v; want %v", got, want)
+				t.Errorf("Did not get expected error. got %#v; want %#v", got, want)
 			}
 		})
 		t.Run("InvalidLength", func(t *testing.T) {
@@ -26,7 +26,7 @@ func TestDocument(t *testing.T) {
 			binary.LittleEndian.PutUint32(b[0:4], 200)
 			_, got := ReadDocument(b)
 			if got != want {
-				t.Errorf("Did not get expected error. got %v; want %v", got, want)
+				t.Errorf("Did not get expected error. got %#v; want %#v", got, want)
 			}
 		})
 		t.Run("keyLength-error", func(t *testing.T) {
@@ -36,7 +36,7 @@ func TestDocument(t *testing.T) {
 			b[4], b[5], b[6], b[7] = '\x02', 'f', 'o', 'o'
 			_, got := ReadDocument(b)
 			if got != want {
-				t.Errorf("Did not get expected error. got %v; want %v", got, want)
+				t.Errorf("Did not get expected error. got %#v; want %#v", got, want)
 			}
 		})
 		t.Run("Missing-Null-Terminator", func(t *testing.T) {
@@ -46,7 +46,7 @@ func TestDocument(t *testing.T) {
 			b[4], b[5], b[6], b[7], b[8] = '\x0A', 'f', 'o', 'o', '\x00'
 			_, got := ReadDocument(b)
 			if got != want {
-				t.Errorf("Did not get expected error. got %v; want %v", got, want)
+				t.Errorf("Did not get expected error. got %#v; want %#v", got, want)
 			}
 		})
 		t.Run("validateValue-error", func(t *testing.T) {
@@ -56,7 +56,7 @@ func TestDocument(t *testing.T) {
 			b[4], b[5], b[6], b[7], b[8], b[9], b[10] = '\x01', 'f', 'o', 'o', '\x00', '\x01', '\x02'
 			_, got := ReadDocument(b)
 			if got != want {
-				t.Errorf("Did not get expected error. got %v; want %v", got, want)
+				t.Errorf("Did not get expected error. got %#v; want %#v", got, want)
 			}
 		})
 		testCases := []struct {
@@ -72,7 +72,7 @@ func TestDocument(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				got, err := ReadDocument(tc.b)
 				if err != tc.err {
-					t.Errorf("Did not get expected error. got %v; want %v", err, tc.err)
+					t.Errorf("Did not get expected error. got %#v; want %#v", err, tc.err)
 				}
 				if diff := cmp.Diff(got, tc.want, cmp.AllowUnexported(Document{})); diff != "" {
 					t.Errorf("Documents differ: (-got +want)\n%s", diff)
@@ -87,7 +87,7 @@ func TestDocument(t *testing.T) {
 				defer func() {
 					r := recover()
 					if r != ErrNilElement {
-						t.Errorf("Did not received expected error from panic. got %v; want %v", r, ErrNilElement)
+						t.Errorf("Did not received expected error from panic. got %#v; want %#v", r, ErrNilElement)
 					}
 				}()
 				d := NewDocument(0)
@@ -99,7 +99,7 @@ func TestDocument(t *testing.T) {
 				defer func() {
 					r := recover()
 					if r != nil {
-						t.Errorf("Recieved unexpected panic from nil insert. got %v; want %v", r, nil)
+						t.Errorf("Recieved unexpected panic from nil insert. got %#v; want %#v", r, nil)
 					}
 				}()
 				want := NewDocument(0)
@@ -133,7 +133,7 @@ func TestDocument(t *testing.T) {
 					t.Errorf("Received an unexpected error while marhsaling BSON: %s", err)
 				}
 				if !bytes.Equal(got, tc.want) {
-					t.Errorf("Output from Append is not correct. got %#v; want %v", got, tc.want)
+					t.Errorf("Output from Append is not correct. got %#v; want %#v", got, tc.want)
 				}
 			})
 		}
@@ -154,7 +154,7 @@ func TestDocument(t *testing.T) {
 					defer func() {
 						r := recover()
 						if r != ErrNilElement {
-							t.Errorf("Did not received expected error from panic. got %v; want %v", r, ErrNilElement)
+							t.Errorf("Did not received expected error from panic. got %#v; want %#v", r, ErrNilElement)
 						}
 						if diff := cmp.Diff(got, tc.want, cmp.AllowUnexported(Document{})); diff != "" {
 							t.Errorf("Documents differ: (-got +want)\n%s", diff)
@@ -184,7 +184,7 @@ func TestDocument(t *testing.T) {
 					defer func() {
 						r := recover()
 						if r != nil {
-							t.Errorf("Did not received expected error from panic. got %v; want %v", r, nil)
+							t.Errorf("Did not received expected error from panic. got %#v; want %#v", r, nil)
 						}
 						if diff := cmp.Diff(got, tc.want, cmp.AllowUnexported(Document{})); diff != "" {
 							t.Errorf("Documents differ: (-got +want)\n%s", diff)
@@ -216,19 +216,23 @@ func TestDocument(t *testing.T) {
 					t.Errorf("Received an unexpected error while marhsaling BSON: %s", err)
 				}
 				if !bytes.Equal(got, tc.want) {
-					t.Errorf("Output from Prepend is not correct. got %#v; want %v", got, tc.want)
+					t.Errorf("Output from Prepend is not correct. got %#v; want %#v", got, tc.want)
 				}
 			})
 		}
 	})
-	t.Run("Replace", func(t *testing.T) {
+	t.Run("Set", func(t *testing.T) {
 		t.Run("Nil Insert", func(t *testing.T) {
 			testCases := []struct {
-				name  string
-				elems []*Element
-				want  *Document
+				name string
+				elem *Element
+				want *Document
 			}{
-				{"first element nil", []*Element{nil}, &Document{elems: make([]*Element, 0), index: make([]uint32, 0)}},
+				{
+					"first element nil",
+					nil,
+					&Document{elems: make([]*Element, 0),
+						index: make([]uint32, 0)}},
 			}
 
 			for _, tc := range testCases {
@@ -237,24 +241,24 @@ func TestDocument(t *testing.T) {
 					defer func() {
 						r := recover()
 						if r != ErrNilElement {
-							t.Errorf("Did not receive expected error from panic. got %v; want %v", r, ErrNilElement)
+							t.Errorf("Did not receive expected error from panic. got %#v; want %#v", r, ErrNilElement)
 						}
 						if diff := cmp.Diff(got, tc.want, cmp.AllowUnexported(Document{})); diff != "" {
 							t.Errorf("Documents differ: (-got +want)\n%s", diff)
 						}
 					}()
 					got = NewDocument(0)
-					got.Replace(tc.elems...)
+					got.Set(tc.elem)
 				}()
 			}
 		})
 		t.Run("Ignore Nil Insert", func(t *testing.T) {
 			testCases := []struct {
-				name  string
-				elems []*Element
-				want  *Document
+				name string
+				elem *Element
+				want *Document
 			}{
-				{"first element nil", []*Element{nil},
+				{"first element nil", nil,
 					&Document{
 						IgnoreNilInsert: true,
 						elems:           make([]*Element, 0), index: make([]uint32, 0)},
@@ -267,7 +271,7 @@ func TestDocument(t *testing.T) {
 					defer func() {
 						r := recover()
 						if r != nil {
-							t.Errorf("Did not received expected error from panic. got %v; want %v", r, nil)
+							t.Errorf("Did not received expected error from panic. got %#v; want %#v", r, nil)
 						}
 						if diff := cmp.Diff(got, tc.want, cmp.AllowUnexported(Document{})); diff != "" {
 							t.Errorf("Documents differ: (-got +want)\n%s", diff)
@@ -275,36 +279,39 @@ func TestDocument(t *testing.T) {
 					}()
 					got = NewDocument(0)
 					got.IgnoreNilInsert = true
-					got.Replace(tc.elems...)
+					got.Set(tc.elem)
 				}()
 			}
 		})
 		testCases := []struct {
-			name  string
-			d     *Document
-			elems []*Element
-			want  *Document
+			name string
+			d    *Document
+			elem *Element
+			want *Document
 		}{
-			{"first", (&Document{}).Append(C.Double("x", 3.14)), []*Element{C.Double("x", 3.14159)},
+			{
+				"first",
+				(&Document{}).Append(C.Double("x", 3.14)),
+				C.Double("x", 3.14159),
 				(&Document{}).Append(C.Double("x", 3.14159)),
 			},
 			{"second", (&Document{}).Append(C.Double("x", 3.14159), C.String("y", "z")),
-				[]*Element{C.Double("y", 1.2345)},
+				C.Double("y", 1.2345),
 				(&Document{}).Append(C.Double("x", 3.14159), C.Double("y", 1.2345)),
 			},
 			{"append", (&Document{}).Append(C.Null("x")),
-				[]*Element{C.Null("y")},
+				C.Null("y"),
 				(&Document{}).Append(C.Null("x"), C.Null("y")),
 			},
 			{"append-in-middle", (&Document{}).Append(C.Null("w"), C.Null("y"), C.Null("z")),
-				[]*Element{C.Null("x")},
+				C.Null("x"),
 				(&Document{}).Append(C.Null("w"), C.Null("y"), C.Null("z"), C.Null("x")),
 			},
 		}
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				got := tc.d.Replace(tc.elems...)
+				got := tc.d.Set(tc.elem)
 				if diff := cmp.Diff(got, tc.want, cmp.AllowUnexported(Document{}, Element{}, Value{})); diff != "" {
 					t.Errorf("Documents differ: (-got +want)\n%s", diff)
 				}
@@ -316,7 +323,7 @@ func TestDocument(t *testing.T) {
 			d := NewDocument(0)
 			_, err := d.Lookup()
 			if err != ErrEmptyKey {
-				t.Errorf("Empty key lookup did not return expected result. got %v; want %v", err, ErrEmptyKey)
+				t.Errorf("Empty key lookup did not return expected result. got %#v; want %#v", err, ErrEmptyKey)
 			}
 		})
 		testCases := []struct {
@@ -347,10 +354,10 @@ func TestDocument(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				got, err := tc.d.Lookup(tc.key...)
 				if err != tc.err {
-					t.Errorf("Returned error does not match. got %v; want %v", err, tc.err)
+					t.Errorf("Returned error does not match. got %#v; want %#v", err, tc.err)
 				}
 				if !elementEqual(got, tc.want) {
-					t.Errorf("Returned element does not match expected element. got %v; want %v", got, tc.want)
+					t.Errorf("Returned element does not match expected element. got %#v; want %#v", got, tc.want)
 				}
 			})
 		}
@@ -391,7 +398,7 @@ func TestDocument(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				got := tc.d.Delete(tc.key...)
 				if !elementEqual(got, tc.want) {
-					t.Errorf("Returned element does not match expected element. got %v; want %v", got, tc.want)
+					t.Errorf("Returned element does not match expected element. got %#v; want %#v", got, tc.want)
 				}
 			})
 		}
@@ -402,7 +409,7 @@ func TestDocument(t *testing.T) {
 			d.Append(C.Null("x"), C.Null("y"), C.Null("z"))
 			_, err := d.ElementAt(3)
 			if err != ErrOutOfBounds {
-				t.Errorf("Out of bounds should be returned when accessing element beyond end of document. got %v; want %v", err, ErrOutOfBounds)
+				t.Errorf("Out of bounds should be returned when accessing element beyond end of document. got %#v; want %#v", err, ErrOutOfBounds)
 			}
 		})
 		testCases := []struct {
@@ -432,7 +439,7 @@ func TestDocument(t *testing.T) {
 	t.Run("Iterator", func(t *testing.T) {})
 	t.Run("Combine", func(t *testing.T) {})
 	t.Run("Reset", func(t *testing.T) {
-		d := NewDocument(5).Append(C.Null("a"), C.Null("b"), C.Null("c"), C.Null("d"), C.Null("e"))
+		d := NewDocument(5).Append(C.Null("a"), C.Null("b"), C.Null("c"), C.Null("a"), C.Null("e"))
 		gotSlc := d.elems
 		d.Reset()
 		wantSlc := make([]*Element, 5)
@@ -554,7 +561,7 @@ func TestDocument(t *testing.T) {
 			}
 			if diff := cmp.Diff(d, tc.want, cmp.Comparer(documentComparer)); diff != "" {
 				t.Errorf("Documents differ: (-got +want)\n%s", diff)
-				t.Errorf("\n%v\n%v", d, tc.want)
+				t.Errorf("\n%#v\n%#v", d, tc.want)
 			}
 
 		}
@@ -665,10 +672,10 @@ func testDocumentKeys(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			got, err := tc.d.Keys(tc.recursive)
 			if err != tc.err {
-				t.Errorf("Returned error does not match. got %v; want %v", err, tc.err)
+				t.Errorf("Returned error does not match. got %#v; want %#v", err, tc.err)
 			}
 			if !reflect.DeepEqual(got, tc.want) {
-				t.Errorf("Returned keys do not match expected keys. got %v; want %v", got, tc.want)
+				t.Errorf("Returned keys do not match expected keys. got %#v; want %#v", got, tc.want)
 			}
 		})
 	}
@@ -680,7 +687,7 @@ type testPrependAppendGenerator struct{}
 
 func (testPrependAppendGenerator) oneOne() [][]*Element {
 	return [][]*Element{
-		[]*Element{C.Double("foobar", 3.14159)},
+		{C.Double("foobar", 3.14159)},
 	}
 }
 
@@ -716,8 +723,8 @@ func (testPrependAppendGenerator) oneOnePrependBytes() []byte {
 
 func (testPrependAppendGenerator) twoOne() [][]*Element {
 	return [][]*Element{
-		[]*Element{C.Double("foo", 1.234)},
-		[]*Element{C.Double("foo", 5.678)},
+		{C.Double("foo", 1.234)},
+		{C.Double("foo", 5.678)},
 	}
 }
 
@@ -798,6 +805,25 @@ func BenchmarkDocument(b *testing.B) {
 	}
 }
 
+func valueEqual(v1, v2 *Value) bool {
+	if v1 == nil && v2 == nil {
+		return true
+	}
+
+	if v1 == nil || v2 == nil {
+		return false
+	}
+
+	if v1.start != v2.start {
+		return false
+	}
+
+	if v1.offset != v2.offset {
+		return false
+	}
+	return true
+}
+
 func elementEqual(e1, e2 *Element) bool {
 	if e1 == nil && e2 == nil {
 		return true
@@ -805,13 +831,8 @@ func elementEqual(e1, e2 *Element) bool {
 	if e1 == nil || e2 == nil {
 		return false
 	}
-	if e1.value.start != e2.value.start {
-		return false
-	}
-	if e1.value.offset != e2.value.offset {
-		return false
-	}
-	return true
+
+	return valueEqual(e1.value, e2.value)
 }
 
 func documentComparer(d1, d2 *Document) bool {

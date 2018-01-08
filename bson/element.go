@@ -104,6 +104,10 @@ func (e *Element) WriteTo(w io.Writer) (int64, error) {
 // WriteElement serializes this element to the provided writer starting at the
 // provided start position.
 func (e *Element) WriteElement(start uint, writer interface{}) (int64, error) {
+	return e.writeElement(true, start, writer)
+}
+
+func (e *Element) writeElement(key bool, start uint, writer interface{}) (int64, error) {
 	// TODO(skriptble): Figure out if we want to use uint or uint32 and
 	// standardize across all packages.
 	var total int64
@@ -113,7 +117,7 @@ func (e *Element) WriteElement(start uint, writer interface{}) (int64, error) {
 	}
 	switch w := writer.(type) {
 	case []byte:
-		n, err := e.writeByteSlice(start, size, w)
+		n, err := e.writeByteSlice(key, start, size, w)
 		if err != nil {
 			return 0, ErrTooSmall
 		}
@@ -125,23 +129,59 @@ func (e *Element) WriteElement(start uint, writer interface{}) (int64, error) {
 }
 
 // writeByteSlice handles writing this element to a slice of bytes.
-func (e *Element) writeByteSlice(start uint, size uint32, b []byte) (int64, error) {
-	if len(b) < int(size)+int(start) {
+func (e *Element) writeByteSlice(key bool, start uint, size uint32, b []byte) (int64, error) {
+	var startToWrite uint
+	needed := start + uint(size)
+
+	if key {
+		startToWrite = uint(e.value.start)
+	} else {
+		startToWrite = uint(e.value.offset)
+
+		// Fewer bytes are needed if the key isn't being written.
+		needed -= uint(e.value.offset) - uint(e.value.start) - 1
+	}
+
+	if uint(len(b)) < needed {
 		return 0, ErrTooSmall
 	}
+
 	var n int
 	switch e.value.data[e.value.start] {
-	case '\x03', '\x04':
+	case '\x03':
 		if e.value.d == nil {
-			n = copy(b[start:start+uint(size)], e.value.data[e.value.start:e.value.start+size])
+			n = copy(b[start:], e.value.data[startToWrite:e.value.start+size])
 			break
 		}
 
 		header := e.value.offset - e.value.start
-		n += copy(b[start:start+uint(header)], e.value.data[e.value.start:e.value.offset])
-		start += uint(n)
 		size -= header
+		if key {
+			n += copy(b[start:], e.value.data[startToWrite:e.value.offset])
+			start += uint(n)
+		}
+
 		nn, err := e.value.d.writeByteSlice(start, size, b)
+		n += int(nn)
+		if err != nil {
+			return int64(n), err
+		}
+	case '\x04':
+		if e.value.d == nil {
+			n = copy(b[start:], e.value.data[startToWrite:e.value.start+size])
+			break
+		}
+
+		header := e.value.offset - e.value.start
+		size -= header
+		if key {
+			n += copy(b[start:], e.value.data[startToWrite:e.value.offset])
+			start += uint(n)
+		}
+
+		arr := &Array{doc: e.value.d}
+
+		nn, err := arr.writeByteSlice(start, size, b)
 		n += int(nn)
 		if err != nil {
 			return int64(n), err
@@ -196,8 +236,9 @@ func (e *Element) writeByteSlice(start uint, size uint32, b []byte) (int64, erro
 
 		fallthrough
 	default:
-		n = copy(b[start:start+uint(size)], e.value.data[e.value.start:e.value.start+size])
+		n = copy(b[start:], e.value.data[startToWrite:e.value.start+size])
 	}
+
 	return int64(n), nil
 }
 
@@ -208,9 +249,23 @@ func (e *Element) MarshalBSON() ([]byte, error) {
 		return nil, err
 	}
 	b := make([]byte, size)
-	_, err = e.writeByteSlice(0, size, b)
+	_, err = e.writeByteSlice(true, 0, size, b)
 	if err != nil {
 		return nil, err
 	}
 	return b, nil
+}
+
+func elemsFromValues(values []*Value) []*Element {
+	elems := make([]*Element, len(values))
+
+	for i, v := range values {
+		if v == nil {
+			elems[i] = nil
+		} else {
+			elems[i] = &Element{v}
+		}
+	}
+
+	return elems
 }
