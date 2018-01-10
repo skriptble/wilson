@@ -257,7 +257,7 @@ func TestReader(t *testing.T) {
 					'\x08', '\x00', '\x00', '\x00', '\x0A', 'x', '\x00', '\x00',
 				},
 				[]string{"x"},
-				&Element{start: 4, value: 7}, nil,
+				&Element{&Value{start: 4, offset: 7}}, nil,
 			},
 			{"first-second",
 				Reader{
@@ -268,7 +268,7 @@ func TestReader(t *testing.T) {
 					'\x0A', 'b', '\x00', '\x00', '\x00',
 				},
 				[]string{"foo", "b"},
-				&Element{start: 7, value: 10}, nil,
+				&Element{&Value{start: 7, offset: 10}}, nil,
 			},
 			{"first-second-array",
 				Reader{
@@ -279,7 +279,7 @@ func TestReader(t *testing.T) {
 					'\x0A', '2', '\x00', '\x00', '\x00',
 				},
 				[]string{"foo", "2"},
-				&Element{start: 7, value: 10}, nil,
+				&Element{&Value{start: 7, offset: 10}}, nil,
 			},
 		}
 
@@ -343,10 +343,10 @@ func TestReader(t *testing.T) {
 }
 
 func readerElementEqual(e1, e2 *Element) bool {
-	if e1.start != e2.start {
+	if e1.value.start != e2.value.start {
 		return false
 	}
-	if e1.value != e2.value {
+	if e1.value.offset != e2.value.offset {
 		return false
 	}
 	return true

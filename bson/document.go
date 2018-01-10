@@ -70,17 +70,17 @@ func (d *Document) recursiveKeys(recursive bool, prefix ...string) (Keys, error)
 		}
 		// TODO(skriptble): Should we support getting the keys of a code with
 		// scope document?
-		switch elem.Type() {
+		switch elem.value.Type() {
 		case '\x03':
 			subprefix := append(prefix, key)
-			subkeys, err := elem.MutableDocument().recursiveKeys(recursive, subprefix...)
+			subkeys, err := elem.value.MutableDocument().recursiveKeys(recursive, subprefix...)
 			if err != nil {
 				return nil, err
 			}
 			ks = append(ks, subkeys...)
 		case '\x04':
 			subprefix := append(prefix, key)
-			subkeys, err := elem.MutableArray().recursiveKeys(recursive, subprefix...)
+			subkeys, err := elem.value.MutableArray().recursiveKeys(recursive, subprefix...)
 			if err != nil {
 				return nil, err
 			}
@@ -109,7 +109,7 @@ func (d *Document) Append(elems ...*Element) *Document {
 		d.elems = append(d.elems, elem)
 		i := sort.Search(len(d.index), func(i int) bool {
 			return bytes.Compare(
-				d.keyFromIndex(i), elem.data[elem.start+1:elem.value]) >= 0
+				d.keyFromIndex(i), elem.value.data[elem.value.start+1:elem.value.offset]) >= 0
 		})
 		if i < len(d.index) {
 			d.index = append(d.index, 0)
@@ -156,7 +156,7 @@ func (d *Document) Prepend(elems ...*Element) *Document {
 		d.elems[idx] = elem
 		i := sort.Search(len(d.index), func(i int) bool {
 			return bytes.Compare(
-				d.keyFromIndex(i), elem.data[elem.start+1:elem.value]) >= 0
+				d.keyFromIndex(i), elem.value.data[elem.value.start+1:elem.value.offset]) >= 0
 		})
 		if i < len(d.index) {
 			d.index = append(d.index, 0)
@@ -224,11 +224,11 @@ func (d *Document) Lookup(key ...string) (*Element, error) {
 		if len(key) == 1 {
 			return elem, nil
 		}
-		switch elem.Type() {
+		switch elem.value.Type() {
 		case '\x03':
-			elem, err = elem.MutableDocument().Lookup(key[1:]...)
+			elem, err = elem.value.MutableDocument().Lookup(key[1:]...)
 		case '\x04':
-			elem, err = elem.MutableArray().Document.Lookup(key[1:]...)
+			elem, err = elem.value.MutableArray().Document.Lookup(key[1:]...)
 		default:
 			// TODO(skriptble): This error message should be more clear, e.g.
 			// include information about what depth was reached, what the
@@ -271,11 +271,11 @@ func (d *Document) Delete(key ...string) *Element {
 			d.elems = append(d.elems[:keyIndex], d.elems[keyIndex+1:]...)
 			return elem
 		}
-		switch elem.Type() {
+		switch elem.value.Type() {
 		case '\x03':
-			elem = elem.MutableDocument().Delete(key[1:]...)
+			elem = elem.value.MutableDocument().Delete(key[1:]...)
 		case '\x04':
-			elem = elem.MutableArray().Document.Delete(key[1:]...)
+			elem = elem.value.MutableArray().Document.Delete(key[1:]...)
 		default:
 			elem = nil
 		}
@@ -433,7 +433,7 @@ func (d *Document) UnmarshalBSON(b []byte) error {
 		d.elems = append(d.elems, elem)
 		i := sort.Search(len(d.index), func(i int) bool {
 			return bytes.Compare(
-				d.keyFromIndex(i), elem.data[elem.start+1:elem.value]) >= 0
+				d.keyFromIndex(i), elem.value.data[elem.value.start+1:elem.value.offset]) >= 0
 		})
 		if i < len(d.index) {
 			d.index = append(d.index, 0)
@@ -473,5 +473,5 @@ func (d *Document) ReadFrom(r io.Reader) (int64, error) {
 // mainly used when calling sort.Search.
 func (d *Document) keyFromIndex(idx int) []byte {
 	haystack := d.elems[d.index[idx]]
-	return haystack.data[haystack.start+1 : haystack.value]
+	return haystack.value.data[haystack.value.start+1 : haystack.value.offset]
 }

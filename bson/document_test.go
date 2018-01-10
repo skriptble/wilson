@@ -305,7 +305,7 @@ func TestDocument(t *testing.T) {
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				got := tc.d.Replace(tc.elems...)
-				if diff := cmp.Diff(got, tc.want, cmp.AllowUnexported(Document{}, Element{})); diff != "" {
+				if diff := cmp.Diff(got, tc.want, cmp.AllowUnexported(Document{}, Element{}, Value{})); diff != "" {
 					t.Errorf("Documents differ: (-got +want)\n%s", diff)
 				}
 			})
@@ -327,11 +327,11 @@ func TestDocument(t *testing.T) {
 			err  error
 		}{
 			{"first", (&Document{}).Append(C.Null("x")), []string{"x"},
-				&Element{start: 0, value: 3}, nil,
+				&Element{&Value{start: 0, offset: 3}}, nil,
 			},
 			{"depth-one", (&Document{}).Append(C.SubDocumentFromElements("x", C.Null("y"))),
 				[]string{"x", "y"},
-				&Element{start: 0, value: 3}, nil,
+				&Element{&Value{start: 0, offset: 3}}, nil,
 			},
 			{"invalid-depth-traversal", (&Document{}).Append(C.Null("x")),
 				[]string{"x", "y"},
@@ -371,11 +371,11 @@ func TestDocument(t *testing.T) {
 			want *Element
 		}{
 			{"first", (&Document{}).Append(C.Null("x")), []string{"x"},
-				&Element{start: 0, value: 3},
+				&Element{&Value{start: 0, offset: 3}},
 			},
 			{"depth-one", (&Document{}).Append(C.SubDocumentFromElements("x", C.Null("y"))),
 				[]string{"x", "y"},
-				&Element{start: 0, value: 3},
+				&Element{&Value{start: 0, offset: 3}},
 			},
 			{"invalid-depth-traversal", (&Document{}).Append(C.Null("x")),
 				[]string{"x", "y"},
@@ -423,7 +423,7 @@ func TestDocument(t *testing.T) {
 				if err != nil {
 					t.Errorf("Unexpected error from ElementAt: %s", err)
 				}
-				if diff := cmp.Diff(got, tc.want, cmp.AllowUnexported(Element{})); diff != "" {
+				if diff := cmp.Diff(got, tc.want, cmp.AllowUnexported(Element{}, Value{})); diff != "" {
 					t.Errorf("Documents differ: (-got +want)\n%s", diff)
 				}
 			})
@@ -477,7 +477,7 @@ func TestDocument(t *testing.T) {
 	t.Run("WriteDocument", func(t *testing.T) {
 		t.Run("invalid-document", func(t *testing.T) {
 			d := NewDocument(1).Append(C.Double("", 3.14159))
-			d.elems[0].data = d.elems[0].data[:3]
+			d.elems[0].value.data = d.elems[0].value.data[:3]
 			b := make([]byte, 15)
 			_, err := d.WriteDocument(0, b)
 			if err != ErrTooSmall {
@@ -805,10 +805,10 @@ func elementEqual(e1, e2 *Element) bool {
 	if e1 == nil || e2 == nil {
 		return false
 	}
-	if e1.start != e2.start {
+	if e1.value.start != e2.value.start {
 		return false
 	}
-	if e1.value != e2.value {
+	if e1.value.offset != e2.value.offset {
 		return false
 	}
 	return true

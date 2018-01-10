@@ -19,19 +19,19 @@ type Reader []byte
 func (r Reader) Validate() (size uint32, err error) {
 	return r.readElements(func(elem *Element) error {
 		var err error
-		switch elem.Type() {
+		switch elem.value.Type() {
 		case '\x03':
-			_, err = elem.ReaderDocument().Validate()
+			_, err = elem.value.ReaderDocument().Validate()
 		case '\x04':
-			_, err = elem.ReaderArray().Validate()
+			_, err = elem.value.ReaderArray().Validate()
 		}
 		return err
 	})
 }
 
-// keySize will ensure the key is valid and return the length of the key
+// validateKey will ensure the key is valid and return the length of the key
 // including the null terminator.
-func (r Reader) keySize(pos, end uint32) (uint32, error) {
+func (r Reader) validateKey(pos, end uint32) (uint32, error) {
 	// Read a CString, return the length, including the '\x00'
 	var total uint32 = 0
 	for ; pos < end && r[pos] != '\x00'; pos++ {
@@ -62,16 +62,16 @@ func (r Reader) Lookup(key ...string) (*Element, error) {
 	_, err := r.readElements(func(e *Element) error {
 		if key[0] == e.Key() {
 			if len(key) > 1 {
-				switch e.Type() {
+				switch e.value.Type() {
 				case '\x03':
-					e, err := e.ReaderDocument().Lookup(key[1:]...)
+					e, err := e.value.ReaderDocument().Lookup(key[1:]...)
 					if err != nil {
 						return err
 					}
 					elem = e
 					return validateDone
 				case '\x04':
-					e, err := e.ReaderArray().Lookup(key[1:]...)
+					e, err := e.value.ReaderArray().Lookup(key[1:]...)
 					if err != nil {
 						return err
 					}
@@ -134,17 +134,17 @@ func (r Reader) recursiveKeys(recursive bool, prefix ...string) (Keys, error) {
 		key := elem.Key()
 		ks = append(ks, Key{Prefix: prefix, Name: key})
 		if recursive {
-			switch elem.Type() {
+			switch elem.value.Type() {
 			case '\x03':
 				recursivePrefix := append(prefix, key)
-				recurKeys, err := elem.ReaderDocument().recursiveKeys(recursive, recursivePrefix...)
+				recurKeys, err := elem.value.ReaderDocument().recursiveKeys(recursive, recursivePrefix...)
 				if err != nil {
 					return err
 				}
 				ks = append(ks, recurKeys...)
 			case '\x04':
 				recursivePrefix := append(prefix, key)
-				recurKeys, err := elem.ReaderArray().recursiveKeys(recursive, recursivePrefix...)
+				recurKeys, err := elem.value.ReaderArray().recursiveKeys(recursive, recursivePrefix...)
 				if err != nil {
 					return err
 				}
@@ -191,17 +191,15 @@ func (r Reader) readElements(f func(e *Element) error) (uint32, error) {
 		}
 		elemStart = pos
 		pos++
-		n, err := r.keySize(pos, end)
+		n, err := r.validateKey(pos, end)
 		pos += n
 		if err != nil {
 			return pos, err
 		}
 		elemValStart = pos
-		elem = new(Element)
-		elem.start = elemStart
-		elem.value = elemValStart
-		elem.data = r
-		n, err = elem.validateValue(true)
+		elem = newElement(elemStart, elemValStart)
+		elem.value.data = r
+		n, err = elem.value.validate(true)
 		pos += n
 		if err != nil {
 			return pos, err

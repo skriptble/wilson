@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestElement(t *testing.T) {
+func TestValue(t *testing.T) {
 	t.Run("panic", func(t *testing.T) {
 		handle := func() {
 			if got := recover(); got != ErrUninitializedElement {
@@ -20,19 +20,19 @@ func TestElement(t *testing.T) {
 		})
 		t.Run("type", func(t *testing.T) {
 			defer handle()
-			(*Element)(nil).Type()
+			(*Value)(nil).Type()
 		})
 		t.Run("double", func(t *testing.T) {
 			defer handle()
-			(*Element)(nil).Double()
+			(*Value)(nil).Double()
 		})
 		t.Run("string", func(t *testing.T) {
 			defer handle()
-			(*Element)(nil).StringValue()
+			(*Value)(nil).StringValue()
 		})
 		t.Run("document", func(t *testing.T) {
 			defer handle()
-			(*Element)(nil).ReaderDocument()
+			(*Value)(nil).ReaderDocument()
 		})
 	})
 	t.Run("key", func(t *testing.T) {
@@ -41,7 +41,7 @@ func TestElement(t *testing.T) {
 			'\x02', 'f', 'o', 'o', '\x00',
 			'\x00', '\x00', '\x00', '\x00', '\x00',
 			'\x00'}
-		e := &Element{start: 4, value: 9, data: buf}
+		e := &Element{&Value{start: 4, offset: 9, data: buf}}
 		want := "foo"
 		got := e.Key()
 		if got != want {
@@ -55,9 +55,9 @@ func TestElement(t *testing.T) {
 			'\x00', '\x00', '\x00', '\x00', '\x00',
 			'\x00',
 		}
-		e := &Element{start: 4, value: 9, data: buf}
+		e := &Element{&Value{start: 4, offset: 9, data: buf}}
 		want := byte('\x02')
-		got := e.Type()
+		got := e.value.Type()
 		if got != want {
 			t.Errorf("Unexpected result. got %v; want %v", got, want)
 		}
@@ -70,10 +70,10 @@ func TestElement(t *testing.T) {
 			'\x00', '\x00', '\x00', '\x00',
 			'\x00',
 		}
-		e := &Element{start: 4, value: 9, data: buf}
+		e := &Element{&Value{start: 4, offset: 9, data: buf}}
 		binary.LittleEndian.PutUint64(buf[9:17], math.Float64bits(3.14159))
 		want := 3.14159
-		got := e.Double()
+		got := e.value.Double()
 		if got != want {
 			t.Errorf("Unexpected result. got %f; want %f", got, want)
 		}
@@ -86,10 +86,10 @@ func TestElement(t *testing.T) {
 			'b', 'a', 'r', '\x00',
 			'\x00',
 		}
-		e := &Element{start: 4, value: 9, data: buf}
+		e := &Element{&Value{start: 4, offset: 9, data: buf}}
 		binary.LittleEndian.PutUint32(buf[9:13], 4)
 		want := "bar"
-		got := e.StringValue()
+		got := e.value.StringValue()
 		if got != want {
 			t.Errorf("Unexpected result. got %f; want %f", got, want)
 		}

@@ -21,7 +21,7 @@ func NewReadIterator(r Reader) (*ReaderIterator, error) {
 	itr.r = r
 	itr.pos = 4
 	itr.end = uint32(givenLength)
-	itr.elem = new(Element)
+	itr.elem = &Element{}
 
 	return itr, nil
 }
@@ -36,18 +36,18 @@ func (itr *ReaderIterator) Next() bool {
 	}
 	elemStart := itr.pos
 	itr.pos++
-	n, err := itr.r.keySize(itr.pos, itr.end)
+	n, err := itr.r.validateKey(itr.pos, itr.end)
 	itr.pos += n
 	if err != nil {
 		itr.err = err
 		return false
 	}
 
-	itr.elem.start = elemStart
-	itr.elem.value = itr.pos
-	itr.elem.data = itr.r
+	itr.elem.value.start = elemStart
+	itr.elem.value.offset = itr.pos
+	itr.elem.value.data = itr.r
 
-	n, err = itr.elem.validateValue(false)
+	n, err = itr.elem.value.validate(false)
 	itr.pos += n
 	if err != nil {
 		itr.err = err
