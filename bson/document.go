@@ -386,6 +386,9 @@ func (d *Document) validate(currentDepth, maxDepth uint32) (uint32, error) {
 }
 
 // WriteTo implements the io.WriterTo interface.
+//
+// TODO(skriptble): We can optimize this by having creating implementations of
+// writeByteSlice that write directly to an io.Writer instead.
 func (d *Document) WriteTo(w io.Writer) (int64, error) {
 	b, err := d.MarshalBSON()
 	if err != nil {

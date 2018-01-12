@@ -6,6 +6,10 @@ type Unmarshaler interface {
 	UnmarshalBSON([]byte) error
 }
 
+type DocumentUnmarshaler interface {
+	UnmarshalBSONDocument(*Document) error
+}
+
 type Decoder struct {
 }
 
