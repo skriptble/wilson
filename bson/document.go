@@ -296,11 +296,8 @@ func (d *Document) ElementAt(index uint) (*Element, error) {
 }
 
 // Iterator creates an Iterator for this document and returns it.
-//
-// TODO(skriptble): Do we need this method? It will just call NewIterator(a)
-// which seems like something users can easily do.
-func (d *Document) Iterator() (*Iterator, error) {
-	return NewIterator(d)
+func (d *Document) Iterator() *Iterator {
+	return newIterator(d)
 }
 
 // Combine will take the keys from the provided document and append them onto

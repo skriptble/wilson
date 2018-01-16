@@ -1,24 +1,39 @@
 package bson
 
 type Iterator struct {
+	d     *Document
+	index int
+	elem  *Element
+	err   error
 }
 
-func NewIterator(d *Document) (*Iterator, error) {
-	return nil, nil
+func newIterator(d *Document) *Iterator {
+	return &Iterator{d: d}
 }
 
 func (itr *Iterator) Next() bool {
-	return false
-}
+	if itr.index >= len(itr.d.elems) {
+		return false
+	}
 
-func (itr *Iterator) Close() error {
-	return nil
+	e := itr.d.elems[itr.index]
+
+	_, err := e.Validate()
+	if err != nil {
+		itr.err = err
+		return false
+	}
+
+	itr.elem = e
+	itr.index++
+
+	return true
 }
 
 func (itr *Iterator) Element() *Element {
-	return nil
+	return itr.elem
 }
 
 func (itr *Iterator) Err() error {
-	return nil
+	return itr.err
 }

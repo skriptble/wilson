@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDocument(t *testing.T) {
@@ -436,7 +437,21 @@ func TestDocument(t *testing.T) {
 			})
 		}
 	})
-	t.Run("Iterator", func(t *testing.T) {})
+	t.Run("Iterator", func(t *testing.T) {
+		elems := []*Element{C.String("foo", "bar"), C.Int32("baz", 1), C.Null("bing")}
+		d := NewDocument(3).Append(elems...)
+
+		iter := d.Iterator()
+
+		for _, elem := range elems {
+			require.True(t, iter.Next())
+			require.NoError(t, iter.Err())
+			requireElementsEqual(t, elem, iter.Element())
+		}
+
+		require.False(t, iter.Next())
+		require.NoError(t, iter.Err())
+	})
 	t.Run("Combine", func(t *testing.T) {})
 	t.Run("Reset", func(t *testing.T) {
 		d := NewDocument(5).Append(C.Null("a"), C.Null("b"), C.Null("c"), C.Null("a"), C.Null("e"))
