@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/require"
 )
 
 func ExampleReaderValidate() {
@@ -339,7 +340,113 @@ func TestReader(t *testing.T) {
 			})
 		}
 	})
-	t.Run("Iterator", func(t *testing.T) {})
+	t.Run("Iterator", func(t *testing.T) {
+		testCases := []struct {
+			name     string
+			rdr      Reader
+			initErr  error
+			elems    []*Element
+			finalErr error
+		}{
+			{
+				"nil reader",
+				nil,
+				ErrTooSmall,
+				nil,
+				nil,
+			},
+			{
+				"empty reader",
+				[]byte{},
+				ErrTooSmall,
+				nil,
+				nil,
+			},
+			{
+				"invalid length",
+				[]byte{0x6, 0x0, 0x0, 0x0, 0x0},
+				ErrInvalidLength,
+				nil,
+				nil,
+			},
+			{
+				"empty document",
+				[]byte{0x5, 0x0, 0x0, 0x0, 0x0},
+				nil,
+				nil,
+				nil,
+			},
+			{
+				"single element",
+				[]byte{
+					// length
+					0x12, 0x0, 0x0, 0x0,
+
+					// type - string
+					0x2,
+					// key - "foo"
+					0x66, 0x6f, 0x6f, 0x0,
+					// value - string length
+					0x4, 0x0, 0x0, 0x0,
+					// value - string "bar"
+					0x62, 0x61, 0x72, 0x0,
+
+					// null terminator
+					0x0,
+				},
+				nil,
+				[]*Element{C.String("foo", "bar")},
+				nil,
+			},
+			{
+				"multiple elements",
+				[]byte{
+					// length
+					0x17, 0x0, 0x0, 0x0,
+
+					// type - string
+					0x2,
+					// key - "foo"
+					0x66, 0x6f, 0x6f, 0x0,
+					// value - string length
+					0x4, 0x0, 0x0, 0x0,
+					// value - string "bar"
+					0x62, 0x61, 0x72, 0x0,
+
+					// type - null
+					0xa,
+					// key - "baz"
+					0x62, 0x61, 0x7a, 0x0,
+
+					// null terminator
+					0x0,
+				},
+				nil,
+				[]*Element{C.String("foo", "bar"), C.Null("baz")},
+				nil,
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				itr, err := NewReadIterator(tc.rdr)
+				require.Equal(t, err, tc.initErr)
+
+				if err != nil {
+					return
+				}
+
+				for _, elem := range tc.elems {
+					require.True(t, itr.Next())
+					require.NoError(t, itr.Err())
+					require.True(t, readerElementComparer(elem, itr.Element()))
+				}
+
+				require.False(t, itr.Next())
+				require.Equal(t, tc.finalErr, itr.Err())
+			})
+		}
+	})
 }
 
 func readerElementEqual(e1, e2 *Element) bool {

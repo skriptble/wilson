@@ -1,5 +1,6 @@
 package bson
 
+// ReaderIterator facilitates iterating over a Reader.
 type ReaderIterator struct {
 	r    Reader
 	pos  uint32
@@ -8,6 +9,7 @@ type ReaderIterator struct {
 	err  error
 }
 
+// NewReaderIterator constructors a new ReaderIterator over a given Reader.
 func NewReadIterator(r Reader) (*ReaderIterator, error) {
 	itr := new(ReaderIterator)
 	if len(r) < 5 {
@@ -21,11 +23,14 @@ func NewReadIterator(r Reader) (*ReaderIterator, error) {
 	itr.r = r
 	itr.pos = 4
 	itr.end = uint32(givenLength)
-	itr.elem = &Element{}
+	itr.elem = &Element{value: &Value{}}
 
 	return itr, nil
 }
 
+// Next fetches the next element of the Reader, returning whether or not the next element was able
+// to be fetched. If true is returned, then call Element to get the element. If false is returned,
+// call Err to check if an error occurred.
 func (itr *ReaderIterator) Next() bool {
 	if itr.pos >= itr.end {
 		itr.err = ErrInvalidReadOnlyDocument
@@ -56,10 +61,13 @@ func (itr *ReaderIterator) Next() bool {
 	return true
 }
 
+// Element returns the current element of the ReaderIterator. The pointer that it returns will
+// _always_ be the same for a given ReaderIterator.
 func (itr *ReaderIterator) Element() *Element {
 	return itr.elem
 }
 
+// Err returns the error that occurred when iterating, or nil if none occurred.
 func (itr *ReaderIterator) Err() error {
 	return itr.err
 }
