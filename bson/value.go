@@ -535,14 +535,14 @@ func (v *Value) Int32() int32 {
 	return readi32(v.data[v.offset : v.offset+4])
 }
 
-func (v *Value) Timestamp() uint64 {
+func (v *Value) Timestamp() (uint32, uint32) {
 	if v == nil || v.offset == 0 || v.data == nil {
 		panic(ErrUninitializedElement)
 	}
 	if v.data[v.start] != '\x11' {
 		panic(ElementTypeError{"compact.Element.Timestamp", BSONType(v.data[v.start])})
 	}
-	return binary.LittleEndian.Uint64(v.data[v.offset : v.offset+8])
+	return binary.LittleEndian.Uint32(v.data[v.offset : v.offset+4]), binary.LittleEndian.Uint32(v.data[v.offset+4 : v.offset+8])
 }
 
 func (v *Value) Int64() int64 {

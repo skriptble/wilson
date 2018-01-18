@@ -1456,26 +1456,27 @@ func TestElement(t *testing.T) {
 			testCases := []struct {
 				name  string
 				elem  *Element
-				val   uint64
+				t     uint32
+				i     uint32
 				fault error
 			}{
-				{"Nil Value", &Element{nil}, 0, ErrUninitializedElement},
+				{"Nil Value", &Element{nil}, 0, 0, ErrUninitializedElement},
 				{"Empty Element value",
-					&Element{&Value{start: 0, offset: 0, data: nil}}, 0, ErrUninitializedElement,
+					&Element{&Value{start: 0, offset: 0, data: nil}}, 0, 0, ErrUninitializedElement,
 				},
 				{"Empty Element data",
-					&Element{&Value{start: 0, offset: 2, data: nil}}, 0, ErrUninitializedElement,
+					&Element{&Value{start: 0, offset: 2, data: nil}}, 0, 0, ErrUninitializedElement,
 				},
 				{"Not Timestamp",
-					&Element{&Value{start: 0, offset: 2, data: []byte{0x02, 0x00}}}, 0,
+					&Element{&Value{start: 0, offset: 2, data: []byte{0x02, 0x00}}}, 0, 0,
 					ElementTypeError{"compact.Element.Timestamp", BSONType(0x02)},
 				},
 				{"Success",
 					&Element{&Value{
 						start: 0, offset: 2,
-						data: []byte{0x11, 0x00, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+						data: []byte{0x11, 0x00, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x1, 0x00, 0x0},
 					}},
-					255, nil,
+					255, 256, nil,
 				},
 			}
 
@@ -1488,9 +1489,10 @@ func TestElement(t *testing.T) {
 						}
 					}()
 
-					val := tc.elem.value.Timestamp()
-					if val != tc.val {
-						t.Errorf("Did not return correct value. got %.5f; want %.5f", val, tc.val)
+					ti, inc := tc.elem.value.Timestamp()
+					if ti != tc.t || inc != tc.i {
+						t.Errorf("Did not return correct value. got (%.5f, %.5f); want (%.5f, %.5f)",
+							ti, inc, tc.t, tc.i)
 					}
 				})
 			}
