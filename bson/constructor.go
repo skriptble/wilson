@@ -1,8 +1,8 @@
 package bson
 
 import (
+	"github.com/skriptble/wilson/bson/decimal"
 	"github.com/skriptble/wilson/bson/elements"
-	"github.com/skriptble/wilson/bson/parser/ast"
 )
 
 var C Constructor
@@ -283,7 +283,7 @@ func (Constructor) Int64(key string, i int64) *Element {
 	return elem
 }
 
-func (Constructor) Decimal128(key string, d ast.Decimal128) *Element {
+func (Constructor) Decimal128(key string, d decimal.Decimal128) *Element {
 	size := uint32(1 + len(key) + 1 + 16)
 	elem := newElement(0, uint32(1+len(key)+1))
 	elem.value.data = make([]byte, size)
@@ -416,7 +416,7 @@ func (ArrayConstructor) Int64(i int64) *Value {
 	return C.Int64("", i).value
 }
 
-func (ArrayConstructor) Decimal128(d ast.Decimal128) *Value {
+func (ArrayConstructor) Decimal128(d decimal.Decimal128) *Value {
 	return C.Decimal128("", d).value
 }
 

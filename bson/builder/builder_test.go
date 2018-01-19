@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/skriptble/wilson/bson/parser/ast"
+	"github.com/skriptble/wilson/bson/decimal"
 )
 
 func TestDocumentBuilder(t *testing.T) {
@@ -1281,12 +1281,12 @@ func TestDocumentBuilder(t *testing.T) {
 		})
 
 		t.Run("Decimal128", func(t *testing.T) {
-			d, _ := ast.ParseDecimal128("-7.50")
+			d, _ := decimal.ParseDecimal128("-7.50")
 
 			testCases := []struct {
 				name    string
 				key     string
-				d       ast.Decimal128
+				d       decimal.Decimal128
 				size    uint
 				repr    []byte
 				start   uint

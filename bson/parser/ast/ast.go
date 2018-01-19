@@ -1,6 +1,10 @@
 package ast
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/skriptble/wilson/bson/decimal"
+)
 
 // Document represents a BSON Document.
 type Document struct {
@@ -152,7 +156,7 @@ type Int64Element struct {
 // package and providing a way to return a big.Float.
 type DecimalElement struct {
 	Name       *ElementKeyName
-	Decimal128 Decimal128
+	Decimal128 decimal.Decimal128
 }
 
 // MinKeyElement represents a BSON min key element.

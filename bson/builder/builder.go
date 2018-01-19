@@ -3,8 +3,8 @@ package builder
 import (
 	"errors"
 
+	"github.com/skriptble/wilson/bson/decimal"
 	"github.com/skriptble/wilson/bson/elements"
-	"github.com/skriptble/wilson/bson/parser/ast"
 )
 
 var ErrTooShort = errors.New("builder: The provided slice's length is too short")
@@ -440,7 +440,7 @@ func (Constructor) Int64(key string, i int64) ElementFunc {
 	}
 }
 
-func (Constructor) Decimal(key string, d ast.Decimal128) ElementFunc {
+func (Constructor) Decimal(key string, d decimal.Decimal128) ElementFunc {
 	return func() (ElementSizer, ElementWriter) {
 		// An decimal's length is (1 + key length + 1) + 16 bytes
 		return func() uint {

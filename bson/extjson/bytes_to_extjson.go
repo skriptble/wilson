@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/skriptble/wilson/bson/decimal"
 	"github.com/skriptble/wilson/bson/parser"
 	"github.com/skriptble/wilson/bson/parser/ast"
 )
@@ -396,7 +397,7 @@ func (w *extJsonWriter) writeMaxKeyValue() error {
 	return w.writeNonExtDocument(d)
 }
 
-func (w *extJsonWriter) writeDecimalValue(dec ast.Decimal128) error {
+func (w *extJsonWriter) writeDecimalValue(dec decimal.Decimal128) error {
 	d := newDoc(newStringElement("$numberDecimal", dec.String()))
 
 	return w.writeDocument(d)

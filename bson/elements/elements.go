@@ -15,7 +15,7 @@ import (
 	"math"
 	"unsafe"
 
-	"github.com/skriptble/wilson/bson/parser/ast"
+	"github.com/skriptble/wilson/bson/decimal"
 )
 
 var ErrTooSmall = errors.New("element: The provided slice is too small")
@@ -706,7 +706,7 @@ func (i64) Element(start uint, writer []byte, key string, i int64) (int, error) 
 	return total, nil
 }
 
-func (decimal128) Encode(start uint, writer []byte, d ast.Decimal128) (int, error) {
+func (decimal128) Encode(start uint, writer []byte, d decimal.Decimal128) (int, error) {
 	var total int
 	high, low := d.GetBytes()
 
@@ -722,7 +722,7 @@ func (decimal128) Encode(start uint, writer []byte, d ast.Decimal128) (int, erro
 	return total, err
 }
 
-func (decimal128) Element(start uint, writer []byte, key string, d ast.Decimal128) (int, error) {
+func (decimal128) Element(start uint, writer []byte, key string, d decimal.Decimal128) (int, error) {
 	var total int
 
 	n, err := Byte.Encode(start, writer, '\x13')

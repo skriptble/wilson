@@ -3,7 +3,7 @@ package builder
 import (
 	"strconv"
 
-	"github.com/skriptble/wilson/bson/parser/ast"
+	"github.com/skriptble/wilson/bson/decimal"
 )
 
 type ArrayElementer interface {
@@ -162,7 +162,7 @@ func (ArrayConstructor) Int64(i int64) ArrayElementFunc {
 	}
 }
 
-func (ArrayConstructor) Decimal(d ast.Decimal128) ArrayElementFunc {
+func (ArrayConstructor) Decimal(d decimal.Decimal128) ArrayElementFunc {
 	return func(pos uint) Elementer {
 		return C.Decimal(strconv.FormatUint(uint64(pos), 10), d)
 	}

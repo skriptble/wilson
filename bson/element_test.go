@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"testing"
 	"time"
+
+	"github.com/skriptble/wilson/bson/decimal"
 )
 
 func TestElement(t *testing.T) {
@@ -1539,11 +1541,11 @@ func TestElement(t *testing.T) {
 			}
 		})
 		t.Run("Decimal128", func(t *testing.T) {
-			var empty Decimal128
+			var empty decimal.Decimal128
 			testCases := []struct {
 				name  string
 				elem  *Element
-				val   Decimal128
+				val   decimal.Decimal128
 				fault error
 			}{
 				{"Nil Value", &Element{nil}, empty, ErrUninitializedElement},
@@ -1565,7 +1567,7 @@ func TestElement(t *testing.T) {
 							0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 							0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 						}}},
-					Decimal128{h: 255, l: 255}, nil,
+					decimal.NewDecimal128(255, 255), nil,
 				},
 			}
 

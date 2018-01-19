@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/skriptble/wilson/bson/parser/ast"
+	"github.com/skriptble/wilson/bson/decimal"
 	"github.com/stretchr/testify/require"
 )
 
@@ -418,7 +418,7 @@ func TestConstructor(t *testing.T) {
 				0xee, 0x02, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
 				0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3c, 0xb0,
 			}
-			d, _ := ast.ParseDecimal128("-7.50")
+			d, _ := decimal.ParseDecimal128("-7.50")
 
 			expected := &Element{&Value{start: 0, offset: 5, data: buf, d: nil}}
 			actual := C.Decimal128("foo", d)
@@ -836,7 +836,7 @@ func TestConstructor(t *testing.T) {
 				0xee, 0x02, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
 				0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3c, 0xb0,
 			}
-			d, _ := ast.ParseDecimal128("-7.50")
+			d, _ := decimal.ParseDecimal128("-7.50")
 
 			expected := &Value{start: 0, offset: 2, data: buf, d: nil}
 			actual := AC.Decimal128(d)

@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 	"math"
 	"time"
+
+	"github.com/skriptble/wilson/bson/decimal"
 )
 
 type Value struct {
@@ -555,7 +557,7 @@ func (v *Value) Int64() int64 {
 	return int64(binary.LittleEndian.Uint64(v.data[v.offset : v.offset+8]))
 }
 
-func (v *Value) Decimal128() Decimal128 {
+func (v *Value) Decimal128() decimal.Decimal128 {
 	if v == nil || v.offset == 0 || v.data == nil {
 		panic(ErrUninitializedElement)
 	}
@@ -564,5 +566,5 @@ func (v *Value) Decimal128() Decimal128 {
 	}
 	l := binary.LittleEndian.Uint64(v.data[v.offset : v.offset+8])
 	h := binary.LittleEndian.Uint64(v.data[v.offset+8 : v.offset+16])
-	return NewDecimal128(h, l)
+	return decimal.NewDecimal128(h, l)
 }

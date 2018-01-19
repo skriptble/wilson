@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/skriptble/wilson/bson/decimal"
 	"github.com/skriptble/wilson/bson/parser/ast"
 )
 
@@ -917,7 +918,7 @@ func parseElementTest(t *testing.T) {
 		},
 		{"decimal128", &ast.DecimalElement{
 			Name:       &ast.ElementKeyName{Key: "foobar"},
-			Decimal128: ast.NewDecimal128(0, 12345)},
+			Decimal128: decimal.NewDecimal128(0, 12345)},
 			decimalBytes(),
 		},
 		{"min-key", &ast.MinKeyElement{

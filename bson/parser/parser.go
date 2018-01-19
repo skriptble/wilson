@@ -7,6 +7,7 @@ import (
 	"io"
 	"math"
 
+	"github.com/skriptble/wilson/bson/decimal"
 	"github.com/skriptble/wilson/bson/parser/ast"
 )
 
@@ -330,7 +331,7 @@ func (p *Parser) ParseElement() (ast.Element, error) {
 		if err != nil {
 			return nil, err
 		}
-		d := ast.NewDecimal128(h, l)
+		d := decimal.NewDecimal128(h, l)
 		el = &ast.DecimalElement{
 			Name:       key,
 			Decimal128: d,

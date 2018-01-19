@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/skriptble/wilson/bson/builder"
+	"github.com/skriptble/wilson/bson/decimal"
 	"github.com/skriptble/wilson/bson/internal/jsonparser"
-	"github.com/skriptble/wilson/bson/parser/ast"
 )
 
 type wrapperType byte
@@ -199,14 +199,14 @@ func parseDouble(data []byte, dataType jsonparser.ValueType) (float64, error) {
 	return f, nil
 }
 
-func parseDecimal(data []byte, dataType jsonparser.ValueType) (ast.Decimal128, error) {
+func parseDecimal(data []byte, dataType jsonparser.ValueType) (decimal.Decimal128, error) {
 	if dataType != jsonparser.String {
-		return ast.Decimal128{}, fmt.Errorf("$numberDecimal value should be string, but instead is %s", dataType.String())
+		return decimal.Decimal128{}, fmt.Errorf("$numberDecimal value should be string, but instead is %s", dataType.String())
 	}
 
-	d, err := ast.ParseDecimal128(string(data))
+	d, err := decimal.ParseDecimal128(string(data))
 	if err != nil {
-		return ast.Decimal128{}, fmt.Errorf("$invalid $numberDecimal string: %s", string(data))
+		return decimal.Decimal128{}, fmt.Errorf("$invalid $numberDecimal string: %s", string(data))
 	}
 
 	return d, nil
