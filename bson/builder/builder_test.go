@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/skriptble/wilson/bson/decimal"
+	"github.com/skriptble/wilson/bson/objectid"
 )
 
 func TestDocumentBuilder(t *testing.T) {
@@ -590,7 +591,7 @@ func TestDocumentBuilder(t *testing.T) {
 			testCases := []struct {
 				name    string
 				key     string
-				oid     [12]byte
+				oid     objectid.ObjectID
 				size    uint
 				repr    []byte
 				start   uint
@@ -866,7 +867,7 @@ func TestDocumentBuilder(t *testing.T) {
 				name    string
 				key     string
 				ns      string
-				oid     [12]byte
+				oid     objectid.ObjectID
 				size    uint
 				repr    []byte
 				start   uint
