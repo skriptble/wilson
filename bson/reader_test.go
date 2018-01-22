@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"reflect"
 	"testing"
 
@@ -444,6 +445,87 @@ func TestReader(t *testing.T) {
 
 				require.False(t, itr.Next())
 				require.Equal(t, tc.finalErr, itr.Err())
+			})
+		}
+	})
+	t.Run("NewFromIOReader", func(t *testing.T) {
+		testCases := []struct {
+			name       string
+			ioReader   io.Reader
+			bsonReader Reader
+			err        error
+		}{
+			{
+				"nil reader",
+				nil,
+				nil,
+				ErrNilReader,
+			},
+			{
+				"premature end of reader",
+				bytes.NewBuffer([]byte{}),
+				nil,
+				io.EOF,
+			},
+			{
+				"empty document",
+				bytes.NewBuffer([]byte{5, 0, 0, 0, 0}),
+				[]byte{5, 0, 0, 0, 0},
+				nil,
+			},
+			{
+				"non-empty document",
+				bytes.NewBuffer([]byte{
+					// length
+					0x17, 0x0, 0x0, 0x0,
+
+					// type - string
+					0x2,
+					// key - "foo"
+					0x66, 0x6f, 0x6f, 0x0,
+					// value - string length
+					0x4, 0x0, 0x0, 0x0,
+					// value - string "bar"
+					0x62, 0x61, 0x72, 0x0,
+
+					// type - null
+					0xa,
+					// key - "baz"
+					0x62, 0x61, 0x7a, 0x0,
+
+					// null terminator
+					0x0,
+				}),
+				[]byte{
+					// length
+					0x17, 0x0, 0x0, 0x0,
+
+					// type - string
+					0x2,
+					// key - "foo"
+					0x66, 0x6f, 0x6f, 0x0,
+					// value - string length
+					0x4, 0x0, 0x0, 0x0,
+					// value - string "bar"
+					0x62, 0x61, 0x72, 0x0,
+
+					// type - null
+					0xa,
+					// key - "baz"
+					0x62, 0x61, 0x7a, 0x0,
+
+					// null terminator
+					0x0,
+				},
+				nil,
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				reader, err := NewFromIOReader(tc.ioReader)
+				require.Equal(t, err, tc.err)
+				require.True(t, bytes.Equal(tc.bsonReader, reader))
 			})
 		}
 	})
