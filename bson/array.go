@@ -18,6 +18,13 @@ func NewArray(numberOfElems uint) *Array {
 	return &Array{doc: NewDocument(numberOfElems)}
 }
 
+// ArrayFromDocument creates an array from a *Document. The returned array
+// does not make a copy of the *Document, so any changes made to either will
+// be present in both.
+func ArrayFromDocument(doc *Document) *Array {
+	return &Array{doc: doc}
+}
+
 func (a *Array) Validate() (uint32, error) {
 	var size uint32 = 4 + 1
 	for i, elem := range a.doc.elems {
