@@ -60,9 +60,39 @@ func (v *Value) validate(sizeOnly bool) (uint32, error) {
 			return total, ErrInvalidString
 		}
 		total += uint32(l)
-	case '\x03', '\x04':
+	case '\x03':
 		if v.d != nil {
 			n, err := v.d.Validate()
+			total += uint32(n)
+			if err != nil {
+				return total, err
+			}
+			break
+		}
+
+		if int(v.offset+4) > len(v.data) {
+			return total, ErrTooSmall
+		}
+		l := readi32(v.data[v.offset : v.offset+4])
+		total += 4
+		if l < 5 {
+			return total, ErrInvalidReadOnlyDocument
+		}
+		if int32(v.offset)+l > int32(len(v.data)) {
+			return total, ErrTooSmall
+		}
+		if !sizeOnly {
+			n, err := Reader(v.data[v.offset : v.offset+uint32(l)]).Validate()
+			total += n - 4
+			if err != nil {
+				return total, err
+			}
+			break
+		}
+		total += uint32(l) - 4
+	case '\x04':
+		if v.d != nil {
+			n, err := (&Array{v.d}).Validate()
 			total += uint32(n)
 			if err != nil {
 				return total, err
