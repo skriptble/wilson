@@ -51,6 +51,24 @@ func (Constructor) SubDocument(key string, d *Document) *Element {
 	elem.value.d = d
 	return elem
 }
+func (Constructor) SubDocumentFromReader(key string, r Reader) *Element {
+	size := uint32(1 + len(key) + 1 + len(r))
+	b := make([]byte, size)
+	elem := newElement(0, uint32(1+len(key)+1))
+	_, err := elements.Byte.Encode(0, b, '\x03')
+	if err != nil {
+		panic(err)
+	}
+	_, err = elements.CString.Encode(1, b, key)
+	if err != nil {
+		panic(err)
+	}
+	// NOTE: We don't validate the Reader here since we don't validate the
+	// Document when provided to SubDocument.
+	copy(b[1+len(key)+1:], r)
+	elem.value.data = b
+	return elem
+}
 func (c Constructor) SubDocumentFromElements(key string, elems ...*Element) *Element {
 	return c.SubDocument(key, NewDocument(uint(len(elems))).Append(elems...))
 }
@@ -343,6 +361,10 @@ func (ArrayConstructor) String(val string) *Value {
 
 func (ArrayConstructor) Document(d *Document) *Value {
 	return C.SubDocument("", d).value
+}
+
+func (ArrayConstructor) DocumentFromReader(r Reader) *Value {
+	return C.SubDocumentFromReader("", r).value
 }
 
 func (ArrayConstructor) DocumentFromElements(elems ...*Element) *Value {
