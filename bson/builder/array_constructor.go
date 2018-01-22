@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"github.com/skriptble/wilson/bson/decimal"
+	"github.com/skriptble/wilson/bson/objectid"
 )
 
 type ArrayElementer interface {
@@ -90,7 +91,7 @@ func (ArrayConstructor) Undefined() ArrayElementFunc {
 	}
 }
 
-func (ArrayConstructor) ObjectId(oid [12]byte) ArrayElementFunc {
+func (ArrayConstructor) ObjectId(oid objectid.ObjectID) ArrayElementFunc {
 	return func(pos uint) Elementer {
 		return C.ObjectId(strconv.FormatUint(uint64(pos), 10), oid)
 	}
@@ -120,7 +121,7 @@ func (ArrayConstructor) Regex(pattern string, options string) ArrayElementFunc {
 	}
 }
 
-func (ArrayConstructor) DBPointer(ns string, oid [12]byte) ArrayElementFunc {
+func (ArrayConstructor) DBPointer(ns string, oid objectid.ObjectID) ArrayElementFunc {
 	return func(pos uint) Elementer {
 		return C.DBPointer(strconv.FormatUint(uint64(pos), 10), ns, oid)
 	}

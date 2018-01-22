@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/skriptble/wilson/bson/decimal"
+	"github.com/skriptble/wilson/bson/objectid"
 )
 
 func TestElement(t *testing.T) {
@@ -1039,7 +1040,7 @@ func TestElement(t *testing.T) {
 			testCases := []struct {
 				name  string
 				elem  *Element
-				val   [12]byte
+				val   objectid.ObjectID
 				fault error
 			}{
 				{"Nil Value", &Element{nil}, empty, ErrUninitializedElement},
@@ -1224,7 +1225,7 @@ func TestElement(t *testing.T) {
 				name    string
 				elem    *Element
 				ns      string
-				pointer [12]byte
+				pointer objectid.ObjectID
 				fault   error
 			}{
 				{"Nil Value", &Element{nil}, "", empty, ErrUninitializedElement},

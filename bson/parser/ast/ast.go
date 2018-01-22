@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/skriptble/wilson/bson/decimal"
+	"github.com/skriptble/wilson/bson/objectid"
 )
 
 // Document represents a BSON Document.
@@ -78,7 +79,7 @@ type UndefinedElement struct {
 // ObjectIDElement represents a BSON objectID element.
 type ObjectIDElement struct {
 	Name *ElementKeyName
-	ID   [12]byte
+	ID   objectid.ObjectID
 }
 
 // BoolElement represents a BSON boolean element.
@@ -110,7 +111,7 @@ type RegexElement struct {
 type DBPointerElement struct {
 	Name    *ElementKeyName
 	String  string
-	Pointer [12]byte
+	Pointer objectid.ObjectID
 }
 
 // JavaScriptElement represents a BSON JavaScript element.

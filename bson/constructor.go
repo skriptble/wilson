@@ -3,6 +3,7 @@ package bson
 import (
 	"github.com/skriptble/wilson/bson/decimal"
 	"github.com/skriptble/wilson/bson/elements"
+	"github.com/skriptble/wilson/bson/objectid"
 )
 
 var C Constructor
@@ -110,7 +111,7 @@ func (Constructor) Undefined(key string) *Element {
 	return elem
 }
 
-func (Constructor) ObjectID(key string, oid [12]byte) *Element {
+func (Constructor) ObjectID(key string, oid objectid.ObjectID) *Element {
 	size := uint32(1 + len(key) + 1 + 12)
 	elem := newElement(0, 1+uint32(len(key))+1)
 	elem.value.data = make([]byte, size)
@@ -177,7 +178,7 @@ func (Constructor) Regex(key string, pattern, options string) *Element {
 	return elem
 }
 
-func (Constructor) DBPointer(key string, ns string, oid [12]byte) *Element {
+func (Constructor) DBPointer(key string, ns string, oid objectid.ObjectID) *Element {
 	size := uint32(1 + len(key) + 1 + 4 + len(ns) + 1 + 12)
 	elem := newElement(0, uint32(1+len(key)+1))
 	elem.value.data = make([]byte, size)
@@ -368,8 +369,8 @@ func (ArrayConstructor) Undefined() *Value {
 	return C.Undefined("").value
 }
 
-func (ArrayConstructor) ObjectID(obj [12]byte) *Value {
-	return C.ObjectID("", obj).value
+func (ArrayConstructor) ObjectID(oid objectid.ObjectID) *Value {
+	return C.ObjectID("", oid).value
 }
 
 func (ArrayConstructor) Boolean(b bool) *Value {
@@ -388,7 +389,7 @@ func (ArrayConstructor) Regex(pattern, options string) *Value {
 	return C.Regex("", pattern, options).value
 }
 
-func (ArrayConstructor) DBPointer(ns string, oid [12]byte) *Value {
+func (ArrayConstructor) DBPointer(ns string, oid objectid.ObjectID) *Value {
 	return C.DBPointer("", ns, oid).value
 }
 

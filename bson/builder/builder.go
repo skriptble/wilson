@@ -5,6 +5,7 @@ import (
 
 	"github.com/skriptble/wilson/bson/decimal"
 	"github.com/skriptble/wilson/bson/elements"
+	"github.com/skriptble/wilson/bson/objectid"
 )
 
 var ErrTooShort = errors.New("builder: The provided slice's length is too short")
@@ -280,7 +281,7 @@ func (Constructor) Undefined(key string) ElementFunc {
 	}
 }
 
-func (Constructor) ObjectId(key string, oid [12]byte) ElementFunc {
+func (Constructor) ObjectId(key string, oid objectid.ObjectID) ElementFunc {
 	return func() (ElementSizer, ElementWriter) {
 		// An ObjectId's length is (1 + key length + 1) + 12
 		return func() uint {
@@ -356,7 +357,7 @@ func (Constructor) Regex(key string, pattern, options string) ElementFunc {
 	}
 }
 
-func (Constructor) DBPointer(key string, ns string, oid [12]byte) ElementFunc {
+func (Constructor) DBPointer(key string, ns string, oid objectid.ObjectID) ElementFunc {
 	return func() (ElementSizer, ElementWriter) {
 		// An dbpointer's length is (1 + key length + 1) + (4 + ns length + 1) + 12
 		return func() uint {

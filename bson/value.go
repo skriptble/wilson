@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/skriptble/wilson/bson/decimal"
+	"github.com/skriptble/wilson/bson/objectid"
 )
 
 type Value struct {
@@ -378,7 +379,7 @@ func (v *Value) Binary() (subtype byte, data []byte) {
 	return st, b
 }
 
-func (v *Value) ObjectID() [12]byte {
+func (v *Value) ObjectID() objectid.ObjectID {
 	if v == nil || v.offset == 0 || v.data == nil {
 		panic(ErrUninitializedElement)
 	}
@@ -434,7 +435,7 @@ func (v *Value) Regex() (pattern, options string) {
 	return string(v.data[pstart:pend]), string(v.data[ostart:oend])
 }
 
-func (v *Value) DBPointer() (string, [12]byte) {
+func (v *Value) DBPointer() (string, objectid.ObjectID) {
 	if v == nil || v.offset == 0 || v.data == nil {
 		panic(ErrUninitializedElement)
 	}
