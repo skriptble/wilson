@@ -15,6 +15,7 @@ var ErrInvalidLength = errors.New("document length is invalid")
 var ErrEmptyKey = errors.New("empty key provided")
 var ErrNilElement = errors.New("Element is nil")
 var ErrNilDocument = errors.New("Document is nil")
+var ErrInvalidDocumentType = errors.New("invalid document type")
 
 // TODO(skriptble): This error message is pretty awful.
 // Please fix.
@@ -300,7 +301,7 @@ func (d *Document) Iterator() *Iterator {
 	return newIterator(d)
 }
 
-// Combine will take the keys from the provided document and append them onto
+// Concat will take the keys from the provided document and concat them onto
 // the end of this document.
 //
 // doc must be one of the following:
@@ -308,8 +309,50 @@ func (d *Document) Iterator() *Iterator {
 //   - *Document
 //   - []byte
 //   - io.Reader
-func (d *Document) Combine(doc interface{}) error {
+func (d *Document) Concat(docs ...interface{}) error {
+	for _, doc := range docs {
+		if doc == nil {
+			if d.IgnoreNilInsert {
+				continue
+			}
+
+			return ErrNilDocument
+		}
+
+		switch doc := doc.(type) {
+		case *Document:
+			if doc == nil {
+				if d.IgnoreNilInsert {
+					continue
+				}
+
+				return ErrNilDocument
+			}
+			d.Append(doc.elems...)
+		case []byte:
+			if err := d.concatReader(Reader(doc)); err != nil {
+				return err
+			}
+		case Reader:
+			if err := d.concatReader(doc); err != nil {
+				return err
+			}
+		default:
+			return ErrInvalidDocumentType
+		}
+	}
+
 	return nil
+}
+
+func (d *Document) concatReader(r Reader) error {
+	_, err := r.readElements(func(e *Element) error {
+		d.Append(e)
+
+		return nil
+	})
+
+	return err
 }
 
 // Reset clears a document so it can be reused. This method clears references

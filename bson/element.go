@@ -36,6 +36,17 @@ func newElement(start uint32, offset uint32) *Element {
 	return &Element{&Value{start: start, offset: offset}}
 }
 
+func (e *Element) Clone() *Element {
+	return &Element{
+		value: &Value{
+			start:  e.value.start,
+			offset: e.value.offset,
+			data:   e.value.data,
+			d:      e.value.d,
+		},
+	}
+}
+
 // Validates the element and returns its total size.
 func (e *Element) Validate() (uint32, error) {
 	if e == nil {

@@ -300,11 +300,11 @@ func TestDocument(t *testing.T) {
 				C.Double("y", 1.2345),
 				(&Document{}).Append(C.Double("x", 3.14159), C.Double("y", 1.2345)),
 			},
-			{"append", (&Document{}).Append(C.Null("x")),
+			{"concat", (&Document{}).Append(C.Null("x")),
 				C.Null("y"),
 				(&Document{}).Append(C.Null("x"), C.Null("y")),
 			},
-			{"append-in-middle", (&Document{}).Append(C.Null("w"), C.Null("y"), C.Null("z")),
+			{"concat-in-middle", (&Document{}).Append(C.Null("w"), C.Null("y"), C.Null("z")),
 				C.Null("x"),
 				(&Document{}).Append(C.Null("w"), C.Null("y"), C.Null("z"), C.Null("x")),
 			},
@@ -452,7 +452,235 @@ func TestDocument(t *testing.T) {
 		require.False(t, iter.Next())
 		require.NoError(t, iter.Err())
 	})
-	t.Run("Combine", func(t *testing.T) {})
+	t.Run("Concat", func(t *testing.T) {
+		testCases := []struct {
+			name     string
+			doc      *Document
+			concat   []interface{}
+			expected *Document
+			err      error
+		}{
+			{
+				"nil",
+				NewDocument(0),
+				[]interface{}{
+					nil,
+				},
+				nil,
+				ErrNilDocument,
+			},
+			{
+				"nil document",
+				NewDocument(0),
+				[]interface{}{
+					(*Document)(nil),
+				},
+				nil,
+				ErrNilDocument,
+			},
+			{
+				"concat single doc",
+				NewDocument(1),
+				[]interface{}{
+					NewDocument(1).Append(C.String("foo", "bar")),
+				},
+				NewDocument(1).Append(C.String("foo", "bar")),
+				nil,
+			},
+			{
+				"concat multiple docs",
+				NewDocument(1),
+				[]interface{}{
+					NewDocument(1).Append(C.String("foo", "bar")),
+					NewDocument(2).Append(C.Int32("baz", 3), C.Null("bang")),
+				},
+				NewDocument(1).Append(C.String("foo", "bar"), C.Int32("baz", 3), C.Null("bang")),
+				nil,
+			},
+			{
+				"concat single byte slice",
+				NewDocument(1),
+				[]interface{}{
+					[]byte{
+						// length
+						0x12, 0x0, 0x0, 0x0,
+
+						// type - string
+						0x2,
+						// key - "foo"
+						0x66, 0x6f, 0x6f, 0x0,
+						// value - string length
+						0x4, 0x0, 0x0, 0x0,
+						// value - string "bar"
+						0x62, 0x61, 0x72, 0x0,
+
+						// null terminator
+						0x0,
+					},
+				},
+				NewDocument(1).Append(C.String("foo", "bar")),
+				nil,
+			},
+			{
+				"concat multiple byte slices",
+				NewDocument(3),
+				[]interface{}{
+					[]byte{
+						// length
+						0x12, 0x0, 0x0, 0x0,
+
+						// type - string
+						0x2,
+						// key - "foo"
+						0x66, 0x6f, 0x6f, 0x0,
+						// value - string length
+						0x4, 0x0, 0x0, 0x0,
+						// value - string "bar"
+						0x62, 0x61, 0x72, 0x0,
+
+						// null terminator
+						0x0,
+					},
+					[]byte{
+						// length
+						0x14, 0x0, 0x0, 0x0,
+
+						// type - string
+						0x10,
+						// key - "baz"
+						0x62, 0x61, 0x7a, 0x0,
+						// value - int32(3)
+						0x3, 0x0, 0x0, 0x0,
+
+						// type - null
+						0xa,
+						// key - "bang"
+						0x62, 0x61, 0x6e, 0x67, 0x0,
+
+						// null terminator
+						0x0,
+					},
+				},
+				NewDocument(1).Append(C.String("foo", "bar"), C.Int32("baz", 3), C.Null("bang")),
+				nil,
+			},
+			{
+				"concat single reader",
+				NewDocument(1),
+				[]interface{}{
+					Reader([]byte{
+						// length
+						0x12, 0x0, 0x0, 0x0,
+
+						// type - string
+						0x2,
+						// key - "foo"
+						0x66, 0x6f, 0x6f, 0x0,
+						// value - string length
+						0x4, 0x0, 0x0, 0x0,
+						// value - string "bar"
+						0x62, 0x61, 0x72, 0x0,
+
+						// null terminator
+						0x0,
+					}),
+				},
+				NewDocument(1).Append(C.String("foo", "bar")),
+				nil,
+			},
+			{
+				"concat multiple readers",
+				NewDocument(3),
+				[]interface{}{
+					Reader([]byte{
+						// length
+						0x12, 0x0, 0x0, 0x0,
+
+						// type - string
+						0x2,
+						// key - "foo"
+						0x66, 0x6f, 0x6f, 0x0,
+						// value - string length
+						0x4, 0x0, 0x0, 0x0,
+						// value - string "bar"
+						0x62, 0x61, 0x72, 0x0,
+
+						// null terminator
+						0x0,
+					}),
+					Reader([]byte{
+						// length
+						0x14, 0x0, 0x0, 0x0,
+
+						// type - string
+						0x10,
+						// key - "baz"
+						0x62, 0x61, 0x7a, 0x0,
+						// value - int32(3)
+						0x3, 0x0, 0x0, 0x0,
+
+						// type - null
+						0xa,
+						// key - "bang"
+						0x62, 0x61, 0x6e, 0x67, 0x0,
+
+						// null terminator
+						0x0,
+					}),
+				},
+				NewDocument(1).Append(C.String("foo", "bar"), C.Int32("baz", 3), C.Null("bang")),
+				nil,
+			},
+			{
+				"concat mixed",
+				NewDocument(1),
+				[]interface{}{
+					NewDocument(1).Append(C.String("foo", "bar")),
+					[]byte{
+						// length
+						0xe, 0x0, 0x0, 0x0,
+
+						// type - string
+						0x10,
+						// key - "baz"
+						0x62, 0x61, 0x7a, 0x0,
+						// value - int32(3)
+						0x3, 0x0, 0x0, 0x0,
+
+						// null terminator
+						0x0,
+					},
+					Reader([]byte{
+						// length
+						0xb, 0x0, 0x0, 0x0,
+
+						// type - null
+						0xa,
+						// key - "bang"
+						0x62, 0x61, 0x6e, 0x67, 0x0,
+
+						// null terminator
+						0x0,
+					}),
+				},
+				NewDocument(1).Append(C.String("foo", "bar"), C.Int32("baz", 3), C.Null("bang")),
+				nil,
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				err := tc.doc.Concat(tc.concat...)
+				require.Equal(t, tc.err, err)
+				if err != nil {
+					return
+				}
+
+				require.True(t, documentComparer(tc.expected, tc.doc))
+			})
+		}
+
+	})
 	t.Run("Reset", func(t *testing.T) {
 		d := NewDocument(5).Append(C.Null("a"), C.Null("b"), C.Null("c"), C.Null("a"), C.Null("e"))
 		gotSlc := d.elems
@@ -863,6 +1091,7 @@ func documentComparer(d1, d2 *Document) bool {
 		if err != nil {
 			return false
 		}
+
 		if !bytes.Equal(b1, b2) {
 			return false
 		}
