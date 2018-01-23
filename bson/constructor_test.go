@@ -106,6 +106,28 @@ func TestConstructor(t *testing.T) {
 			requireElementsEqual(t, expected, actual)
 		})
 
+		t.Run("SubDocumentFromReader", func(t *testing.T) {
+			buf := []byte{
+				// type
+				0x3,
+				// key
+				0x66, 0x6f, 0x6f, 0x0,
+				0x0A, 0x00, 0x00, 0x00,
+				0x0A, 'b', 'a', 'r', 0x00,
+				0x00,
+			}
+			rdr := Reader{
+				0x0A, 0x00, 0x00, 0x00,
+				0x0A, 'b', 'a', 'r', 0x00,
+				0x00,
+			}
+
+			expected := &Element{&Value{start: 0, offset: 5, data: buf}}
+			actual := C.SubDocumentFromReader("foo", rdr)
+
+			requireElementsEqual(t, expected, actual)
+		})
+
 		t.Run("Array", func(t *testing.T) {
 			buf := []byte{
 				// type
@@ -520,6 +542,32 @@ func TestConstructor(t *testing.T) {
 
 			expected := &Value{start: 0, offset: 2, data: buf, d: d}
 			actual := AC.DocumentFromElements(e)
+
+			requireValuesEqual(t, expected, actual)
+		})
+
+		t.Run("SubDocumentFromReader", func(t *testing.T) {
+			buf := []byte{
+				// type
+				0x3,
+				// key
+				0x0,
+				0x10, 0x00, 0x00, 0x00,
+				0x01, '0', 0x00,
+				0x01, 0x02, 0x03, 0x04,
+				0x05, 0x06, 0x07, 0x08,
+				0x00,
+			}
+			rdr := Reader{
+				0x10, 0x00, 0x00, 0x00,
+				0x01, '0', 0x00,
+				0x01, 0x02, 0x03, 0x04,
+				0x05, 0x06, 0x07, 0x08,
+				0x00,
+			}
+
+			expected := &Value{start: 0, offset: 2, data: buf}
+			actual := AC.DocumentFromReader(rdr)
 
 			requireValuesEqual(t, expected, actual)
 		})
