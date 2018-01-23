@@ -1823,6 +1823,12 @@ func testValidateValue(t *testing.T) {
 					start: 0, offset: 2, data: []byte{0x04, 0x00, 0x08, 0x00, 0x00, 0x00, 0x0A, '0', 0x00, 0x00},
 				}}, false, 8, nil,
 			},
+			{"ArrayWithDocument/success",
+				&Element{&Value{
+					start: 0, offset: 2, data: []byte{0x04, 0x00},
+					d: NewArray(1).Append(AC.Null()).doc,
+				}}, false, 8, nil,
+			},
 		}
 
 		for _, tc := range testCases {
