@@ -47,6 +47,10 @@ func (e *Element) Clone() *Element {
 	}
 }
 
+func (e *Element) Value() *Value {
+	return e.value
+}
+
 // Validates the element and returns its total size.
 func (e *Element) Validate() (uint32, error) {
 	if e == nil {
