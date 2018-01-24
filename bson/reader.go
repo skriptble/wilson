@@ -2,9 +2,11 @@ package bson
 
 import (
 	"errors"
+	"io"
 	"strings"
 )
 
+var ErrNilReader = errors.New("nil reader")
 var validateDone = errors.New("validation loop complete")
 
 // Reader is a wrapper around a byte slice. It will interpret the slice as a
@@ -13,6 +15,39 @@ var validateDone = errors.New("validation loop complete")
 // stored all methods run in O(n) time. If a more efficient lookup method is
 // necessary then the Document type should be used.
 type Reader []byte
+
+func NewFromIOReader(r io.Reader) (Reader, error) {
+	if r == nil {
+		return nil, ErrNilReader
+	}
+
+	var lengthBytes [4]byte
+
+	count, err := io.ReadFull(r, lengthBytes[:])
+	if err != nil {
+		return nil, err
+	}
+
+	if count < 4 {
+		return nil, ErrTooSmall
+	}
+
+	length := readi32(lengthBytes[:])
+	reader := make([]byte, length)
+
+	copy(reader, lengthBytes[:])
+
+	count, err = io.ReadFull(r, reader[4:])
+	if err != nil {
+		return nil, err
+	}
+
+	if int32(count) != length-4 {
+		return nil, ErrInvalidLength
+	}
+
+	return reader, nil
+}
 
 // Validates the document. This method only validates the first document in
 // the slice, to validate other documents, the slice must be resliced.
