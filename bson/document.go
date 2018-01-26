@@ -53,6 +53,11 @@ func ReadDocument(b []byte) (*Document, error) {
 	return doc, nil
 }
 
+// Len returns the number of elements in the document.
+func (d *Document) Len() int {
+	return len(d.elems)
+}
+
 // Keys returns all of the element keys for this document. If recursive is true,
 // this method will also return the keys of any subdocuments or arrays.
 func (d *Document) Keys(recursive bool) (Keys, error) {
