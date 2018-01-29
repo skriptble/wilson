@@ -1634,7 +1634,7 @@ func TestElement(t *testing.T) {
 		testCases := []struct {
 			name  string
 			elem  *Element
-			etype byte
+			etype BSONType
 			fault error
 		}{
 			{"Nil Value", &Element{nil}, 0x0, ErrUninitializedElement},

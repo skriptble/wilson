@@ -12,27 +12,27 @@ package bson
 type node [2]uint32
 
 const (
-	TypeDouble           = '\x01'
-	TypeString           = '\x02'
-	TypeEmbeddedDocument = '\x03'
-	TypeArray            = '\x04'
-	TypeBinary           = '\x05'
-	TypeUndefined        = '\x06'
-	TypeObjectID         = '\x07'
-	TypeBoolean          = '\x08'
-	TypeDateTime         = '\x09'
-	TypeNull             = '\x0A'
-	TypeRegex            = '\x0B'
-	TypeDBPointer        = '\x0C'
-	TypeJavaScript       = '\x0D'
-	TypeSymbol           = '\x0E'
-	TypeCodeWithScope    = '\x0F'
-	TypeInt32            = '\x10'
-	TypeTimestamp        = '\x11'
-	TypeInt64            = '\x12'
-	TypeDecimal128       = '\x13'
-	TypeMinKey           = '\xFF'
-	TypeMaxKey           = '\x7F'
+	TypeDouble           BSONType = 0x01
+	TypeString           BSONType = 0x02
+	TypeEmbeddedDocument BSONType = 0x03
+	TypeArray            BSONType = 0x04
+	TypeBinary           BSONType = 0x05
+	TypeUndefined        BSONType = 0x06
+	TypeObjectID         BSONType = 0x07
+	TypeBoolean          BSONType = 0x08
+	TypeDateTime         BSONType = 0x09
+	TypeNull             BSONType = 0x0A
+	TypeRegex            BSONType = 0x0B
+	TypeDBPointer        BSONType = 0x0C
+	TypeJavaScript       BSONType = 0x0D
+	TypeSymbol           BSONType = 0x0E
+	TypeCodeWithScope    BSONType = 0x0F
+	TypeInt32            BSONType = 0x10
+	TypeTimestamp        BSONType = 0x11
+	TypeInt64            BSONType = 0x12
+	TypeDecimal128       BSONType = 0x13
+	TypeMinKey           BSONType = 0xFF
+	TypeMaxKey           BSONType = 0x7F
 )
 
 type BSONType byte

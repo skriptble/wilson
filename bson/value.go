@@ -271,11 +271,11 @@ func (v *Value) valueSize() (uint32, error) {
 
 // Type returns the identifying element byte for this element.
 // It panics if e is uninitialized.
-func (v *Value) Type() byte {
+func (v *Value) Type() BSONType {
 	if v == nil || v.offset == 0 || v.data == nil {
 		panic(ErrUninitializedElement)
 	}
-	return v.data[v.start]
+	return BSONType(v.data[v.start])
 }
 
 // Double returns the float64 value for this element.

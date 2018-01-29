@@ -56,7 +56,7 @@ func TestValue(t *testing.T) {
 			'\x00',
 		}
 		e := &Element{&Value{start: 4, offset: 9, data: buf}}
-		want := byte('\x02')
+		want := BSONType('\x02')
 		got := e.value.Type()
 		if got != want {
 			t.Errorf("Unexpected result. got %v; want %v", got, want)
