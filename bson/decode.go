@@ -39,6 +39,8 @@ var tUint64 = reflect.TypeOf(uint64(0))
 
 var tEmpty = reflect.TypeOf((*interface{})(nil)).Elem()
 
+var zeroVal reflect.Value
+
 type Unmarshaler interface {
 	UnmarshalBSON([]byte) error
 }
@@ -168,12 +170,18 @@ func (d *Decoder) decodeToReader() error {
 
 }
 
-func (d *Decoder) reflectDecode(val reflect.Value) error {
+func (d *Decoder) reflectDecode(val reflect.Value) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("%s", e)
+		}
+	}()
+
 	switch val.Kind() {
 	case reflect.Map:
 		return d.decodeIntoMap(val)
 	case reflect.Slice, reflect.Array:
-		return d.decodeIntoSlice(val)
+		return d.decodeIntoElementSlice(val)
 	case reflect.Struct:
 		return d.decodeIntoStruct(val)
 	case reflect.Ptr:
@@ -246,6 +254,23 @@ func (d *Decoder) getReflectValue(v *Value, containerType reflect.Type, outer re
 		f := v.Double()
 
 		switch containerType {
+		case tUint32:
+			if f > 0 && math.Floor(f) == f && f <= float64(math.MaxUint32) {
+				val = reflect.ValueOf(uint32(f))
+			}
+		case tUint64:
+			if f > 0 && math.Floor(f) == f && f <= float64(math.MaxUint64) {
+				val = reflect.ValueOf(uint64(f))
+			}
+		case tUint:
+			if f < 0 || math.Floor(f) != f || f > float64(math.MaxUint64) {
+				break
+			}
+
+			u := uint64(f)
+			if uint64(uint(u)) == u {
+				val = reflect.ValueOf(uint(f))
+			}
 		case tInt32:
 			if math.Floor(f) == f && f <= float64(math.MaxInt32) {
 				val = reflect.ValueOf(int32(f))
@@ -265,11 +290,10 @@ func (d *Decoder) getReflectValue(v *Value, containerType reflect.Type, outer re
 			}
 
 		case tFloat32:
-			if f > math.MaxFloat32 {
-				return val, nil
+			if float64(float32(f)) == f {
+				val = reflect.ValueOf(float32(f))
 			}
 
-			fallthrough
 		case tFloat64, tEmpty:
 			val = reflect.ValueOf(f)
 		default:
@@ -283,12 +307,26 @@ func (d *Decoder) getReflectValue(v *Value, containerType reflect.Type, outer re
 
 		val = reflect.ValueOf(v.StringValue())
 	case 0x4:
-		if containerType.Kind() == reflect.Slice || containerType.Kind() == reflect.Array {
-			d := NewDecoder(bytes.NewBuffer(v.ReaderDocument()))
-			err := d.decodeIntoSlice(val)
+		if containerType.Kind() == reflect.Slice {
+			d := NewDecoder(bytes.NewBuffer(v.ReaderArray()))
+			newVal, err := d.decodeBSONArrayToSlice(containerType)
 			if err != nil {
 				return val, err
 			}
+
+			val = newVal
+
+			break
+		}
+
+		if containerType.Kind() == reflect.Array {
+			d := NewDecoder(bytes.NewBuffer(v.ReaderArray()))
+			newVal, err := d.decodeBSONArrayIntoArray(containerType)
+			if err != nil {
+				return val, err
+			}
+
+			val = newVal
 
 			break
 		}
@@ -321,12 +359,15 @@ func (d *Decoder) getReflectValue(v *Value, containerType reflect.Type, outer re
 		val = empty
 
 	case 0x5:
-		if containerType != tBinary && containerType != tEmpty {
-			return val, nil
+		switch containerType {
+		case tByteSlice:
+			_, data := v.Binary()
+			val = reflect.ValueOf(data)
+		case tEmpty, tBinary:
+			st, data := v.Binary()
+			val = reflect.ValueOf(Binary{Subtype: st, Data: data})
 		}
 
-		st, data := v.Binary()
-		val = reflect.ValueOf(Binary{Subtype: st, Data: data})
 	case 0x6:
 		if containerType != tEmpty {
 			return val, nil
@@ -394,14 +435,26 @@ func (d *Decoder) getReflectValue(v *Value, containerType reflect.Type, outer re
 		i := v.Int32()
 
 		switch containerType {
-		case tUint32, tUint64, tUint:
+		case tUint32:
 			if i < 0 {
 				return val, nil
 			}
 
-			fallthrough
-		case tInt32, tInt64, tInt, tFloat32, tFloat64, tEmpty:
-			val = reflect.ValueOf(i)
+			val = reflect.ValueOf(uint32(i))
+		case tUint64:
+			if i < 0 {
+				return val, nil
+			}
+
+			val = reflect.ValueOf(uint64(i))
+		case tUint:
+			if i < 0 {
+				return val, nil
+			}
+
+			val = reflect.ValueOf(uint(i))
+		case tEmpty, tInt32, tInt64, tInt, tFloat32, tFloat64:
+			val = reflect.ValueOf(i).Convert(containerType)
 		default:
 			return val, nil
 		}
@@ -417,29 +470,35 @@ func (d *Decoder) getReflectValue(v *Value, containerType reflect.Type, outer re
 		i := v.Int64()
 
 		switch containerType {
+		case tUint32:
+			if i >= 0 && i <= math.MaxUint32 {
+				val = reflect.ValueOf(uint32(i))
+			}
+		case tUint64:
+			if i >= 0 {
+				val = reflect.ValueOf(uint64(i))
+			}
+		case tUint:
+			if i >= 0 && int64(uint(i)) == i {
+				val = reflect.ValueOf(uint(i))
+			}
+		case tInt32:
+			if i >= int64(math.MinInt32) && i <= int64(math.MaxInt32) {
+				val = reflect.ValueOf(int32(i))
+			}
 		case tInt:
 			// Check the value can fit in an int
-			if int64(int(i)) != i {
-				return val, nil
+			if int64(int(i)) == i {
+				val = reflect.ValueOf(int(i))
 			}
-
-		case tUint:
-			if i < 0 || int64(uint(i)) != i {
-				return val, nil
-			}
-
-		case tUint64:
-			if i < 0 {
-				return val, nil
-			}
-
+		case tInt64, tEmpty:
 			val = reflect.ValueOf(i)
-		case tInt64, tFloat32, tFloat64, tEmpty:
-		default:
-			return val, nil
+		case tFloat32:
+			val = reflect.ValueOf(float32(i))
+		case tFloat64:
+			val = reflect.ValueOf(float64(i))
 		}
 
-		val = reflect.ValueOf(i)
 	case 0x13:
 		if containerType != tDecimal && containerType != tEmpty {
 			return val, nil
@@ -493,7 +552,95 @@ func (d *Decoder) decodeIntoMap(mapVal reflect.Value) error {
 	return itr.Err()
 }
 
-func (d *Decoder) decodeIntoSlice(sliceVal reflect.Value) error {
+func (d *Decoder) decodeBSONArrayToSlice(sliceType reflect.Type) (reflect.Value, error) {
+	var out reflect.Value
+
+	elems := make([]reflect.Value, 0)
+
+	err := d.decodeToReader()
+	if err != nil {
+		return out, err
+	}
+
+	itr, err := d.bsonReader.Iterator()
+	if err != nil {
+		return out, err
+	}
+
+	for itr.Next() {
+		v, err := d.getReflectValue(
+			itr.Element().Clone().Value(),
+			sliceType.Elem(),
+			sliceType,
+		)
+		if err != nil {
+			return out, err
+		}
+		if !v.IsValid() {
+			continue
+		}
+
+		elems = append(elems, v)
+	}
+
+	out = reflect.MakeSlice(sliceType, len(elems), len(elems))
+
+	for i, elem := range elems {
+		if i >= out.Len() {
+			break
+		}
+
+		out.Index(i).Set(elem)
+	}
+
+	return out, nil
+}
+
+func (d *Decoder) decodeBSONArrayIntoArray(arrayType reflect.Type) (reflect.Value, error) {
+	length := arrayType.Len()
+	arrayVal := reflect.New(arrayType)
+
+	err := d.decodeToReader()
+	if err != nil {
+		return arrayVal, err
+	}
+
+	itr, err := d.bsonReader.Iterator()
+	if err != nil {
+		return arrayVal, err
+	}
+
+	i := 0
+	for itr.Next() {
+		if i >= length {
+			break
+		}
+
+		v, err := d.getReflectValue(
+			itr.Element().Clone().Value(),
+			arrayType.Elem(),
+			arrayType,
+		)
+		if err != nil {
+			return arrayVal, err
+		}
+
+		arrayVal.Elem().Index(i).Set(v)
+		i++
+	}
+
+	if err = itr.Err(); err != nil {
+		return arrayVal, err
+	}
+
+	return arrayVal.Elem(), nil
+}
+
+func (d *Decoder) decodeIntoElementSlice(sliceVal reflect.Value) error {
+	if sliceVal.Type().Elem() != tElement {
+		return nil
+	}
+
 	sliceLength := sliceVal.Len()
 
 	err := d.decodeToReader()
@@ -557,7 +704,6 @@ func (d *Decoder) decodeIntoStruct(structVal reflect.Value) error {
 		return err
 	}
 
-	var notFound reflect.Value
 	sType := structVal.Type()
 
 	for itr.Next() {
@@ -566,7 +712,7 @@ func (d *Decoder) decodeIntoStruct(structVal reflect.Value) error {
 		field := structVal.FieldByNameFunc(func(field string) bool {
 			return matchesField(elem.Key(), field, sType)
 		})
-		if field == notFound {
+		if field == zeroVal {
 			continue
 		}
 
@@ -575,7 +721,9 @@ func (d *Decoder) decodeIntoStruct(structVal reflect.Value) error {
 			return err
 		}
 
-		field.Set(v)
+		if v != zeroVal {
+			field.Set(v)
+		}
 	}
 
 	return itr.Err()
