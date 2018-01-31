@@ -13,6 +13,8 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"sync/atomic"
@@ -20,6 +22,8 @@ import (
 )
 
 type ObjectID [12]byte
+
+var NilObjectID ObjectID
 
 var objectIDCounter = readRandomUint32()
 var processUnique = processUniqueBytes()
@@ -36,6 +40,32 @@ func New() ObjectID {
 
 func (id *ObjectID) Hex() string {
 	return hex.EncodeToString(id[:])
+}
+
+func (id *ObjectID) UnmarshalJSON(b []byte) error {
+	var err error
+	switch len(b) {
+	case 64:
+		// Extended JSON
+		m := make(map[string]string)
+		err := json.Unmarshal(b, &m)
+		if err != nil {
+			return err
+		}
+		str, ok := m["$oid"]
+		if !ok {
+			return errors.New("Not an extended JSON ObjectID")
+		}
+		_, err = hex.Decode(id[:], []byte(str))
+		if err != nil {
+			return err
+		}
+	case 12:
+		copy(id[:], b)
+	default:
+		err = fmt.Errorf("cannot unmarshal into an ObjectID, the length must be 12 but it is %d", len(b))
+	}
+	return err
 }
 
 func processUniqueBytes() [5]byte {

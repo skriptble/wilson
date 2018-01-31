@@ -132,6 +132,24 @@ func (d *Decoder) Decode(v interface{}) error {
 
 		_, err = Reader(t).Validate()
 		return err
+	case Reader:
+		length, err := d.pReader.peekLength()
+		if err != nil {
+			return err
+		}
+
+		if len(t) < int(length) {
+			return ErrTooSmall
+		}
+
+		_, err = io.ReadAtLeast(d.pReader, t, int(length))
+		if err != nil {
+			return err
+		}
+
+		_, err = t.Validate()
+		return err
+
 	default:
 		rval := reflect.ValueOf(v)
 		return d.reflectDecode(rval)

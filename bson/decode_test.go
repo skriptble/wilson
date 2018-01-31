@@ -115,6 +115,110 @@ func TestDecoder(t *testing.T) {
 		}
 	})
 
+	t.Run("Reader", func(t *testing.T) {
+		testCases := []struct {
+			name     string
+			reader   *bytes.Buffer
+			expected Reader
+			actual   Reader
+			err      error
+		}{
+			{
+				"nil",
+				bytes.NewBuffer([]byte{0x5, 0x0, 0x0, 0x0, 0x0}),
+				nil,
+				nil,
+				ErrTooSmall,
+			},
+			{
+				"empty slice",
+				bytes.NewBuffer([]byte{0x5, 0x0, 0x0, 0x0}),
+				nil,
+				[]byte{},
+				ErrTooSmall,
+			},
+			{
+				"too small",
+				bytes.NewBuffer([]byte{
+					0x5, 0x0, 0x0, 0x0, 0x0,
+				}),
+				nil,
+				make([]byte, 0x4),
+				ErrTooSmall,
+			},
+			{
+				"empty doc",
+				bytes.NewBuffer([]byte{
+					0x5, 0x0, 0x0, 0x0, 0x0,
+				}),
+				[]byte{0x5, 0x0, 0x0, 0x0, 0x0},
+				make([]byte, 0x5),
+				nil,
+			},
+			{
+				"non-empty doc",
+				bytes.NewBuffer([]byte{
+					// length
+					0x17, 0x0, 0x0, 0x0,
+
+					// type - string
+					0x2,
+					// key - "foo"
+					0x66, 0x6f, 0x6f, 0x0,
+					// value - string length
+					0x4, 0x0, 0x0, 0x0,
+					// value - string "bar"
+					0x62, 0x61, 0x72, 0x0,
+
+					// type - null
+					0xa,
+					// key - "baz"
+					0x62, 0x61, 0x7a, 0x0,
+
+					// null terminator
+					0x0,
+				}),
+				[]byte{
+					// length
+					0x17, 0x0, 0x0, 0x0,
+
+					// type - string
+					0x2,
+					// key - "foo"
+					0x66, 0x6f, 0x6f, 0x0,
+					// value - string length
+					0x4, 0x0, 0x0, 0x0,
+					// value - string "bar"
+					0x62, 0x61, 0x72, 0x0,
+
+					// type - null
+					0xa,
+					// key - "baz"
+					0x62, 0x61, 0x7a, 0x0,
+
+					// null terminator
+					0x0,
+				},
+				make([]byte, 0x17),
+				nil,
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				d := NewDecoder(tc.reader)
+
+				err := d.Decode(tc.actual)
+				require.Equal(t, tc.err, err)
+				if err != nil {
+					return
+				}
+
+				require.True(t, bytes.Equal(tc.expected, tc.actual))
+			})
+		}
+	})
+
 	t.Run("io.Writer", func(t *testing.T) {
 		testCases := []struct {
 			name     string

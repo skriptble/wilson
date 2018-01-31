@@ -25,6 +25,14 @@ func ArrayFromDocument(doc *Document) *Array {
 	return &Array{doc: doc}
 }
 
+func (a *Array) Len() int {
+	return len(a.doc.elems)
+}
+
+func (a *Array) Reset() {
+	a.doc.Reset()
+}
+
 func (a *Array) Validate() (uint32, error) {
 	var size uint32 = 4 + 1
 	for i, elem := range a.doc.elems {
