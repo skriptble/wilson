@@ -18,7 +18,7 @@ func TestEncoder(t *testing.T) {
 		}{
 			{
 				"success",
-				NewDocument(1).Append(C.Null("foo")),
+				NewDocument(C.Null("foo")),
 				[]byte{
 					0x0A, 0x00, 0x00, 0x00,
 					0x0A, 'f', 'o', 'o', 0x00,
@@ -52,8 +52,8 @@ func TestEncoder(t *testing.T) {
 		}{
 			{
 				"success",
-				NewDocument(1).Append(C.Null("foo")),
-				NewDocument(1).Append(C.Null("foo")),
+				NewDocument(C.Null("foo")),
+				NewDocument(C.Null("foo")),
 				nil,
 			},
 		}
@@ -123,7 +123,7 @@ func TestEncoder(t *testing.T) {
 					0x0A, 'f', 'o', 'o', 0x00,
 					0x00,
 				}),
-				NewDocument(1).Append(C.Null("foo")),
+				NewDocument(C.Null("foo")),
 				nil,
 			},
 		}
@@ -193,7 +193,7 @@ func TestEncoder(t *testing.T) {
 					0x0A, 'f', 'o', 'o', 0x00,
 					0x00,
 				},
-				NewDocument(1).Append(C.Null("foo")),
+				NewDocument(C.Null("foo")),
 				nil,
 			},
 		}
@@ -263,7 +263,7 @@ func TestEncoder(t *testing.T) {
 					0x0A, 'f', 'o', 'o', 0x00,
 					0x00,
 				},
-				NewDocument(1).Append(C.Null("foo")),
+				NewDocument(C.Null("foo")),
 				nil,
 			},
 		}
@@ -295,7 +295,7 @@ func TestEncoder(t *testing.T) {
 					0x0A, 'f', 'o', 'o', 0x00,
 					0x00,
 				}),
-				NewDocument(1).Append(C.Null("foo")),
+				NewDocument(C.Null("foo")),
 				nil,
 			},
 		}
@@ -328,7 +328,7 @@ func TestEncoder(t *testing.T) {
 				}{
 					A: "foo",
 				},
-				NewDocument(1).Append(C.String("a", "foo")),
+				NewDocument(C.String("a", "foo")),
 				nil,
 			},
 		}
@@ -453,8 +453,8 @@ func reflectionEncoderTest(t *testing.T) {
 		},
 		{
 			"[]*Document",
-			[]*Document{NewDocument(1).Append(C.Null("A"))},
-			docToBytes(NewDocument(1).Append(
+			[]*Document{NewDocument(C.Null("A"))},
+			docToBytes(NewDocument(
 				C.SubDocumentFromElements("0", (C.Null("A"))),
 			)),
 			nil,
@@ -462,7 +462,7 @@ func reflectionEncoderTest(t *testing.T) {
 		{
 			"[]Reader",
 			[]Reader{Reader{0x05, 0x00, 0x00, 0x00, 0x00}},
-			docToBytes(NewDocument(1).Append(
+			docToBytes(NewDocument(
 				C.SubDocumentFromElements("0"),
 			)),
 			nil,
@@ -470,7 +470,7 @@ func reflectionEncoderTest(t *testing.T) {
 		{
 			"map[string][]*Element",
 			map[string][]*Element{"Z": {C.Int32("A", 1), C.Int32("B", 2), C.Int32("C", 3)}},
-			docToBytes(NewDocument(1).Append(
+			docToBytes(NewDocument(
 				C.ArrayFromElements("Z", AC.Int32(1), AC.Int32(2), AC.Int32(3)),
 			)),
 			nil,
@@ -478,7 +478,7 @@ func reflectionEncoderTest(t *testing.T) {
 		{
 			"map[string][]*Value",
 			map[string][]*Value{"Z": {AC.Int32(1), AC.Int32(2), AC.Int32(3)}},
-			docToBytes(NewDocument(1).Append(
+			docToBytes(NewDocument(
 				C.ArrayFromElements("Z", AC.Int32(1), AC.Int32(2), AC.Int32(3)),
 			)),
 			nil,
@@ -486,15 +486,15 @@ func reflectionEncoderTest(t *testing.T) {
 		{
 			"map[string]*Element",
 			map[string]*Element{"Z": C.Int32("foo", 12345)},
-			docToBytes(NewDocument(1).Append(
+			docToBytes(NewDocument(
 				C.Int32("foo", 12345),
 			)),
 			nil,
 		},
 		{
 			"map[string]*Document",
-			map[string]*Document{"Z": NewDocument(1).Append(C.Null("foo"))},
-			docToBytes(NewDocument(1).Append(
+			map[string]*Document{"Z": NewDocument(C.Null("foo"))},
+			docToBytes(NewDocument(
 				C.SubDocumentFromElements("Z", C.Null("foo")),
 			)),
 			nil,
@@ -502,7 +502,7 @@ func reflectionEncoderTest(t *testing.T) {
 		{
 			"map[string]Reader",
 			map[string]Reader{"Z": Reader{0x05, 0x00, 0x00, 0x00, 0x00}},
-			docToBytes(NewDocument(1).Append(
+			docToBytes(NewDocument(
 				C.SubDocumentFromReader("Z", Reader{0x05, 0x00, 0x00, 0x00, 0x00}),
 			)),
 			nil,
@@ -510,7 +510,7 @@ func reflectionEncoderTest(t *testing.T) {
 		{
 			"map[string][]int32",
 			map[string][]int32{"Z": {1, 2, 3}},
-			docToBytes(NewDocument(1).Append(
+			docToBytes(NewDocument(
 				C.ArrayFromElements("Z", AC.Int32(1), AC.Int32(2), AC.Int32(3)),
 			)),
 			nil,
@@ -518,7 +518,7 @@ func reflectionEncoderTest(t *testing.T) {
 		{
 			"[2]*Element",
 			[2]*Element{C.Int32("A", 1), C.Int32("B", 2)},
-			docToBytes(NewDocument(1).Append(
+			docToBytes(NewDocument(
 				C.Int32("A", 1), C.Int32("B", 2),
 			)),
 			nil,
@@ -530,7 +530,7 @@ func reflectionEncoderTest(t *testing.T) {
 			}{
 				A: "",
 			},
-			docToBytes(NewDocument(0).Append()),
+			docToBytes(NewDocument()),
 			nil,
 		},
 		{
@@ -540,7 +540,7 @@ func reflectionEncoderTest(t *testing.T) {
 			}{
 				A: "",
 			},
-			docToBytes(NewDocument(0).Append()),
+			docToBytes(NewDocument()),
 			nil,
 		},
 		{
@@ -550,7 +550,7 @@ func reflectionEncoderTest(t *testing.T) {
 			}{
 				a: "should be empty",
 			},
-			docToBytes(NewDocument(0).Append()),
+			docToBytes(NewDocument()),
 			nil,
 		},
 		{
@@ -560,7 +560,7 @@ func reflectionEncoderTest(t *testing.T) {
 			}{
 				A: 12345,
 			},
-			docToBytes(NewDocument(1).Append(C.Int32("a", 12345))),
+			docToBytes(NewDocument(C.Int32("a", 12345))),
 			nil,
 		},
 		{
@@ -576,7 +576,7 @@ func reflectionEncoderTest(t *testing.T) {
 					A: 12345,
 				},
 			},
-			docToBytes(NewDocument(1).Append(C.Int32("a", 12345))),
+			docToBytes(NewDocument(C.Int32("a", 12345))),
 			nil,
 		},
 		{
@@ -586,7 +586,7 @@ func reflectionEncoderTest(t *testing.T) {
 			}{
 				Foo: map[string]string{"foo": "bar"},
 			},
-			docToBytes(NewDocument(1).Append(C.String("foo", "bar"))),
+			docToBytes(NewDocument(C.String("foo", "bar"))),
 			nil,
 		},
 		{
@@ -596,7 +596,7 @@ func reflectionEncoderTest(t *testing.T) {
 			}{
 				A: "bar",
 			},
-			docToBytes(NewDocument(1).Append(C.String("foo", "bar"))),
+			docToBytes(NewDocument(C.String("foo", "bar"))),
 			nil,
 		},
 		{
@@ -606,7 +606,7 @@ func reflectionEncoderTest(t *testing.T) {
 			}{
 				A: "bar",
 			},
-			docToBytes(NewDocument(1).Append(C.String("foo", "bar"))),
+			docToBytes(NewDocument(C.String("foo", "bar"))),
 			nil,
 		},
 		{
@@ -647,10 +647,10 @@ func reflectionEncoderTest(t *testing.T) {
 					M: "foobar",
 				},
 				N: C.Null("N"),
-				O: NewDocument(1).Append(C.Int64("countdown", 9876543210)),
+				O: NewDocument(C.Int64("countdown", 9876543210)),
 				P: Reader{0x05, 0x00, 0x00, 0x00, 0x00},
 			},
-			docToBytes(NewDocument(12).Append(
+			docToBytes(NewDocument(
 				C.Boolean("a", true),
 				C.Int32("b", 123),
 				C.Int64("c", 456),
@@ -711,10 +711,10 @@ func reflectionEncoderTest(t *testing.T) {
 				},
 				N: [][]string{[]string{"foo", "bar"}},
 				O: []*Element{C.Null("N")},
-				P: []*Document{NewDocument(1).Append(C.Int64("countdown", 9876543210))},
+				P: []*Document{NewDocument(C.Int64("countdown", 9876543210))},
 				Q: []Reader{Reader{0x05, 0x00, 0x00, 0x00, 0x00}},
 			},
-			docToBytes(NewDocument(12).Append(
+			docToBytes(NewDocument(
 				C.ArrayFromElements("a", AC.Boolean(true)),
 				C.ArrayFromElements("b", AC.Int32(123)),
 				C.ArrayFromElements("c", AC.Int64(456)),

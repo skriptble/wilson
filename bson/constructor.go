@@ -70,7 +70,7 @@ func (Constructor) SubDocumentFromReader(key string, r Reader) *Element {
 	return elem
 }
 func (c Constructor) SubDocumentFromElements(key string, elems ...*Element) *Element {
-	return c.SubDocument(key, NewDocument(uint(len(elems))).Append(elems...))
+	return c.SubDocument(key, NewDocument(elems...))
 }
 func (Constructor) Array(key string, a *Array) *Element {
 	size := uint32(1 + len(key) + 1)
@@ -89,7 +89,7 @@ func (Constructor) Array(key string, a *Array) *Element {
 	return elem
 }
 func (c Constructor) ArrayFromElements(key string, values ...*Value) *Element {
-	return c.Array(key, NewArray(uint(len(values))).Append(values...))
+	return c.Array(key, NewArray(values...))
 }
 
 func (c Constructor) Binary(key string, b []byte) *Element {

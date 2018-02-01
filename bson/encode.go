@@ -106,7 +106,7 @@ func (e *encoder) Encode(v interface{}) error {
 		if err != nil {
 			return err
 		}
-		_, err = NewDocument(uint(len(elems))).Append(elems...).WriteTo(e.w)
+		_, err = NewDocument(elems...).WriteTo(e.w)
 	}
 
 	return err
@@ -115,7 +115,7 @@ func (e *encoder) Encode(v interface{}) error {
 func (e *encoder) EncodeDocument(v interface{}) (*Document, error) {
 	var err error
 
-	d := NewDocument(0)
+	d := NewDocument()
 
 	switch t := v.(type) {
 	case *Document:

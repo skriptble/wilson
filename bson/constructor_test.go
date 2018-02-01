@@ -80,8 +80,7 @@ func TestConstructor(t *testing.T) {
 				// key
 				0x66, 0x6f, 0x6f, 0x0,
 			}
-			d := NewDocument(1)
-			d.Append(C.String("bar", "baz"))
+			d := NewDocument(C.String("bar", "baz"))
 
 			expected := &Element{&Value{start: 0, offset: 5, data: buf, d: d}}
 			actual := C.SubDocument("foo", d)
@@ -97,8 +96,7 @@ func TestConstructor(t *testing.T) {
 				0x66, 0x6f, 0x6f, 0x0,
 			}
 			e := C.String("bar", "baz")
-			d := NewDocument(1)
-			d.Append(e)
+			d := NewDocument(e)
 
 			expected := &Element{&Value{start: 0, offset: 5, data: buf, d: d}}
 			actual := C.SubDocumentFromElements("foo", e)
@@ -135,8 +133,7 @@ func TestConstructor(t *testing.T) {
 				// key
 				0x66, 0x6f, 0x6f, 0x0,
 			}
-			a := NewArray(2)
-			a.Append(AC.String("bar"), AC.Double(-2.7))
+			a := NewArray(AC.String("bar"), AC.Double(-2.7))
 
 			expected := &Element{&Value{start: 0, offset: 5, data: buf, d: a.doc}}
 			actual := C.Array("foo", a)
@@ -153,8 +150,7 @@ func TestConstructor(t *testing.T) {
 			}
 			e1 := AC.String("bar")
 			e2 := AC.Double(-2.7)
-			a := NewArray(2)
-			a.Append(e1, e2)
+			a := NewArray(e1, e2)
 
 			expected := &Element{&Value{start: 0, offset: 5, data: buf, d: a.doc}}
 			actual := C.ArrayFromElements("foo", e1, e2)
@@ -373,8 +369,7 @@ func TestConstructor(t *testing.T) {
 				// value - code
 				0x76, 0x61, 0x72, 0x20, 0x62, 0x61, 0x72, 0x20, 0x3d, 0x20, 0x78, 0x3b, 0x0,
 			}
-			scope := NewDocument(1)
-			scope.Append(C.Null("x"))
+			scope := NewDocument(C.Null("x"))
 
 			expected := &Element{&Value{start: 0, offset: 5, data: buf, d: scope}}
 			actual := C.CodeWithScope("foo", "var bar = x;", scope)
@@ -520,8 +515,7 @@ func TestConstructor(t *testing.T) {
 				// key
 				0x0,
 			}
-			d := NewDocument(1)
-			d.Append(C.String("bar", "baz"))
+			d := NewDocument(C.String("bar", "baz"))
 
 			expected := &Value{start: 0, offset: 2, data: buf, d: d}
 			actual := AC.Document(d)
@@ -537,8 +531,7 @@ func TestConstructor(t *testing.T) {
 				0x0,
 			}
 			e := C.String("bar", "baz")
-			d := NewDocument(1)
-			d.Append(e)
+			d := NewDocument(e)
 
 			expected := &Value{start: 0, offset: 2, data: buf, d: d}
 			actual := AC.DocumentFromElements(e)
@@ -579,8 +572,7 @@ func TestConstructor(t *testing.T) {
 				// key
 				0x0,
 			}
-			a := NewArray(2)
-			a.Append(AC.String("bar"), AC.Double(-2.7))
+			a := NewArray(AC.String("bar"), AC.Double(-2.7))
 
 			expected := &Value{start: 0, offset: 2, data: buf, d: a.doc}
 			actual := AC.Array(a)
@@ -597,8 +589,7 @@ func TestConstructor(t *testing.T) {
 			}
 			e1 := AC.String("bar")
 			e2 := AC.Double(-2.7)
-			a := NewArray(2)
-			a.Append(e1, e2)
+			a := NewArray(e1, e2)
 
 			expected := &Value{start: 0, offset: 2, data: buf, d: a.doc}
 			actual := AC.ArrayFromValues(e1, e2)
@@ -817,8 +808,7 @@ func TestConstructor(t *testing.T) {
 				// value - code
 				0x76, 0x61, 0x72, 0x20, 0x62, 0x61, 0x72, 0x20, 0x3d, 0x20, 0x78, 0x3b, 0x0,
 			}
-			scope := NewDocument(1)
-			scope.Append(C.Null("x"))
+			scope := NewDocument(C.Null("x"))
 
 			expected := &Value{start: 0, offset: 2, data: buf, d: scope}
 			actual := AC.CodeWithScope("var bar = x;", scope)

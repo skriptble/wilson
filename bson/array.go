@@ -14,8 +14,13 @@ type Array struct {
 	doc *Document
 }
 
-func NewArray(numberOfElems uint) *Array {
-	return &Array{doc: NewDocument(numberOfElems)}
+func NewArray(values ...*Value) *Array {
+	elems := make([]*Element, 0, len(values))
+	for _, v := range values {
+		elems = append(elems, &Element{value: v})
+	}
+
+	return &Array{doc: NewDocument(elems...)}
 }
 
 // ArrayFromDocument creates an array from a *Document. The returned array

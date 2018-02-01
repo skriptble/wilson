@@ -315,8 +315,8 @@ func TestDecoder(t *testing.T) {
 				bytes.NewBuffer([]byte{
 					0x5, 0x0, 0x0, 0x0, 0x0,
 				}),
-				NewDocument(0),
-				NewDocument(0),
+				NewDocument(),
+				NewDocument(),
 				nil,
 			},
 			{
@@ -342,11 +342,11 @@ func TestDecoder(t *testing.T) {
 					// null terminator
 					0x0,
 				}),
-				NewDocument(2).Append(
+				NewDocument(
 					C.String("foo", "bar"),
 					C.Null("baz"),
 				),
-				NewDocument(0),
+				NewDocument(),
 				nil,
 			},
 			{
@@ -389,13 +389,13 @@ func TestDecoder(t *testing.T) {
 					// null terminator
 					0x0,
 				}),
-				NewDocument(2).Append(
+				NewDocument(
 					C.String("foo", "bar"),
 					C.SubDocumentFromElements("baz",
 						C.Int32("bang", 12),
 					),
 				),
-				NewDocument(0),
+				NewDocument(),
 				nil,
 			},
 		}

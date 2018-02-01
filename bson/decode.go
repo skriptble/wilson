@@ -197,7 +197,7 @@ func (d *Decoder) createEmptyValue(r Reader, t reflect.Type) (reflect.Value, err
 		val = reflect.MakeMap(t)
 	case reflect.Ptr:
 		if t == tDocument {
-			val = reflect.ValueOf(NewDocument(0))
+			val = reflect.ValueOf(NewDocument())
 			break
 		}
 

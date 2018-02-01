@@ -19,7 +19,7 @@ func TestArray(t *testing.T) {
 						t.Errorf("Did not received expected error from panic. got %#v; want %#v", r, ErrNilElement)
 					}
 				}()
-				a := NewArray(0)
+				a := NewArray()
 				a.Append(nil)
 			}()
 		})
@@ -31,10 +31,10 @@ func TestArray(t *testing.T) {
 						t.Errorf("Recieved unexpected panic from nil insert. got %#v; want %#v", r, nil)
 					}
 				}()
-				want := NewArray(0)
+				want := NewArray()
 				want.doc.IgnoreNilInsert = true
 
-				got := NewArray(0)
+				got := NewArray()
 				got.doc.IgnoreNilInsert = true
 				got.Append(nil)
 				if diff := cmp.Diff(got, want, cmp.AllowUnexported(Document{}, Array{})); diff != "" {
@@ -53,7 +53,7 @@ func TestArray(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				a := NewArray(0)
+				a := NewArray()
 				for _, elems := range tc.values {
 					a.Append(elems...)
 				}
@@ -77,7 +77,7 @@ func TestArray(t *testing.T) {
 						t.Errorf("Did not received expected error from panic. got %#v; want %#v", r, ErrNilElement)
 					}
 				}()
-				a := NewArray(0)
+				a := NewArray()
 				a.Prepend(nil)
 			}()
 		})
@@ -111,7 +111,7 @@ func TestArray(t *testing.T) {
 							t.Errorf("Documents differ: (-got +want)\n%s", diff)
 						}
 					}()
-					got = NewArray(0)
+					got = NewArray()
 					got.doc.IgnoreNilInsert = true
 					got.Prepend(tc.values...)
 				}()
@@ -128,7 +128,7 @@ func TestArray(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				a := NewArray(0)
+				a := NewArray()
 				for _, elems := range tc.values {
 					a.Prepend(elems...)
 				}
@@ -152,14 +152,14 @@ func TestArray(t *testing.T) {
 		}{
 			{
 				"first",
-				NewArray(0).Append(AC.Null()),
+				NewArray(AC.Null()),
 				0,
 				&Value{start: 0, offset: 2, data: []byte{0xa, 0x0}},
 				nil,
 			},
 			{
 				"not-found",
-				NewArray(0).Append(AC.Null()),
+				NewArray(AC.Null()),
 				1,
 				nil,
 				ErrOutOfBounds,
@@ -180,7 +180,7 @@ func TestArray(t *testing.T) {
 	})
 	t.Run("Delete", func(t *testing.T) {
 		t.Run("empty key", func(t *testing.T) {
-			d := NewDocument(0)
+			d := NewDocument()
 			var want *Element = nil
 			got := d.Delete()
 			if got != want {
@@ -195,13 +195,13 @@ func TestArray(t *testing.T) {
 		}{
 			{
 				"first",
-				NewArray(0).Append(AC.Null()),
+				NewArray(AC.Null()),
 				0,
 				&Value{start: 0, offset: 2},
 			},
 			{
 				"not-found",
-				NewArray(0).Append(AC.Null()),
+				NewArray(AC.Null()),
 				1,
 				nil,
 			},
@@ -333,7 +333,7 @@ func ExampleArray() {
 	internalVersion := "1234567"
 
 	f := func(appName string) *Array {
-		arr := NewArray(4)
+		arr := NewArray()
 		arr.Append(
 			AC.DocumentFromElements(
 				C.String("name", "mongo-go-driver"),

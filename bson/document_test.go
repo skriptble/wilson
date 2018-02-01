@@ -91,7 +91,7 @@ func TestDocument(t *testing.T) {
 						t.Errorf("Did not received expected error from panic. got %#v; want %#v", r, ErrNilElement)
 					}
 				}()
-				d := NewDocument(0)
+				d := NewDocument()
 				d.Append(nil)
 			}()
 		})
@@ -103,10 +103,10 @@ func TestDocument(t *testing.T) {
 						t.Errorf("Recieved unexpected panic from nil insert. got %#v; want %#v", r, nil)
 					}
 				}()
-				want := NewDocument(0)
+				want := NewDocument()
 				want.IgnoreNilInsert = true
 
-				got := NewDocument(0)
+				got := NewDocument()
 				got.IgnoreNilInsert = true
 				got.Append(nil)
 				if diff := cmp.Diff(got, want, cmp.AllowUnexported(Document{})); diff != "" {
@@ -125,7 +125,7 @@ func TestDocument(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				d := NewDocument(0)
+				d := NewDocument()
 				for _, elems := range tc.elems {
 					d.Append(elems...)
 				}
@@ -161,7 +161,7 @@ func TestDocument(t *testing.T) {
 							t.Errorf("Documents differ: (-got +want)\n%s", diff)
 						}
 					}()
-					got = NewDocument(0)
+					got = NewDocument()
 					got.Prepend(tc.elems...)
 				}()
 			}
@@ -191,7 +191,7 @@ func TestDocument(t *testing.T) {
 							t.Errorf("Documents differ: (-got +want)\n%s", diff)
 						}
 					}()
-					got = NewDocument(0)
+					got = NewDocument()
 					got.IgnoreNilInsert = true
 					got.Prepend(tc.elems...)
 				}()
@@ -208,7 +208,7 @@ func TestDocument(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				d := NewDocument(0)
+				d := NewDocument()
 				for _, elems := range tc.elems {
 					d.Prepend(elems...)
 				}
@@ -248,7 +248,7 @@ func TestDocument(t *testing.T) {
 							t.Errorf("Documents differ: (-got +want)\n%s", diff)
 						}
 					}()
-					got = NewDocument(0)
+					got = NewDocument()
 					got.Set(tc.elem)
 				}()
 			}
@@ -278,7 +278,7 @@ func TestDocument(t *testing.T) {
 							t.Errorf("Documents differ: (-got +want)\n%s", diff)
 						}
 					}()
-					got = NewDocument(0)
+					got = NewDocument()
 					got.IgnoreNilInsert = true
 					got.Set(tc.elem)
 				}()
@@ -321,7 +321,7 @@ func TestDocument(t *testing.T) {
 	})
 	t.Run("Lookup", func(t *testing.T) {
 		t.Run("empty key", func(t *testing.T) {
-			d := NewDocument(0)
+			d := NewDocument()
 			_, err := d.Lookup()
 			if err != ErrEmptyKey {
 				t.Errorf("Empty key lookup did not return expected result. got %#v; want %#v", err, ErrEmptyKey)
@@ -365,7 +365,7 @@ func TestDocument(t *testing.T) {
 	})
 	t.Run("Delete", func(t *testing.T) {
 		t.Run("empty key", func(t *testing.T) {
-			d := NewDocument(0)
+			d := NewDocument()
 			var want *Element = nil
 			got := d.Delete()
 			if got != want {
@@ -406,8 +406,7 @@ func TestDocument(t *testing.T) {
 	})
 	t.Run("ElementAt", func(t *testing.T) {
 		t.Run("Out of bounds", func(t *testing.T) {
-			d := NewDocument(3)
-			d.Append(C.Null("x"), C.Null("y"), C.Null("z"))
+			d := NewDocument(C.Null("x"), C.Null("y"), C.Null("z"))
 			_, err := d.ElementAt(3)
 			if err != ErrOutOfBounds {
 				t.Errorf("Out of bounds should be returned when accessing element beyond end of document. got %#v; want %#v", err, ErrOutOfBounds)
@@ -426,7 +425,7 @@ func TestDocument(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				d := NewDocument(uint(len(tc.elems))).Append(tc.elems...)
+				d := NewDocument(tc.elems...)
 				got, err := d.ElementAt(tc.index)
 				if err != nil {
 					t.Errorf("Unexpected error from ElementAt: %s", err)
@@ -439,7 +438,7 @@ func TestDocument(t *testing.T) {
 	})
 	t.Run("Iterator", func(t *testing.T) {
 		elems := []*Element{C.String("foo", "bar"), C.Int32("baz", 1), C.Null("bing")}
-		d := NewDocument(3).Append(elems...)
+		d := NewDocument(elems...)
 
 		iter := d.Iterator()
 
@@ -462,7 +461,7 @@ func TestDocument(t *testing.T) {
 		}{
 			{
 				"nil",
-				NewDocument(0),
+				NewDocument(),
 				[]interface{}{
 					nil,
 				},
@@ -471,7 +470,7 @@ func TestDocument(t *testing.T) {
 			},
 			{
 				"nil document",
-				NewDocument(0),
+				NewDocument(),
 				[]interface{}{
 					(*Document)(nil),
 				},
@@ -480,26 +479,26 @@ func TestDocument(t *testing.T) {
 			},
 			{
 				"concat single doc",
-				NewDocument(1),
+				NewDocument(),
 				[]interface{}{
-					NewDocument(1).Append(C.String("foo", "bar")),
+					NewDocument(C.String("foo", "bar")),
 				},
-				NewDocument(1).Append(C.String("foo", "bar")),
+				NewDocument(C.String("foo", "bar")),
 				nil,
 			},
 			{
 				"concat multiple docs",
-				NewDocument(1),
+				NewDocument(),
 				[]interface{}{
-					NewDocument(1).Append(C.String("foo", "bar")),
-					NewDocument(2).Append(C.Int32("baz", 3), C.Null("bang")),
+					NewDocument(C.String("foo", "bar")),
+					NewDocument(C.Int32("baz", 3), C.Null("bang")),
 				},
-				NewDocument(1).Append(C.String("foo", "bar"), C.Int32("baz", 3), C.Null("bang")),
+				NewDocument(C.String("foo", "bar"), C.Int32("baz", 3), C.Null("bang")),
 				nil,
 			},
 			{
 				"concat single byte slice",
-				NewDocument(1),
+				NewDocument(),
 				[]interface{}{
 					[]byte{
 						// length
@@ -518,12 +517,12 @@ func TestDocument(t *testing.T) {
 						0x0,
 					},
 				},
-				NewDocument(1).Append(C.String("foo", "bar")),
+				NewDocument(C.String("foo", "bar")),
 				nil,
 			},
 			{
 				"concat multiple byte slices",
-				NewDocument(3),
+				NewDocument(),
 				[]interface{}{
 					[]byte{
 						// length
@@ -561,12 +560,12 @@ func TestDocument(t *testing.T) {
 						0x0,
 					},
 				},
-				NewDocument(1).Append(C.String("foo", "bar"), C.Int32("baz", 3), C.Null("bang")),
+				NewDocument(C.String("foo", "bar"), C.Int32("baz", 3), C.Null("bang")),
 				nil,
 			},
 			{
 				"concat single reader",
-				NewDocument(1),
+				NewDocument(),
 				[]interface{}{
 					Reader([]byte{
 						// length
@@ -585,12 +584,12 @@ func TestDocument(t *testing.T) {
 						0x0,
 					}),
 				},
-				NewDocument(1).Append(C.String("foo", "bar")),
+				NewDocument(C.String("foo", "bar")),
 				nil,
 			},
 			{
 				"concat multiple readers",
-				NewDocument(3),
+				NewDocument(),
 				[]interface{}{
 					Reader([]byte{
 						// length
@@ -628,14 +627,14 @@ func TestDocument(t *testing.T) {
 						0x0,
 					}),
 				},
-				NewDocument(1).Append(C.String("foo", "bar"), C.Int32("baz", 3), C.Null("bang")),
+				NewDocument(C.String("foo", "bar"), C.Int32("baz", 3), C.Null("bang")),
 				nil,
 			},
 			{
 				"concat mixed",
-				NewDocument(1),
+				NewDocument(),
 				[]interface{}{
-					NewDocument(1).Append(C.String("foo", "bar")),
+					NewDocument(C.String("foo", "bar")),
 					[]byte{
 						// length
 						0xe, 0x0, 0x0, 0x0,
@@ -663,7 +662,7 @@ func TestDocument(t *testing.T) {
 						0x0,
 					}),
 				},
-				NewDocument(1).Append(C.String("foo", "bar"), C.Int32("baz", 3), C.Null("bang")),
+				NewDocument(C.String("foo", "bar"), C.Int32("baz", 3), C.Null("bang")),
 				nil,
 			},
 		}
@@ -682,7 +681,7 @@ func TestDocument(t *testing.T) {
 
 	})
 	t.Run("Reset", func(t *testing.T) {
-		d := NewDocument(5).Append(C.Null("a"), C.Null("b"), C.Null("c"), C.Null("a"), C.Null("e"))
+		d := NewDocument(C.Null("a"), C.Null("b"), C.Null("c"), C.Null("a"), C.Null("e"))
 		gotSlc := d.elems
 		d.Reset()
 		wantSlc := make([]*Element, 5)
@@ -705,7 +704,7 @@ func TestDocument(t *testing.T) {
 			n    int64
 			err  error
 		}{
-			{"empty-document", NewDocument(0), []byte{'\x05', '\x00', '\x00', '\x00', '\x00'}, 5, nil},
+			{"empty-document", NewDocument(), []byte{'\x05', '\x00', '\x00', '\x00', '\x00'}, 5, nil},
 		}
 
 		for _, tc := range testCases {
@@ -726,7 +725,7 @@ func TestDocument(t *testing.T) {
 	})
 	t.Run("WriteDocument", func(t *testing.T) {
 		t.Run("invalid-document", func(t *testing.T) {
-			d := NewDocument(1).Append(C.Double("", 3.14159))
+			d := NewDocument(C.Double("", 3.14159))
 			d.elems[0].value.data = d.elems[0].value.data[:3]
 			b := make([]byte, 15)
 			_, err := d.WriteDocument(0, b)
@@ -735,7 +734,7 @@ func TestDocument(t *testing.T) {
 			}
 		})
 		t.Run("[]byte-too-small", func(t *testing.T) {
-			d := NewDocument(1).Append(C.Double("", 3.14159))
+			d := NewDocument(C.Double("", 3.14159))
 			b := make([]byte, 5)
 			_, err := d.WriteDocument(0, b)
 			if err != ErrTooSmall {
@@ -743,7 +742,7 @@ func TestDocument(t *testing.T) {
 			}
 		})
 		t.Run("invalid-writer", func(t *testing.T) {
-			d := NewDocument(1).Append(C.Double("", 3.14159))
+			d := NewDocument(C.Double("", 3.14159))
 			var buf bytes.Buffer
 			_, err := d.WriteDocument(0, buf)
 			if err != ErrInvalidWriter {
@@ -759,7 +758,7 @@ func TestDocument(t *testing.T) {
 			n     int64
 			err   error
 		}{
-			{"empty-document", NewDocument(0), 0, []byte{'\x05', '\x00', '\x00', '\x00', '\x00'}, 5, nil},
+			{"empty-document", NewDocument(), 0, []byte{'\x05', '\x00', '\x00', '\x00', '\x00'}, 5, nil},
 		}
 
 		for _, tc := range testCases {
@@ -791,13 +790,13 @@ func TestDocument(t *testing.T) {
 					'\x0A', 'x', '\x00', '\x0A', 'y', '\x00', '\x0A', 'z', '\x00', '\x0A', 'w', '\x00',
 					'\x00',
 				},
-				NewDocument(4).Append(C.Null("x"), C.Null("y"), C.Null("z"), C.Null("w")),
+				NewDocument(C.Null("x"), C.Null("y"), C.Null("z"), C.Null("w")),
 				nil,
 			},
 		}
 
 		for _, tc := range testCases {
-			d := NewDocument(0)
+			d := NewDocument()
 			err := d.UnmarshalBSON(tc.b)
 			if err != tc.err {
 				t.Errorf("Expected error not returned. got %s; want %s", err, tc.err)
@@ -812,7 +811,7 @@ func TestDocument(t *testing.T) {
 	t.Run("ReadFrom", func(t *testing.T) {
 		t.Run("[]byte-too-small", func(t *testing.T) {
 			var buf bytes.Buffer
-			_, err := NewDocument(0).ReadFrom(&buf)
+			_, err := NewDocument().ReadFrom(&buf)
 			if err != io.EOF {
 				t.Errorf("Expected error not returned. got %s; want %s", err, io.EOF)
 			}
@@ -823,7 +822,7 @@ func TestDocument(t *testing.T) {
 			if err != nil {
 				t.Errorf("Unexepected error while writing length: %s", err)
 			}
-			_, err = NewDocument(0).ReadFrom(&buf)
+			_, err = NewDocument().ReadFrom(&buf)
 			if err != io.EOF {
 				t.Errorf("Expected error not returned. got %s; want %s", err, io.EOF)
 			}
@@ -834,7 +833,7 @@ func TestDocument(t *testing.T) {
 			if err != nil {
 				t.Errorf("Unexpected error while writing document to buffer: %s", err)
 			}
-			_, err = NewDocument(0).ReadFrom(&buf)
+			_, err = NewDocument().ReadFrom(&buf)
 			if err != ErrTooSmall {
 				t.Errorf("Expected error not returned. got %s; want %s", err, ErrTooSmall)
 			}
@@ -846,7 +845,7 @@ func TestDocument(t *testing.T) {
 			n    int64
 			err  error
 		}{
-			{"empty-document", []byte{'\x05', '\x00', '\x00', '\x00', '\x00'}, NewDocument(0), 5, nil},
+			{"empty-document", []byte{'\x05', '\x00', '\x00', '\x00', '\x00'}, NewDocument(), 5, nil},
 		}
 
 		for _, tc := range testCases {
@@ -855,7 +854,7 @@ func TestDocument(t *testing.T) {
 			if err != nil {
 				t.Errorf("Unexpected error while writing document to buffer: %s", err)
 			}
-			d := NewDocument(0)
+			d := NewDocument()
 			n, err := d.ReadFrom(&buf)
 			if n != tc.n {
 				t.Errorf("Number of bytes written does not match. got %d; want %d", n, tc.n)
@@ -1001,8 +1000,7 @@ func ExampleDocument() {
 	internalVersion := "1234567"
 
 	f := func(appName string) *Document {
-		doc := NewDocument(4)
-		doc.Append(
+		doc := NewDocument(
 			C.SubDocumentFromElements("driver",
 				C.String("name", "mongo-go-driver"),
 				C.String("version", internalVersion),
@@ -1032,8 +1030,7 @@ func BenchmarkDocument(b *testing.B) {
 	b.ReportAllocs()
 	internalVersion := "1234567"
 	for i := 0; i < b.N; i++ {
-		doc := NewDocument(4)
-		doc.Append(
+		doc := NewDocument(
 			C.SubDocumentFromElements("driver",
 				C.String("name", "mongo-go-driver"),
 				C.String("version", internalVersion),
