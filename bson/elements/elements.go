@@ -1,4 +1,4 @@
-// package element holds the logic to encode and decode the BSON element types
+// Package elements holds the logic to encode and decode the BSON element types
 // from native Go to BSON binary and vice versa.
 //
 // These are low level helper methods, so they do not encode or decode BSON
@@ -18,28 +18,31 @@ import (
 	"github.com/skriptble/wilson/bson/decimal"
 )
 
+// ErrTooSmall indicates that slice provided to encode into is not large enough to fit the data.
 var ErrTooSmall = errors.New("element: The provided slice is too small")
-var ErrInvalidValue = errors.New("element: The bytes provided are not a valid BSON element")
 
-var Double double
-var String str
-var Document document
-var Array array
-var Binary bin
-var ObjectId objectid
-var Boolean boolean
-var DateTime datetime
-var Regex regex
-var DBPointer dbpointer
-var Javascript javascript
-var Symbol symbol
-var CodeWithScope codewithscope
-var Int32 i32
-var Timestamp timestamp
-var Int64 i64
-var Decimal128 decimal128
-var CString cstring
-var Byte bsonbyte
+// These variables are used as namespaces for methods pertaining to encoding individual BSON types.
+var (
+	Double        double
+	String        str
+	Document      document
+	Array         array
+	Binary        bin
+	ObjectID      objectid
+	Boolean       boolean
+	DateTime      datetime
+	Regex         regex
+	DBPointer     dbpointer
+	JavaScript    javascript
+	Symbol        symbol
+	CodeWithScope codewithscope
+	Int32         i32
+	Timestamp     timestamp
+	Int64         i64
+	Decimal128    decimal128
+	CString       cstring
+	Byte          bsonbyte
+)
 
 type double struct{}
 type str struct{}
@@ -222,7 +225,7 @@ func (bin) Encode(start uint, writer []byte, b []byte, btype byte) (int, error) 
 
 	writer[start] = btype
 	start++
-	total += 1
+	total++
 
 	total += copy(writer[start:], b)
 
@@ -246,7 +249,7 @@ func (bin) encodeSubtype2(start uint, writer []byte, b []byte) (int, error) {
 
 	writer[start] = 2
 	start++
-	total += 1
+	total++
 
 	n, err = Int32.Encode(start, writer, int32(len(b)))
 	start += uint(n)
@@ -307,7 +310,7 @@ func (objectid) Element(start uint, writer []byte, key string, oid [12]byte) (in
 		return total, err
 	}
 
-	n, err = ObjectId.Encode(start, writer, oid)
+	n, err = ObjectID.Encode(start, writer, oid)
 	start += uint(n)
 	total += n
 	if err != nil {
@@ -447,7 +450,7 @@ func (dbpointer) Encode(start uint, writer []byte, ns string, oid [12]byte) (int
 		return total, err
 	}
 
-	written, err = ObjectId.Encode(start+uint(written), writer, oid)
+	written, err = ObjectID.Encode(start+uint(written), writer, oid)
 	total += written
 
 	return total, err
@@ -502,7 +505,7 @@ func (javascript) Element(start uint, writer []byte, key string, code string) (i
 		return total, err
 	}
 
-	n, err = Javascript.Encode(start, writer, code)
+	n, err = JavaScript.Encode(start, writer, code)
 	start += uint(n)
 	total += n
 	if err != nil {

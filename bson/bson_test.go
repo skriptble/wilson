@@ -56,7 +56,7 @@ func TestValue(t *testing.T) {
 			'\x00',
 		}
 		e := &Element{&Value{start: 4, offset: 9, data: buf}}
-		want := BSONType('\x02')
+		want := TypeString
 		got := e.value.Type()
 		if got != want {
 			t.Errorf("Unexpected result. got %v; want %v", got, want)
@@ -91,7 +91,7 @@ func TestValue(t *testing.T) {
 		want := "bar"
 		got := e.value.StringValue()
 		if got != want {
-			t.Errorf("Unexpected result. got %f; want %f", got, want)
+			t.Errorf("Unexpected result. got %s; want %s", got, want)
 		}
 	})
 	t.Run("document", func(t *testing.T) {})

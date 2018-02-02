@@ -90,6 +90,6 @@ func BenchmarkParseInt(b *testing.B) {
 func BenchmarkParseIntUnsafeSlower(b *testing.B) {
 	bytes := []byte("123")
 	for i := 0; i < b.N; i++ {
-		strconv.ParseInt(*(*string)(unsafe.Pointer(&bytes)), 10, 64)
+		_, _ = strconv.ParseInt(*(*string)(unsafe.Pointer(&bytes)), 10, 64)
 	}
 }

@@ -10,32 +10,39 @@ import (
 	"strings"
 )
 
+// ErrEncoderNilWriter indicates that encoder.Encode was called with a nil argument.
 var ErrEncoderNilWriter = errors.New("encoder.Encode called on Encoder with nil io.Writer")
 
 var tByteSlice = reflect.TypeOf(([]byte)(nil))
 var tByte = reflect.TypeOf(byte(0x00))
 var tElement = reflect.TypeOf((*Element)(nil))
 
+// Marshaler describes a type that can marshal a BSON representation of itself into bytes.
 type Marshaler interface {
 	MarshalBSON() ([]byte, error)
 }
 
+// DocumentMarshaler describes a type that can marshal itself into a bson.Document.
 type DocumentMarshaler interface {
 	MarshalBSONDocument() (*Document, error)
 }
 
+// ElementMarshaler describes a type that can marshal itself into a bson.Element.
 type ElementMarshaler interface {
 	MarshalBSONElement() (*Element, error)
 }
 
+// ValueMarshaler describes a type that can marshal itself into a bson.Value.
 type ValueMarshaler interface {
 	MarshalBSONValue() (*Value, error)
 }
 
+// Encoder describes a type that can encode itself into a value.
 type Encoder interface {
 	Encode(interface{}) error
 }
 
+// DocumentEncoder describes a type that can marshal itself into a value and return the bson.Document it represents.
 type DocumentEncoder interface {
 	EncodeDocument(interface{}) (*Document, error)
 }
@@ -54,6 +61,7 @@ func NewDocumentEncoder() DocumentEncoder {
 	return &encoder{}
 }
 
+// Encode encodes a value from an io.Writer into the given value.
 func (e *encoder) Encode(v interface{}) error {
 	var err error
 
@@ -112,6 +120,8 @@ func (e *encoder) Encode(v interface{}) error {
 	return err
 }
 
+// EncodeDocument encodes a value from an io.Writer into the given value and returns the document
+// it represents.
 func (e *encoder) EncodeDocument(v interface{}) (*Document, error) {
 	var err error
 

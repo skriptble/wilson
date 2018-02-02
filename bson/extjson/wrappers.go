@@ -16,56 +16,56 @@ import (
 type wrapperType byte
 
 const (
-	None     wrapperType = 0
-	ObjectId             = iota
-	Symbol
-	Int32
-	Int64
-	Double
-	Decimal
-	Binary
-	Code
-	Timestamp
-	Regex
-	DBPointer
-	DateTime
-	DBRef
-	MinKey
-	MaxKey
-	Undefined
+	none     wrapperType = 0
+	objectID             = iota
+	symbol
+	int32Type
+	int64Type
+	double
+	decimalType
+	binary
+	code
+	timestamp
+	regex
+	dbPointer
+	dateTime
+	dbRef
+	minKey
+	maxKey
+	undefined
 )
 
 func (w wrapperType) String() string {
 	switch w {
-	case ObjectId:
-		return "ObjectId"
-	case Int32:
-		return "int32"
-	case Int64:
+	case objectID:
+		return "objectID"
+	case int32Type:
+		return "int32Type"
+	case int64Type:
 		return "int64"
-	case Double:
+	case double:
 		return "double"
-	case Decimal:
-		return "decimal"
-	case Binary:
+	case decimalType:
+		return "decimalType"
+	case binary:
 		return "binary"
-	case Code:
+	case code:
 		return "JavaScript code"
-	case Timestamp:
+	case timestamp:
 		return "timestamp"
-	case Regex:
+	case regex:
 		return "regex"
-	case DBPointer:
+	case dbPointer:
 		return "dbpointer"
-	case DateTime:
+	case dateTime:
 		return "datetime"
-	case DBRef:
+	case dbRef:
 		return "dbref"
-	case MinKey:
+	case minKey:
 		return "minkey"
-	case MaxKey:
+	case maxKey:
 		return "maxkey"
-	case Undefined:
+	case undefined:
 		return "undefined"
 	}
 
@@ -75,49 +75,49 @@ func (w wrapperType) String() string {
 func wrapperKeyType(key []byte) wrapperType {
 	switch string(key) {
 	case "$numberInt":
-		return Int32
+		return int32Type
 	case "$numberLong":
-		return Int64
+		return int64Type
 	case "$oid":
-		return ObjectId
+		return objectID
 	case "$symbol":
-		return Symbol
+		return symbol
 	case "$numberDouble":
-		return Double
+		return double
 	case "$numberDecimal":
-		return Decimal
+		return decimalType
 	case "$binary":
-		return Binary
+		return binary
 	case "$code":
 		fallthrough
 	case "$scope":
-		return Code
+		return code
 	case "$timestamp":
-		return Timestamp
+		return timestamp
 	case "$regularExpression":
-		return Regex
+		return regex
 	case "$dbPointer":
-		return DBPointer
+		return dbPointer
 	case "$date":
-		return DateTime
+		return dateTime
 	case "$ref":
 		fallthrough
 	case "$id":
 		fallthrough
 	case "$db":
-		return DBRef
+		return dbRef
 	case "$minKey":
-		return MinKey
+		return minKey
 	case "$maxKey":
-		return MaxKey
+		return maxKey
 	case "$undefined":
-		return Undefined
+		return undefined
 	}
 
-	return None
+	return none
 }
 
-func parseObjectId(data []byte, dataType jsonparser.ValueType) ([12]byte, error) {
+func parseObjectID(data []byte, dataType jsonparser.ValueType) ([12]byte, error) {
 	var oid [12]byte
 
 	if dataType != jsonparser.String {
@@ -158,7 +158,7 @@ func parseInt32(data []byte, dataType jsonparser.ValueType) (int32, error) {
 	}
 
 	if i < math.MinInt32 || i > math.MaxInt32 {
-		return 0, fmt.Errorf("$numberInt value should be int32 but instead is int64: %d", i)
+		return 0, fmt.Errorf("$numberInt value should be int32Type but instead is int64: %d", i)
 	}
 
 	return int32(i), nil
@@ -467,7 +467,7 @@ func parseDBPointer(data []byte, dataType jsonparser.ValueType) (string, [12]byt
 				return fmt.Errorf("$dbPointer $id value should be object, but instead is %s", dataType.String())
 			}
 
-			id, err := parseDBPointerObjectId(value)
+			id, err := parseDBPointerObjectID(value)
 			if err != nil {
 				return err
 			}
@@ -496,7 +496,7 @@ func parseDBPointer(data []byte, dataType jsonparser.ValueType) (string, [12]byt
 	return *ns, oid, nil
 }
 
-func parseDBPointerObjectId(data []byte) ([12]byte, error) {
+func parseDBPointerObjectID(data []byte) ([12]byte, error) {
 	var oid [12]byte
 	oidFound := false
 
@@ -512,7 +512,7 @@ func parseDBPointerObjectId(data []byte) ([12]byte, error) {
 			}
 
 			var err error
-			oid, err = parseObjectId(value, dataType)
+			oid, err = parseObjectID(value, dataType)
 			if err != nil {
 				return fmt.Errorf("invalid $dbPointer $id $oid value: %s", err)
 			}
@@ -536,7 +536,7 @@ func parseDBPointerObjectId(data []byte) ([12]byte, error) {
 	return oid, nil
 }
 
-const RFC3339Milli = "2006-01-02T15:04:05.999Z07:00"
+const rfc3339Milli = "2006-01-02T15:04:05.999Z07:00"
 
 func parseDatetime(data []byte, dataType jsonparser.ValueType) (int64, error) {
 	switch dataType {
@@ -550,7 +550,7 @@ func parseDatetime(data []byte, dataType jsonparser.ValueType) (int64, error) {
 }
 
 func parseDatetimeString(data []byte) (int64, error) {
-	t, err := time.Parse(RFC3339Milli, string(data))
+	t, err := time.Parse(rfc3339Milli, string(data))
 	if err != nil {
 		return 0, fmt.Errorf("invalid $date value string: %s", string(data))
 	}
@@ -668,7 +668,7 @@ func parseUndefined(data []byte, dataType jsonparser.ValueType) error {
 	}
 
 	if !b {
-		return fmt.Errorf("$undefined balue boolean should be true, but instead is %s", b)
+		return fmt.Errorf("$undefined balue boolean should be true, but instead is %v", b)
 	}
 
 	return nil

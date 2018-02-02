@@ -14,6 +14,7 @@ type Array struct {
 	doc *Document
 }
 
+// NewArray creates a new array with the specified value.
 func NewArray(values ...*Value) *Array {
 	elems := make([]*Element, 0, len(values))
 	for _, v := range values {
@@ -30,14 +31,18 @@ func ArrayFromDocument(doc *Document) *Array {
 	return &Array{doc: doc}
 }
 
+// Len returns the number of elements in the array.
 func (a *Array) Len() int {
 	return len(a.doc.elems)
 }
 
+// Reset clears all elements from the array.
 func (a *Array) Reset() {
 	a.doc.Reset()
 }
 
+// Validate ensures that the array's underlying BSON is valid. It returns the the number of bytes
+// in the underlying BSON if it is valid or an error if it isn't.
 func (a *Array) Validate() (uint32, error) {
 	var size uint32 = 4 + 1
 	for i, elem := range a.doc.elems {
@@ -57,6 +62,7 @@ func (a *Array) Validate() (uint32, error) {
 	return size, nil
 }
 
+// Lookup returns the value in the array at the given index or an error if it cannot be found.
 func (a *Array) Lookup(index uint) (*Value, error) {
 	v, err := a.doc.ElementAt(index)
 	if err != nil {
@@ -66,18 +72,22 @@ func (a *Array) Lookup(index uint) (*Value, error) {
 	return v.value, nil
 }
 
+// Append adds the given values to the end of the array. It returns a reference to itself.
 func (a *Array) Append(values ...*Value) *Array {
 	a.doc.Append(elemsFromValues(values)...)
 
 	return a
 }
 
+// Prepend adds the given values to the beginning of the array. It returns a reference to itself.
 func (a *Array) Prepend(values ...*Value) *Array {
 	a.doc.Prepend(elemsFromValues(values)...)
 
 	return a
 }
 
+// Set replaces the value at the given index with the parameter value. It panics if the index is
+// out of bounds.
 func (a *Array) Set(index uint, value *Value) *Array {
 	if index >= uint(len(a.doc.elems)) {
 		panic(ErrOutOfBounds)
@@ -88,10 +98,79 @@ func (a *Array) Set(index uint, value *Value) *Array {
 	return a
 }
 
-func (a *Array) Combine(doc interface{}) error {
+// Concat will append all the values from each of the arguments onto the array.
+//
+// Each argument must be one of the following:
+//
+//   - *Array
+//   - *Document
+//   - []byte
+//   - bson.Reader
+//
+// Note that in the case of *Document, []byte, and bson.Reader, the keys will be ignored and only
+// the values will be appended.
+func (a *Array) Concat(docs ...interface{}) error {
+	for _, arr := range docs {
+		if arr == nil {
+			if a.doc.IgnoreNilInsert {
+				continue
+			}
+
+			return ErrNilDocument
+		}
+
+		switch val := arr.(type) {
+		case *Array:
+			if val == nil {
+				if a.doc.IgnoreNilInsert {
+					continue
+				}
+
+				return ErrNilDocument
+			}
+
+			for _, e := range val.doc.elems {
+				a.Append(e.value)
+			}
+		case *Document:
+			if val == nil {
+				if a.doc.IgnoreNilInsert {
+					continue
+				}
+
+				return ErrNilDocument
+			}
+
+			for _, e := range val.elems {
+				a.Append(e.value)
+			}
+		case []byte:
+			if err := a.concatReader(Reader(val)); err != nil {
+				return err
+			}
+		case Reader:
+			if err := a.concatReader(val); err != nil {
+				return err
+			}
+		default:
+			return ErrInvalidDocumentType
+		}
+	}
+
 	return nil
 }
 
+func (a *Array) concatReader(r Reader) error {
+	_, err := r.readElements(func(e *Element) error {
+		a.Append(e.value)
+
+		return nil
+	})
+
+	return err
+}
+
+// Delete removes the value at the given index from the array.
 func (a *Array) Delete(index uint) *Value {
 	if index >= uint(len(a.doc.elems)) {
 		return nil
@@ -113,7 +192,7 @@ func (a *Array) WriteTo(w io.Writer) (int64, error) {
 	return int64(n), err
 }
 
-// WriteDocument will serialize this document to the provided writer beginning
+// WriteArray will serialize this array to the provided writer beginning
 // at the provided start position.
 func (a *Array) WriteArray(start uint, writer []byte) (int64, error) {
 	var total int64
@@ -134,7 +213,7 @@ func (a *Array) WriteArray(start uint, writer []byte) (int64, error) {
 	return total, nil
 }
 
-// writeByteSlice handles serializing this document to a slice of bytes starting
+// writeByteSlice handles serializing this array to a slice of bytes starting
 // at the given start position.
 func (a *Array) writeByteSlice(start uint, size uint32, b []byte) (int64, error) {
 	var total int64
@@ -152,8 +231,8 @@ func (a *Array) writeByteSlice(start uint, size uint32, b []byte) (int64, error)
 
 	for i, elem := range a.doc.elems {
 		b[pos] = elem.value.data[elem.value.start]
-		total += 1
-		pos += 1
+		total++
+		pos++
 
 		key := []byte(strconv.Itoa(i))
 		key = append(key, 0)

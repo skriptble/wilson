@@ -42,10 +42,13 @@ func NewDecimal128(h, l uint64) Decimal128 {
 	return Decimal128{h: h, l: l}
 }
 
+// GetBytes returns the underlying bytes of the BSON decimal value as two uint16 values. The first
+// contains the most first 8 bytes of the value and the second contains the latter.
 func (d Decimal128) GetBytes() (uint64, uint64) {
 	return d.h, d.l
 }
 
+// String returns a string representation of the decimal value.
 func (d Decimal128) String() string {
 	var pos int     // positive sign
 	var e int       // exponent

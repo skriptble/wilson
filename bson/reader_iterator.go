@@ -1,6 +1,6 @@
 package bson
 
-// ReaderIterator facilitates iterating over a Reader.
+// ReaderIterator facilitates iterating over a bson.Reader.
 type ReaderIterator struct {
 	r    Reader
 	pos  uint32
@@ -10,7 +10,7 @@ type ReaderIterator struct {
 }
 
 // NewReaderIterator constructors a new ReaderIterator over a given Reader.
-func NewReadIterator(r Reader) (*ReaderIterator, error) {
+func NewReaderIterator(r Reader) (*ReaderIterator, error) {
 	itr := new(ReaderIterator)
 	if len(r) < 5 {
 		return nil, ErrTooSmall

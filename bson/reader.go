@@ -6,8 +6,9 @@ import (
 	"strings"
 )
 
+// ErrNilReader indicates that an operation was attempted on a nil bson.Reader.
 var ErrNilReader = errors.New("nil reader")
-var validateDone = errors.New("validation loop complete")
+var errValidateDone = errors.New("validation loop complete")
 
 // Reader is a wrapper around a byte slice. It will interpret the slice as a
 // BSON document. Most of the methods on Reader are low cost and are meant for
@@ -16,6 +17,8 @@ var validateDone = errors.New("validation loop complete")
 // necessary then the Document type should be used.
 type Reader []byte
 
+// NewFromIOReader reads in a document from the given io.Reader and constructs a bson.Reader from
+// it.
 func NewFromIOReader(r io.Reader) (Reader, error) {
 	if r == nil {
 		return nil, ErrNilReader
@@ -49,7 +52,7 @@ func NewFromIOReader(r io.Reader) (Reader, error) {
 	return reader, nil
 }
 
-// Validates the document. This method only validates the first document in
+// Validate validates the document. This method only validates the first document in
 // the slice, to validate other documents, the slice must be resliced.
 func (r Reader) Validate() (size uint32, err error) {
 	return r.readElements(func(elem *Element) error {
@@ -68,7 +71,7 @@ func (r Reader) Validate() (size uint32, err error) {
 // including the null terminator.
 func (r Reader) validateKey(pos, end uint32) (uint32, error) {
 	// Read a CString, return the length, including the '\x00'
-	var total uint32 = 0
+	var total uint32
 	for ; pos < end && r[pos] != '\x00'; pos++ {
 		total++
 	}
@@ -104,20 +107,20 @@ func (r Reader) Lookup(key ...string) (*Element, error) {
 						return err
 					}
 					elem = e
-					return validateDone
+					return errValidateDone
 				case '\x04':
 					e, err := e.value.ReaderArray().Lookup(key[1:]...)
 					if err != nil {
 						return err
 					}
 					elem = e
-					return validateDone
+					return errValidateDone
 				default:
 					return ErrInvalidDepthTraversal
 				}
 			}
 			elem = e
-			return validateDone
+			return errValidateDone
 		}
 		return nil
 	})
@@ -136,7 +139,7 @@ func (r Reader) ElementAt(index uint) (*Element, error) {
 			return nil
 		}
 		elem = e
-		return validateDone
+		return errValidateDone
 	})
 	if err != nil {
 		return nil, err
@@ -150,7 +153,7 @@ func (r Reader) ElementAt(index uint) (*Element, error) {
 // Iterator returns a ReaderIterator that can be used to iterate through the
 // elements of this Reader.
 func (r Reader) Iterator() (*ReaderIterator, error) {
-	return NewReadIterator(r)
+	return NewReaderIterator(r)
 }
 
 // Keys returns the keys for this document. If recursive is true then this
@@ -196,9 +199,9 @@ func (r Reader) recursiveKeys(recursive bool, prefix ...string) (Keys, error) {
 
 // readElements is an internal method used to traverse the document. It will
 // validate the document and the underlying elements. If the provided function
-// is non-nil it will be called for each element. If `validateDone` is returned
+// is non-nil it will be called for each element. If `errValidateDone` is returned
 // from the function, this method will return. This method will return nil when
-// the function returns validateDone, in all other cases a non-nil error will
+// the function returns errValidateDone, in all other cases a non-nil error will
 // be returned by this method.
 func (r Reader) readElements(f func(e *Element) error) (uint32, error) {
 	if len(r) < 5 {
@@ -242,7 +245,7 @@ func (r Reader) readElements(f func(e *Element) error) (uint32, error) {
 		if f != nil {
 			err = f(elem)
 			if err != nil {
-				if err == validateDone {
+				if err == errValidateDone {
 					break
 				}
 				return pos, err

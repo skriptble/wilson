@@ -273,7 +273,7 @@ func searchKeys(data []byte, keys ...string) int {
 				var valueFound []byte
 				var valueOffset int
 				var curI = i
-				ArrayEach(data[i:], func(_ int, value []byte, dataType ValueType, offset int) error {
+				_, _ = ArrayEach(data[i:], func(_ int, value []byte, dataType ValueType, offset int) error {
 					if curIdx == aIdx {
 						valueFound = value
 						valueOffset = offset
@@ -889,7 +889,7 @@ func ArrayEach(data []byte, cb func(index int, value []byte, dataType ValueType,
 		}
 
 		if t != NotExist {
-			cb(i, v, t, offset+o-len(v))
+			_ = cb(i, v, t, offset+o-len(v))
 		}
 
 		if e != nil {

@@ -12,7 +12,7 @@ import (
 var activeTest = ""
 
 func toArray(data []byte) (result [][]byte) {
-	ArrayEach(data, func(_ int, value []byte, dataType ValueType, offset int) error {
+	_, _ = ArrayEach(data, func(_ int, value []byte, dataType ValueType, offset int) error {
 		result = append(result, value)
 		return nil
 	})
@@ -21,7 +21,7 @@ func toArray(data []byte) (result [][]byte) {
 }
 
 func toStringArray(data []byte) (result []string) {
-	ArrayEach(data, func(_ int, value []byte, dataType ValueType, offset int) error {
+	_, _ = ArrayEach(data, func(_ int, value []byte, dataType ValueType, offset int) error {
 		result = append(result, string(value))
 		return nil
 	})
@@ -1135,7 +1135,7 @@ func TestArrayEach(t *testing.T) {
 	mock := []byte(`{"a": { "b":[{"x": 1} ,{"x":2},{ "x":3}, {"x":4} ]}}`)
 	count := 0
 
-	ArrayEach(mock, func(_ int, value []byte, dataType ValueType, offset int) error {
+	_, _ = ArrayEach(mock, func(_ int, value []byte, dataType ValueType, offset int) error {
 		count++
 
 		switch count {

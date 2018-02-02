@@ -184,7 +184,7 @@ func TestElement(t *testing.T) {
 			}
 		})
 
-		t.Run("Double", func(t *testing.T) {
+		t.Run("double", func(t *testing.T) {
 			testCases := []struct {
 				name          string
 				elem          *Element
@@ -360,7 +360,7 @@ func TestElement(t *testing.T) {
 			// TODO: implement array test when array is implemented
 		})
 
-		t.Run("Binary", func(t *testing.T) {
+		t.Run("binary", func(t *testing.T) {
 			testCases := []struct {
 				name          string
 				elem          *Element
@@ -391,7 +391,7 @@ func TestElement(t *testing.T) {
 			}
 		})
 
-		t.Run("ObjectID", func(t *testing.T) {
+		t.Run("objectID", func(t *testing.T) {
 			testCases := []struct {
 				name          string
 				elem          *Element
@@ -491,7 +491,7 @@ func TestElement(t *testing.T) {
 			}
 		})
 
-		t.Run("Regex", func(t *testing.T) {
+		t.Run("regex", func(t *testing.T) {
 			testCases := []struct {
 				name          string
 				elem          *Element
@@ -522,7 +522,7 @@ func TestElement(t *testing.T) {
 			}
 		})
 
-		t.Run("DBPointer", func(t *testing.T) {
+		t.Run("dbPointer", func(t *testing.T) {
 			testCases := []struct {
 				name          string
 				elem          *Element
@@ -594,7 +594,7 @@ func TestElement(t *testing.T) {
 				})
 			}
 		})
-		t.Run("Symbol", func(t *testing.T) {
+		t.Run("symbol", func(t *testing.T) {
 			testCases := []struct {
 				name          string
 				elem          *Element
@@ -683,7 +683,7 @@ func TestElement(t *testing.T) {
 			}
 		})
 
-		t.Run("Int32", func(t *testing.T) {
+		t.Run("int32", func(t *testing.T) {
 			testCases := []struct {
 				name          string
 				elem          *Element
@@ -714,7 +714,7 @@ func TestElement(t *testing.T) {
 			}
 		})
 
-		t.Run("Timestamp", func(t *testing.T) {
+		t.Run("timestamp", func(t *testing.T) {
 			testCases := []struct {
 				name          string
 				elem          *Element
@@ -745,7 +745,7 @@ func TestElement(t *testing.T) {
 			}
 		})
 
-		t.Run("Int64", func(t *testing.T) {
+		t.Run("int64Type", func(t *testing.T) {
 			testCases := []struct {
 				name          string
 				elem          *Element
@@ -815,7 +815,7 @@ func TestElement(t *testing.T) {
 		})
 	})
 	t.Run("Value Methods", func(t *testing.T) {
-		t.Run("Double", func(t *testing.T) {
+		t.Run("double", func(t *testing.T) {
 			testCases := []struct {
 				name  string
 				elem  *Element
@@ -829,9 +829,9 @@ func TestElement(t *testing.T) {
 				{"Empty Element data",
 					&Element{&Value{start: 0, offset: 2, data: nil}}, 0, ErrUninitializedElement,
 				},
-				{"Not Double",
+				{"Not double",
 					&Element{&Value{start: 0, offset: 2, data: []byte{0x02, 0x00}}}, 0,
-					ElementTypeError{"compact.Element.Double", BSONType(0x02)},
+					ElementTypeError{"compact.Element.double", Type(0x02)},
 				},
 				{"Success",
 					&Element{&Value{
@@ -874,7 +874,7 @@ func TestElement(t *testing.T) {
 				},
 				{"Not String",
 					&Element{&Value{start: 0, offset: 2, data: []byte{0x01, 0x00}}}, "",
-					ElementTypeError{"compact.Element.String", BSONType(0x01)},
+					ElementTypeError{"compact.Element.String", Type(0x01)},
 				},
 				{"Success",
 					&Element{&Value{
@@ -917,7 +917,7 @@ func TestElement(t *testing.T) {
 				},
 				{"Not Document",
 					&Element{&Value{start: 0, offset: 2, data: []byte{0x01, 0x00}}}, nil,
-					ElementTypeError{"compact.Element.Document", BSONType(0x01)},
+					ElementTypeError{"compact.Element.Document", Type(0x01)},
 				},
 				{"Success",
 					&Element{&Value{
@@ -960,7 +960,7 @@ func TestElement(t *testing.T) {
 				},
 				{"Not Array",
 					&Element{&Value{start: 0, offset: 2, data: []byte{0x01, 0x00}}}, nil,
-					ElementTypeError{"compact.Element.Array", BSONType(0x01)},
+					ElementTypeError{"compact.Element.Array", Type(0x01)},
 				},
 				{"Success",
 					&Element{&Value{
@@ -987,7 +987,7 @@ func TestElement(t *testing.T) {
 				})
 			}
 		})
-		t.Run("Binary", func(t *testing.T) {
+		t.Run("binary", func(t *testing.T) {
 			testCases := []struct {
 				name    string
 				elem    *Element
@@ -1002,9 +1002,9 @@ func TestElement(t *testing.T) {
 				{"Empty Element data",
 					&Element{&Value{start: 0, offset: 2, data: nil}}, 0x00, nil, ErrUninitializedElement,
 				},
-				{"Not Binary",
+				{"Not binary",
 					&Element{&Value{start: 0, offset: 2, data: []byte{0x01, 0x00}}}, 0x00, nil,
-					ElementTypeError{"compact.Element.Binary", BSONType(0x01)},
+					ElementTypeError{"compact.Element.binary", Type(0x01)},
 				},
 				{"Success",
 					&Element{&Value{
@@ -1034,7 +1034,7 @@ func TestElement(t *testing.T) {
 				})
 			}
 		})
-		t.Run("ObjectID", func(t *testing.T) {
+		t.Run("objectID", func(t *testing.T) {
 			var empty [12]byte
 			testCases := []struct {
 				name  string
@@ -1049,9 +1049,9 @@ func TestElement(t *testing.T) {
 				{"Empty Element data",
 					&Element{&Value{start: 0, offset: 2, data: nil}}, empty, ErrUninitializedElement,
 				},
-				{"Not ObjectID",
+				{"Not objectID",
 					&Element{&Value{start: 0, offset: 2, data: []byte{0x01, 0x00}}}, empty,
-					ElementTypeError{"compact.Element.ObejctID", BSONType(0x01)},
+					ElementTypeError{"compact.Element.ObejctID", Type(0x01)},
 				},
 				{"Success",
 					&Element{&Value{
@@ -1100,7 +1100,7 @@ func TestElement(t *testing.T) {
 				},
 				{"Not Boolean",
 					&Element{&Value{start: 0, offset: 2, data: []byte{0x01, 0x00}}}, false,
-					ElementTypeError{"compact.Element.Boolean", BSONType(0x01)},
+					ElementTypeError{"compact.Element.Boolean", Type(0x01)},
 				},
 				{"Success",
 					&Element{&Value{
@@ -1127,7 +1127,7 @@ func TestElement(t *testing.T) {
 				})
 			}
 		})
-		t.Run("UTC DateTime", func(t *testing.T) {
+		t.Run("UTC dateTime", func(t *testing.T) {
 			var empty time.Time
 			testCases := []struct {
 				name  string
@@ -1142,9 +1142,9 @@ func TestElement(t *testing.T) {
 				{"Empty Element data",
 					&Element{&Value{start: 0, offset: 2, data: nil}}, empty, ErrUninitializedElement,
 				},
-				{"Not UTC DateTime",
+				{"Not UTC dateTime",
 					&Element{&Value{start: 0, offset: 2, data: []byte{0x01, 0x00}}}, empty,
-					ElementTypeError{"compact.Element.DateTime", BSONType(0x01)},
+					ElementTypeError{"compact.Element.dateTime", Type(0x01)},
 				},
 				{"Success",
 					&Element{&Value{
@@ -1171,7 +1171,7 @@ func TestElement(t *testing.T) {
 				})
 			}
 		})
-		t.Run("Regex", func(t *testing.T) {
+		t.Run("regex", func(t *testing.T) {
 			testCases := []struct {
 				name    string
 				elem    *Element
@@ -1186,9 +1186,9 @@ func TestElement(t *testing.T) {
 				{"Empty Element data",
 					&Element{&Value{start: 0, offset: 2, data: nil}}, "", "", ErrUninitializedElement,
 				},
-				{"Not Regex",
+				{"Not regex",
 					&Element{&Value{start: 0, offset: 2, data: []byte{0x01, 0x00}}}, "", "",
-					ElementTypeError{"compact.Element.Regex", BSONType(0x01)},
+					ElementTypeError{"compact.Element.regex", Type(0x01)},
 				},
 				{"Success",
 					&Element{&Value{
@@ -1218,7 +1218,7 @@ func TestElement(t *testing.T) {
 				})
 			}
 		})
-		t.Run("DBPointer", func(t *testing.T) {
+		t.Run("dbPointer", func(t *testing.T) {
 			var empty [12]byte
 			testCases := []struct {
 				name    string
@@ -1234,9 +1234,9 @@ func TestElement(t *testing.T) {
 				{"Empty Element data",
 					&Element{&Value{start: 0, offset: 2, data: nil}}, "", empty, ErrUninitializedElement,
 				},
-				{"Not DBPointer",
+				{"Not dbPointer",
 					&Element{&Value{start: 0, offset: 2, data: []byte{0x01, 0x00}}}, "", empty,
-					ElementTypeError{"compact.Element.DBPointer", BSONType(0x01)},
+					ElementTypeError{"compact.Element.dbPointer", Type(0x01)},
 				},
 				{"Success",
 					&Element{&Value{
@@ -1288,9 +1288,9 @@ func TestElement(t *testing.T) {
 				{"Empty Element data",
 					&Element{&Value{start: 0, offset: 2, data: nil}}, "", ErrUninitializedElement,
 				},
-				{"Not Javascript",
+				{"Not JavaScript",
 					&Element{&Value{start: 0, offset: 2, data: []byte{0x01, 0x00}}}, "",
-					ElementTypeError{"compact.Element.Javascript", BSONType(0x01)},
+					ElementTypeError{"compact.Element.JavaScript", Type(0x01)},
 				},
 				{"Success",
 					&Element{&Value{
@@ -1310,14 +1310,14 @@ func TestElement(t *testing.T) {
 						}
 					}()
 
-					val := tc.elem.value.Javascript()
+					val := tc.elem.value.JavaScript()
 					if val != tc.val {
 						t.Errorf("Did not return correct value. got %s; want %s", val, tc.val)
 					}
 				})
 			}
 		})
-		t.Run("Symbol", func(t *testing.T) {
+		t.Run("symbol", func(t *testing.T) {
 			testCases := []struct {
 				name  string
 				elem  *Element
@@ -1331,9 +1331,9 @@ func TestElement(t *testing.T) {
 				{"Empty Element data",
 					&Element{&Value{start: 0, offset: 2, data: nil}}, "", ErrUninitializedElement,
 				},
-				{"Not Javascript",
+				{"Not JavaScript",
 					&Element{&Value{start: 0, offset: 2, data: []byte{0x01, 0x00}}}, "",
-					ElementTypeError{"compact.Element.Symbol", BSONType(0x01)},
+					ElementTypeError{"compact.Element.symbol", Type(0x01)},
 				},
 				{"Success",
 					&Element{&Value{
@@ -1360,7 +1360,7 @@ func TestElement(t *testing.T) {
 				})
 			}
 		})
-		t.Run("Code With Scope", func(t *testing.T) {
+		t.Run("code With Scope", func(t *testing.T) {
 			testCases := []struct {
 				name  string
 				elem  *Element
@@ -1377,7 +1377,7 @@ func TestElement(t *testing.T) {
 				},
 				{"Not JavascriptWithScope",
 					&Element{&Value{start: 0, offset: 2, data: []byte{0x01, 0x00}}}, "", nil,
-					ElementTypeError{"compact.Element.JavascriptWithScope", BSONType(0x01)},
+					ElementTypeError{"compact.Element.JavaScriptWithScope", Type(0x01)},
 				},
 				{"Success",
 					&Element{&Value{
@@ -1401,7 +1401,7 @@ func TestElement(t *testing.T) {
 						}
 					}()
 
-					code, scope := tc.elem.value.ReaderJavascriptWithScope()
+					code, scope := tc.elem.value.ReaderJavaScriptWithScope()
 					if code != tc.code {
 						t.Errorf("Did not return correct code. got %s; want %s", code, tc.code)
 					}
@@ -1411,7 +1411,7 @@ func TestElement(t *testing.T) {
 				})
 			}
 		})
-		t.Run("Int32", func(t *testing.T) {
+		t.Run("int32", func(t *testing.T) {
 			testCases := []struct {
 				name  string
 				elem  *Element
@@ -1425,9 +1425,9 @@ func TestElement(t *testing.T) {
 				{"Empty Element data",
 					&Element{&Value{start: 0, offset: 2, data: nil}}, 0, ErrUninitializedElement,
 				},
-				{"Not Int32",
+				{"Not int32",
 					&Element{&Value{start: 0, offset: 2, data: []byte{0x02, 0x00}}}, 0,
-					ElementTypeError{"compact.Element.Int32", BSONType(0x02)},
+					ElementTypeError{"compact.Element.int32", Type(0x02)},
 				},
 				{"Success",
 					&Element{&Value{
@@ -1449,12 +1449,12 @@ func TestElement(t *testing.T) {
 
 					val := tc.elem.value.Int32()
 					if val != tc.val {
-						t.Errorf("Did not return correct value. got %.5f; want %.5f", val, tc.val)
+						t.Errorf("Did not return correct value. got %d; want %d", val, tc.val)
 					}
 				})
 			}
 		})
-		t.Run("Timestamp", func(t *testing.T) {
+		t.Run("timestamp", func(t *testing.T) {
 			testCases := []struct {
 				name  string
 				elem  *Element
@@ -1469,9 +1469,9 @@ func TestElement(t *testing.T) {
 				{"Empty Element data",
 					&Element{&Value{start: 0, offset: 2, data: nil}}, 0, 0, ErrUninitializedElement,
 				},
-				{"Not Timestamp",
+				{"Not timestamp",
 					&Element{&Value{start: 0, offset: 2, data: []byte{0x02, 0x00}}}, 0, 0,
-					ElementTypeError{"compact.Element.Timestamp", BSONType(0x02)},
+					ElementTypeError{"compact.Element.timestamp", Type(0x02)},
 				},
 				{"Success",
 					&Element{&Value{
@@ -1493,13 +1493,13 @@ func TestElement(t *testing.T) {
 
 					ti, inc := tc.elem.value.Timestamp()
 					if ti != tc.t || inc != tc.i {
-						t.Errorf("Did not return correct value. got (%.5f, %.5f); want (%.5f, %.5f)",
+						t.Errorf("Did not return correct value. got (%d, %d); want (%d, %d)",
 							ti, inc, tc.t, tc.i)
 					}
 				})
 			}
 		})
-		t.Run("Int64", func(t *testing.T) {
+		t.Run("int64Type", func(t *testing.T) {
 			testCases := []struct {
 				name  string
 				elem  *Element
@@ -1513,9 +1513,9 @@ func TestElement(t *testing.T) {
 				{"Empty Element data",
 					&Element{&Value{start: 0, offset: 2, data: nil}}, 0, ErrUninitializedElement,
 				},
-				{"Not Int64",
+				{"Not int64Type",
 					&Element{&Value{start: 0, offset: 2, data: []byte{0x02, 0x00}}}, 0,
-					ElementTypeError{"compact.Element.Int64", BSONType(0x02)},
+					ElementTypeError{"compact.Element.int64Type", Type(0x02)},
 				},
 				{"Success",
 					&Element{&Value{
@@ -1537,7 +1537,7 @@ func TestElement(t *testing.T) {
 
 					val := tc.elem.value.Int64()
 					if val != tc.val {
-						t.Errorf("Did not return correct value. got %.5f; want %.5f", val, tc.val)
+						t.Errorf("Did not return correct value. got %d; want %d", val, tc.val)
 					}
 				})
 			}
@@ -1557,9 +1557,9 @@ func TestElement(t *testing.T) {
 				{"Empty Element data",
 					&Element{&Value{start: 0, offset: 2, data: nil}}, empty, ErrUninitializedElement,
 				},
-				{"Not Int64",
+				{"Not int64Type",
 					&Element{&Value{start: 0, offset: 2, data: []byte{0x02, 0x00}}}, empty,
-					ElementTypeError{"compact.Element.Decimal128", BSONType(0x02)},
+					ElementTypeError{"compact.Element.Decimal128", Type(0x02)},
 				},
 				{"Success",
 					&Element{&Value{
@@ -1584,7 +1584,7 @@ func TestElement(t *testing.T) {
 
 					val := tc.elem.value.Decimal128()
 					if val != tc.val {
-						t.Errorf("Did not return correct value. got %.5f; want %.5f", val, tc.val)
+						t.Errorf("Did not return correct value. got %#v; want %#v", val, tc.val)
 					}
 				})
 			}
@@ -1633,7 +1633,7 @@ func TestElement(t *testing.T) {
 		testCases := []struct {
 			name  string
 			elem  *Element
-			etype BSONType
+			etype Type
 			fault error
 		}{
 			{"Nil Value", &Element{nil}, 0x0, ErrUninitializedElement},
@@ -1671,7 +1671,7 @@ func TestElement(t *testing.T) {
 }
 
 func testValidateValue(t *testing.T) {
-	t.Run("Double", func(t *testing.T) {
+	t.Run("double", func(t *testing.T) {
 		testCases := []struct {
 			name string
 			elem *Element
@@ -1843,7 +1843,7 @@ func testValidateValue(t *testing.T) {
 		}
 
 	})
-	t.Run("Binary", func(t *testing.T) {
+	t.Run("binary", func(t *testing.T) {
 		testCases := []struct {
 			name string
 			elem *Element
@@ -1856,7 +1856,7 @@ func testValidateValue(t *testing.T) {
 				}},
 				0, ErrTooSmall,
 			},
-			{"Invalid Binary Subtype",
+			{"Invalid binary Subtype",
 				&Element{&Value{
 					start: 0, offset: 2, data: []byte{0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7F},
 				}},
@@ -1888,7 +1888,7 @@ func testValidateValue(t *testing.T) {
 			})
 		}
 	})
-	t.Run("Undefined", func(t *testing.T) {
+	t.Run("undefined", func(t *testing.T) {
 		testCases := []struct {
 			name string
 			elem *Element
@@ -1915,7 +1915,7 @@ func testValidateValue(t *testing.T) {
 			})
 		}
 	})
-	t.Run("ObjectID", func(t *testing.T) {
+	t.Run("objectID", func(t *testing.T) {
 		testCases := []struct {
 			name string
 			elem *Element
@@ -1964,7 +1964,7 @@ func testValidateValue(t *testing.T) {
 				}},
 				0, ErrTooSmall,
 			},
-			{"Invalid Binary Type",
+			{"Invalid binary Type",
 				&Element{&Value{
 					start: 0, offset: 2, data: []byte{0x08, 0x00, 0x03},
 				}},
@@ -1996,7 +1996,7 @@ func testValidateValue(t *testing.T) {
 			})
 		}
 	})
-	t.Run("UTC DateTime", func(t *testing.T) {
+	t.Run("UTC dateTime", func(t *testing.T) {
 		testCases := []struct {
 			name string
 			elem *Element
@@ -2059,7 +2059,7 @@ func testValidateValue(t *testing.T) {
 			})
 		}
 	})
-	t.Run("Regex", func(t *testing.T) {
+	t.Run("regex", func(t *testing.T) {
 		testCases := []struct {
 			name string
 			elem *Element
@@ -2098,7 +2098,7 @@ func testValidateValue(t *testing.T) {
 			})
 		}
 	})
-	t.Run("DBPointer", func(t *testing.T) {
+	t.Run("dbPointer", func(t *testing.T) {
 		testCases := []struct {
 			name string
 			elem *Element
@@ -2192,7 +2192,7 @@ func testValidateValue(t *testing.T) {
 			})
 		}
 	})
-	t.Run("Symbol", func(t *testing.T) {
+	t.Run("symbol", func(t *testing.T) {
 		testCases := []struct {
 			name string
 			elem *Element
@@ -2242,7 +2242,7 @@ func testValidateValue(t *testing.T) {
 			})
 		}
 	})
-	t.Run("Code With Scope", func(t *testing.T) {
+	t.Run("code With Scope", func(t *testing.T) {
 		testCases := []struct {
 			name string
 			elem *Element
@@ -2328,7 +2328,7 @@ func testValidateValue(t *testing.T) {
 			})
 		}
 	})
-	t.Run("Int32", func(t *testing.T) {
+	t.Run("int32", func(t *testing.T) {
 		testCases := []struct {
 			name string
 			elem *Element
@@ -2363,7 +2363,7 @@ func testValidateValue(t *testing.T) {
 			})
 		}
 	})
-	t.Run("Timestamp", func(t *testing.T) {
+	t.Run("timestamp", func(t *testing.T) {
 		testCases := []struct {
 			name string
 			elem *Element
@@ -2398,7 +2398,7 @@ func testValidateValue(t *testing.T) {
 			})
 		}
 	})
-	t.Run("Int64", func(t *testing.T) {
+	t.Run("int64Type", func(t *testing.T) {
 		testCases := []struct {
 			name string
 			elem *Element
@@ -2471,7 +2471,7 @@ func testValidateValue(t *testing.T) {
 			})
 		}
 	})
-	t.Run("MinKey", func(t *testing.T) {
+	t.Run("minKey", func(t *testing.T) {
 		testCases := []struct {
 			name string
 			elem *Element
@@ -2498,7 +2498,7 @@ func testValidateValue(t *testing.T) {
 			})
 		}
 	})
-	t.Run("MaxKey", func(t *testing.T) {
+	t.Run("maxKey", func(t *testing.T) {
 		testCases := []struct {
 			name string
 			elem *Element
@@ -2527,7 +2527,7 @@ func testValidateValue(t *testing.T) {
 	})
 	t.Run("Invalid Element", func(t *testing.T) {
 		want := ErrInvalidElement
-		var wantSize uint32 = 0
+		var wantSize uint32
 		gotSize, got := (&Value{start: 0, offset: 2, data: []byte{0xEE, 0x00}}).validate(false)
 		if gotSize != wantSize {
 			t.Errorf("Did not return correct number of bytes read. got %d; want %d", gotSize, wantSize)

@@ -9,19 +9,40 @@ import (
 	"github.com/skriptble/wilson/bson/elements"
 )
 
-var ErrInvalidReadOnlyDocument = errors.New("Invalid read-only document")
+// ErrInvalidReadOnlyDocument indicates that the underlying bytes of a bson.Reader are invalid.
+var ErrInvalidReadOnlyDocument = errors.New("invalid read-only document")
+
+// ErrInvalidKey indicates that the BSON representation of a key is missing a null terminator.
 var ErrInvalidKey = errors.New("invalid document key")
+
+// ErrInvalidLength indicates that a length in a binary representation of a BSON document is invalid.
 var ErrInvalidLength = errors.New("document length is invalid")
+
+// ErrEmptyKey indicates that no key was provided to a Lookup method.
 var ErrEmptyKey = errors.New("empty key provided")
-var ErrNilElement = errors.New("Element is nil")
-var ErrNilDocument = errors.New("Document is nil")
+
+// ErrNilElement indicates that a nil element was provided when none was expected.
+var ErrNilElement = errors.New("element is nil")
+
+// ErrNilDocument indicates that an operation was attempted on a nil *bson.Document.
+var ErrNilDocument = errors.New("document is nil")
+
+// ErrInvalidDocumentType indicates that a type which doesn't represent a BSON document was
+// was provided when a document was expected.
 var ErrInvalidDocumentType = errors.New("invalid document type")
 
+// ErrInvalidDepthTraversal indicates that a provided path of keys to a nested value in a document
+// does not exist.
+//
 // TODO(skriptble): This error message is pretty awful.
 // Please fix.
-var ErrInvalidDepthTraversal = errors.New("Invalid depth traversal")
-var ErrElementNotFound = errors.New("Element not found")
-var ErrOutOfBounds = errors.New("Out of bounds")
+var ErrInvalidDepthTraversal = errors.New("invalid depth traversal")
+
+// ErrElementNotFound indicates that an Element matching a certain condition does not exist.
+var ErrElementNotFound = errors.New("element not found")
+
+// ErrOutOfBounds indicates that an index provided to access something was invalid.
+var ErrOutOfBounds = errors.New("out of bounds")
 
 // Document is a mutable ordered map that compactly represents a BSON document.
 type Document struct {
@@ -100,7 +121,7 @@ func (d *Document) recursiveKeys(recursive bool, prefix ...string) (Keys, error)
 	return ks, nil
 }
 
-// Appends each element to the document, in order. If a nil element is passed
+// Append adds each element to the end of the document, in order. If a nil element is passed
 // as a parameter this method will panic. To change this behavior to silently
 // ignore a nil element, set IgnoreNilInsert to true on the Document.
 //
@@ -132,7 +153,7 @@ func (d *Document) Append(elems ...*Element) *Document {
 	return d
 }
 
-// Prepends each element to the document, in order. If a nil element is passed
+// Prepend adds each element to the beginning of the document, in order. If a nil element is passed
 // as a parameter this method will panic. To change this behavior to silently
 // ignore a nil element, set IgnoreNilInsert to true on the Document.
 //
@@ -179,7 +200,7 @@ func (d *Document) Prepend(elems ...*Element) *Document {
 	return d
 }
 
-// Replaces the elements of a document. If an element with a matching key is
+// Set replaces an element of a document. If an element with a matching key is
 // found, the element will be replaced with the one provided. If the document
 // does not have an element with that key, the element is appended to the
 // document instead. If a nil element is passed as a parameter this method will
@@ -258,7 +279,7 @@ func (d *Document) Lookup(key ...string) (*Element, error) {
 	return elem, nil
 }
 
-// Deletes the key from the Document. The deleted element is
+// Delete removes the keys from the Document. The deleted element is
 // returned. If the key does not exist, then nil is returned and the delete is
 // a no-op. The same is true if something along the depth tree does not exist
 // or is not a traversable type.
@@ -374,7 +395,7 @@ func (d *Document) Reset() {
 	d.index = d.index[:0]
 }
 
-// Validates the document and returns its total size.
+// Validate validates the document and returns its total size.
 func (d *Document) Validate() (uint32, error) {
 	// Header and Footer
 	var size uint32 = 4 + 1

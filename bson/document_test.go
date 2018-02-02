@@ -366,10 +366,10 @@ func TestDocument(t *testing.T) {
 	t.Run("Delete", func(t *testing.T) {
 		t.Run("empty key", func(t *testing.T) {
 			d := NewDocument()
-			var want *Element = nil
+			var want *Element
 			got := d.Delete()
 			if got != want {
-				t.Errorf("Delete should return nil element when deleting with empty key", got, want)
+				t.Errorf("Delete should return nil element when deleting with empty key. got %#v; want %#v", got, want)
 			}
 		})
 		testCases := []struct {
@@ -1041,7 +1041,7 @@ func BenchmarkDocument(b *testing.B) {
 			),
 			C.String("platform", "go1.9.2"),
 		)
-		doc.MarshalBSON()
+		_, _ = doc.MarshalBSON()
 	}
 }
 
