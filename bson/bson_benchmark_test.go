@@ -9,10 +9,10 @@ import (
 	"math"
 	"testing"
 
-	"github.com/10gen/mongo-go-driver/bson"
 	"github.com/skriptble/wilson/bson/builder"
 	"github.com/skriptble/wilson/bson/extjson"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/mgo.v2/bson"
 )
 
 var benchmarkDataFiles []string = []string{
