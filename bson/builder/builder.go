@@ -8,9 +8,13 @@ import (
 	"github.com/skriptble/wilson/bson/objectid"
 )
 
+// ErrTooShort indicates that the slice provided to encode into is not large enough to fit the data.
 var ErrTooShort = errors.New("builder: The provided slice's length is too short")
 
+// C is used as a namespace for document element constructor functions.
 var C Constructor
+
+// AC is used as a namespace for array element constructor functions.
 var AC ArrayConstructor
 
 type Constructor struct{}
@@ -50,6 +54,7 @@ type DocumentBuilder struct {
 	initialized bool
 }
 
+// NewDocumentBuilder constructs a new DocumentBuilder.
 func NewDocumentBuilder() *DocumentBuilder {
 	var b DocumentBuilder
 	b.Init()
@@ -57,6 +62,8 @@ func NewDocumentBuilder() *DocumentBuilder {
 	return &b
 }
 
+// Init initializes a new DocumentBuilder. It must be called before appending elements or
+// marshaling the builder to bytes.
 func (db *DocumentBuilder) Init() {
 	if db.initialized {
 		return
@@ -87,7 +94,7 @@ func (db *DocumentBuilder) documentHeader() (ElementSizer, ElementWriter) {
 		}
 }
 
-// RequireBytes returns the number of bytes required to write the entire BSON
+// RequiredBytes returns the number of bytes required to write the entire BSON
 // document.
 func (db *DocumentBuilder) RequiredBytes() uint {
 	return db.requiredSize(false)
@@ -117,6 +124,7 @@ func (db *DocumentBuilder) Element() (ElementSizer, ElementWriter) {
 	}
 }
 
+// WriteDocument writes out the document as BSON to the byte slice.
 func (db *DocumentBuilder) WriteDocument(writer []byte) (int64, error) {
 	n, err := db.writeDocument(0, writer, false)
 	return int64(n), err
@@ -172,15 +180,19 @@ func (db *DocumentBuilder) writeElements(start uint, writer []byte) (total int, 
 	return total, nil
 }
 
+// SubDocument creates a subdocument element with the given key and value.
 func (Constructor) SubDocument(key string, subdoc *DocumentBuilder) Elementer {
 	subdoc.Key = key
 	return subdoc
 }
 
+// SubDocumentWithElements creates a subdocument element with the given key. The elements passed as
+// arguments will be used to create a new document as the value.
 func (c Constructor) SubDocumentWithElements(key string, elems ...Elementer) Elementer {
 	return (&DocumentBuilder{Key: key}).Append(elems...)
 }
 
+// Array creates an array element with the given key and value.
 func (c Constructor) Array(key string, array *ArrayBuilder) ElementFunc {
 	return func() (ElementSizer, ElementWriter) {
 		// A subdocument will always take (1 + key length + 1) + len(subdoc) bytes
@@ -199,6 +211,8 @@ func (c Constructor) Array(key string, array *ArrayBuilder) ElementFunc {
 	}
 }
 
+// ArrayWithElements creates an element with the given key. The elements passed as
+// arguments will be used to create a new array as the value.
 func (c Constructor) ArrayWithElements(key string, elems ...ArrayElementer) ElementFunc {
 	var b ArrayBuilder
 	b.Init()
@@ -207,6 +221,7 @@ func (c Constructor) ArrayWithElements(key string, elems ...ArrayElementer) Elem
 	return C.Array(key, &b)
 }
 
+// Double creates a double element with the given key and value.
 func (Constructor) Double(key string, f float64) ElementFunc {
 	return func() (ElementSizer, ElementWriter) {
 		// A double will always take (1 + key length + 1) + 8 bytes
@@ -219,6 +234,7 @@ func (Constructor) Double(key string, f float64) ElementFunc {
 	}
 }
 
+// String creates a string element with the given key and value.
 func (Constructor) String(key string, value string) ElementFunc {
 	return func() (ElementSizer, ElementWriter) {
 		// A string's length is (1 + key length + 1) + (4 + value length + 1)
@@ -231,10 +247,13 @@ func (Constructor) String(key string, value string) ElementFunc {
 	}
 }
 
+// Binary creates a binary element with the given key and value.
 func (c Constructor) Binary(key string, b []byte) ElementFunc {
 	return c.BinaryWithSubtype(key, b, 0)
 }
 
+// BinaryWithSubtype creates a binary element with the given key. It will create a new BSON binary value
+// with the given data and subtype.
 func (Constructor) BinaryWithSubtype(key string, b []byte, btype byte) ElementFunc {
 	return func() (ElementSizer, ElementWriter) {
 		// A binary of subtype 2 has length (1 + key length + 1) + (4 + 1 + 4 + b length)
@@ -253,6 +272,7 @@ func (Constructor) BinaryWithSubtype(key string, b []byte, btype byte) ElementFu
 	}
 }
 
+// Undefined creates a undefined element with the given key.
 func (Constructor) Undefined(key string) ElementFunc {
 	return func() (ElementSizer, ElementWriter) {
 		// Undefined's length is 1 + key length + 1
@@ -281,21 +301,23 @@ func (Constructor) Undefined(key string) ElementFunc {
 	}
 }
 
-func (Constructor) ObjectId(key string, oid objectid.ObjectID) ElementFunc {
+// ObjectID creates a objectid element with the given key and value.
+func (Constructor) ObjectID(key string, oid objectid.ObjectID) ElementFunc {
 	return func() (ElementSizer, ElementWriter) {
-		// An ObjectId's length is (1 + key length + 1) + 12
+		// An ObjectID's length is (1 + key length + 1) + 12
 		return func() uint {
 				return uint(14 + len(key))
 			},
 			func(start uint, writer []byte) (int, error) {
-				return elements.ObjectId.Element(start, writer, key, oid)
+				return elements.ObjectID.Element(start, writer, key, oid)
 			}
 	}
 }
 
+// Boolean creates a boolean element with the given key and value.
 func (Constructor) Boolean(key string, b bool) ElementFunc {
 	return func() (ElementSizer, ElementWriter) {
-		// An ObjectId's length is (1 + key length + 1) + 1
+		// An ObjectID's length is (1 + key length + 1) + 1
 		return func() uint {
 				return uint(3 + len(key))
 			},
@@ -305,6 +327,7 @@ func (Constructor) Boolean(key string, b bool) ElementFunc {
 	}
 }
 
+// DateTime creates a datetime element with the given key and value.
 func (Constructor) DateTime(key string, dt int64) ElementFunc {
 	return func() (ElementSizer, ElementWriter) {
 		// Datetime's length is (1 + key length + 1) + 8
@@ -317,6 +340,7 @@ func (Constructor) DateTime(key string, dt int64) ElementFunc {
 	}
 }
 
+// Null creates a null element with the given key.
 func (Constructor) Null(key string) ElementFunc {
 	return func() (ElementSizer, ElementWriter) {
 		// Null's length is 1 + key length + 1
@@ -345,6 +369,7 @@ func (Constructor) Null(key string) ElementFunc {
 	}
 }
 
+// Regex creates a regex element with the given key and value.
 func (Constructor) Regex(key string, pattern, options string) ElementFunc {
 	return func() (ElementSizer, ElementWriter) {
 		// Null's length is (1 + key length + 1) + (pattern length + 1) + (options length + 1)
@@ -357,6 +382,7 @@ func (Constructor) Regex(key string, pattern, options string) ElementFunc {
 	}
 }
 
+// DBPointer creates a dbpointer element with the given key and value.
 func (Constructor) DBPointer(key string, ns string, oid objectid.ObjectID) ElementFunc {
 	return func() (ElementSizer, ElementWriter) {
 		// An dbpointer's length is (1 + key length + 1) + (4 + ns length + 1) + 12
@@ -369,6 +395,7 @@ func (Constructor) DBPointer(key string, ns string, oid objectid.ObjectID) Eleme
 	}
 }
 
+// JavaScriptCode creates a JavaScript code element with the given key and value.
 func (Constructor) JavaScriptCode(key string, code string) ElementFunc {
 	return func() (ElementSizer, ElementWriter) {
 		// JavaScript code's length is (1 + key length + 1) + (4 + code length + 1)
@@ -376,11 +403,12 @@ func (Constructor) JavaScriptCode(key string, code string) ElementFunc {
 				return uint(7 + len(key) + len(code))
 			},
 			func(start uint, writer []byte) (int, error) {
-				return elements.Javascript.Element(start, writer, key, code)
+				return elements.JavaScript.Element(start, writer, key, code)
 			}
 	}
 }
 
+// Symbol creates a symbol element with the given key and value.
 func (Constructor) Symbol(key string, symbol string) ElementFunc {
 	return func() (ElementSizer, ElementWriter) {
 		// A symbol's length is (1 + key length + 1) + (4 + symbol length + 1)
@@ -393,6 +421,7 @@ func (Constructor) Symbol(key string, symbol string) ElementFunc {
 	}
 }
 
+// CodeWithScope creates a JavaScript code with scope element with the given key and value.
 func (Constructor) CodeWithScope(key string, code string, scope []byte) ElementFunc {
 	return func() (ElementSizer, ElementWriter) {
 		// JavaScript code with scope's length is (1 + key length + 1) + 4 +  (4 + len key + 1) + len(scope)
@@ -405,6 +434,7 @@ func (Constructor) CodeWithScope(key string, code string, scope []byte) ElementF
 	}
 }
 
+// Int32 creates a int32 element with the given key and value.
 func (Constructor) Int32(key string, i int32) ElementFunc {
 	return func() (ElementSizer, ElementWriter) {
 		// An int32's length is (1 + key length + 1) + 4 bytes
@@ -417,6 +447,7 @@ func (Constructor) Int32(key string, i int32) ElementFunc {
 	}
 }
 
+// Timestamp creates a timestamp element with the given key and value.
 func (Constructor) Timestamp(key string, t uint32, i uint32) ElementFunc {
 	return func() (ElementSizer, ElementWriter) {
 		// An decimal's length is (1 + key length + 1) + 8 bytes
@@ -429,6 +460,7 @@ func (Constructor) Timestamp(key string, t uint32, i uint32) ElementFunc {
 	}
 }
 
+// Int64 creates a int64 element with the given key and value.
 func (Constructor) Int64(key string, i int64) ElementFunc {
 	return func() (ElementSizer, ElementWriter) {
 		// An int64's length is (1 + key length + 1) + 8 bytes
@@ -441,6 +473,7 @@ func (Constructor) Int64(key string, i int64) ElementFunc {
 	}
 }
 
+// Decimal creates a decimal element with the given key and value.
 func (Constructor) Decimal(key string, d decimal.Decimal128) ElementFunc {
 	return func() (ElementSizer, ElementWriter) {
 		// An decimal's length is (1 + key length + 1) + 16 bytes
@@ -453,6 +486,7 @@ func (Constructor) Decimal(key string, d decimal.Decimal128) ElementFunc {
 	}
 }
 
+// MinKey creates a minkey element with the given key and value.
 func (Constructor) MinKey(key string) ElementFunc {
 	return func() (ElementSizer, ElementWriter) {
 		// An min key's length is (1 + key length + 1)
@@ -481,6 +515,7 @@ func (Constructor) MinKey(key string) ElementFunc {
 	}
 }
 
+// MaxKey creates a maxkey element with the given key and value.
 func (Constructor) MaxKey(key string) ElementFunc {
 	return func() (ElementSizer, ElementWriter) {
 		// An max key's length is (1 + key length + 1)

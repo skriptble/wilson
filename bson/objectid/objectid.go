@@ -21,13 +21,16 @@ import (
 	"time"
 )
 
+// ObjectID is the BSON ObjectID type.
 type ObjectID [12]byte
 
+// NilObjectID is the zero value for ObjectID.
 var NilObjectID ObjectID
 
 var objectIDCounter = readRandomUint32()
 var processUnique = processUniqueBytes()
 
+// New generates a new ObjectID.
 func New() ObjectID {
 	var b [12]byte
 
@@ -38,10 +41,15 @@ func New() ObjectID {
 	return b
 }
 
+// Hex returns the hex encoding of the ObjectID as a string.
 func (id *ObjectID) Hex() string {
 	return hex.EncodeToString(id[:])
 }
 
+// UnmarshalJSON populates the byte slice with the ObjectID. If the byte slice is 64 bytes long, it
+// will be populated with the hex representation of the ObjectID. If the byte slice is twelve bytes
+// long, it will be populated with the BSON representation of the ObjectID. Otherwise, it will
+// return an error.
 func (id *ObjectID) UnmarshalJSON(b []byte) error {
 	var err error
 	switch len(b) {
@@ -54,7 +62,7 @@ func (id *ObjectID) UnmarshalJSON(b []byte) error {
 		}
 		str, ok := m["$oid"]
 		if !ok {
-			return errors.New("Not an extended JSON ObjectID")
+			return errors.New("not an extended JSON ObjectID")
 		}
 		_, err = hex.Decode(id[:], []byte(str))
 		if err != nil {

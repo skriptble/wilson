@@ -4,7 +4,7 @@ import (
 	"sort"
 )
 
-// Options is Pretty options
+// NewOptions is Pretty options
 type Options struct {
 	// Width is an max column width for single line arrays
 	// Default is 80
@@ -25,10 +25,10 @@ var DefaultOptions = &Options{Width: 80, Prefix: "", Indent: "  ", SortKeys: fal
 
 // Pretty converts the input json into a more human readable format where each
 // element is on it's own line with clear indentation.
-func Pretty(json []byte) []byte { return PrettyOptions(json, nil) }
+func Pretty(json []byte) []byte { return NewOptions(json, nil) }
 
-// PrettyOptions is like Pretty but with customized options.
-func PrettyOptions(json []byte, opts *Options) []byte {
+// NewOptions is like Pretty but with customized options.
+func NewOptions(json []byte, opts *Options) []byte {
 	if opts == nil {
 		opts = DefaultOptions
 	}

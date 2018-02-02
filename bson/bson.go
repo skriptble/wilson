@@ -11,33 +11,36 @@ package bson
 // could result in parsing errors.
 type node [2]uint32
 
+// These constants uniquely refer to each BSON type.
 const (
-	TypeDouble           BSONType = 0x01
-	TypeString           BSONType = 0x02
-	TypeEmbeddedDocument BSONType = 0x03
-	TypeArray            BSONType = 0x04
-	TypeBinary           BSONType = 0x05
-	TypeUndefined        BSONType = 0x06
-	TypeObjectID         BSONType = 0x07
-	TypeBoolean          BSONType = 0x08
-	TypeDateTime         BSONType = 0x09
-	TypeNull             BSONType = 0x0A
-	TypeRegex            BSONType = 0x0B
-	TypeDBPointer        BSONType = 0x0C
-	TypeJavaScript       BSONType = 0x0D
-	TypeSymbol           BSONType = 0x0E
-	TypeCodeWithScope    BSONType = 0x0F
-	TypeInt32            BSONType = 0x10
-	TypeTimestamp        BSONType = 0x11
-	TypeInt64            BSONType = 0x12
-	TypeDecimal128       BSONType = 0x13
-	TypeMinKey           BSONType = 0xFF
-	TypeMaxKey           BSONType = 0x7F
+	TypeDouble           Type = 0x01
+	TypeString           Type = 0x02
+	TypeEmbeddedDocument Type = 0x03
+	TypeArray            Type = 0x04
+	TypeBinary           Type = 0x05
+	TypeUndefined        Type = 0x06
+	TypeObjectID         Type = 0x07
+	TypeBoolean          Type = 0x08
+	TypeDateTime         Type = 0x09
+	TypeNull             Type = 0x0A
+	TypeRegex            Type = 0x0B
+	TypeDBPointer        Type = 0x0C
+	TypeJavaScript       Type = 0x0D
+	TypeSymbol           Type = 0x0E
+	TypeCodeWithScope    Type = 0x0F
+	TypeInt32            Type = 0x10
+	TypeTimestamp        Type = 0x11
+	TypeInt64            Type = 0x12
+	TypeDecimal128       Type = 0x13
+	TypeMinKey           Type = 0xFF
+	TypeMaxKey           Type = 0x7F
 )
 
-type BSONType byte
+// Type represents a BSON type.
+type Type byte
 
-func (bt BSONType) String() string {
+// String returns the string representation of the BSON type's name.
+func (bt Type) String() string {
 	switch bt {
 	case '\x01':
 		return "double"
@@ -52,7 +55,7 @@ func (bt BSONType) String() string {
 	case '\x06':
 		return "undefined"
 	case '\x07':
-		return "ObjectId"
+		return "objectID"
 	case '\x08':
 		return "boolean"
 	case '\x09':
@@ -62,7 +65,7 @@ func (bt BSONType) String() string {
 	case '\x0B':
 		return "regex"
 	case '\x0C':
-		return "DBPointer"
+		return "dbPointer"
 	case '\x0D':
 		return "javascript"
 	case '\x0E':

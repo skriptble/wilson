@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func ExampleReaderValidate() {
+func ExampleReader_Validate() {
 	rdr := make(Reader, 500)
 	rdr[250], rdr[251], rdr[252], rdr[253], rdr[254] = '\x05', '\x00', '\x00', '\x00', '\x00'
 	n, err := rdr[250:].Validate()
@@ -430,7 +430,7 @@ func TestReader(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				itr, err := NewReadIterator(tc.rdr)
+				itr, err := NewReaderIterator(tc.rdr)
 				require.Equal(t, err, tc.initErr)
 
 				if err != nil {

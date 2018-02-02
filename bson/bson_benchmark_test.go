@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var benchmarkDataFiles []string = []string{
+var benchmarkDataFiles = []string{
 	"single_and_multi_document/large_doc.json.gz",
 	"single_and_multi_document/small_doc.json.gz",
 	"single_and_multi_document/tweet.json.gz",
@@ -25,7 +25,7 @@ var benchmarkDataFiles []string = []string{
 	//"extended_bson/full_bson.json.gz",
 }
 
-func loadJsonBytesFromFile(filename string) ([]byte, error) {
+func loadJSONBytesFromFile(filename string) ([]byte, error) {
 	compressedData, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
@@ -44,8 +44,8 @@ func loadJsonBytesFromFile(filename string) ([]byte, error) {
 	return jsonBytes, nil
 }
 
-func loadDocBuilderFromJsonFile(filename string) (*builder.DocumentBuilder, error) {
-	jsonBytes, err := loadJsonBytesFromFile(filename)
+func loadDocBuilderFromJSONFile(filename string) (*builder.DocumentBuilder, error) {
+	jsonBytes, err := loadJSONBytesFromFile(filename)
 	if err != nil {
 		return nil, err
 	}
@@ -58,8 +58,8 @@ func loadDocBuilderFromJsonFile(filename string) (*builder.DocumentBuilder, erro
 	return docBuilder, nil
 }
 
-func loadFromJsonFile(filename string) (bson.M, bson.D, bson.RawD, *builder.DocumentBuilder, error) {
-	docBuilder, err := loadDocBuilderFromJsonFile(filename)
+func loadFromJSONFile(filename string) (bson.M, bson.D, bson.RawD, *builder.DocumentBuilder, error) {
+	docBuilder, err := loadDocBuilderFromJSONFile(filename)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
@@ -98,7 +98,7 @@ const (
 	bsonD
 	bsonRawD
 	documentBuilder
-	extJson
+	extJSON
 	reader
 )
 
@@ -112,8 +112,8 @@ func (ot outType) String() string {
 		return "bson.RawD"
 	case documentBuilder:
 		return "docBuilder"
-	case extJson:
-		return "extJson"
+	case extJSON:
+		return "extJSON"
 	case reader:
 		return "reader"
 	default:
@@ -122,7 +122,7 @@ func (ot outType) String() string {
 }
 
 func benchmarkEncodingGen(filename string, out outType) func(b *testing.B) {
-	docBsonM, docBsonD, docBsonRawD, docBuilder, err := loadFromJsonFile(filename)
+	docBsonM, docBsonD, docBsonRawD, docBuilder, err := loadFromJSONFile(filename)
 
 	return func(benchmark *testing.B) {
 		if err != nil {
@@ -132,27 +132,27 @@ func benchmarkEncodingGen(filename string, out outType) func(b *testing.B) {
 		switch out {
 		case bsonM:
 			for idx := 0; idx < benchmark.N; idx++ {
-				bson.Marshal(docBsonM)
+				_, _ = bson.Marshal(docBsonM)
 			}
 		case bsonD:
 			for idx := 0; idx < benchmark.N; idx++ {
-				bson.Marshal(docBsonD)
+				_, _ = bson.Marshal(docBsonD)
 			}
 		case bsonRawD:
 			for idx := 0; idx < benchmark.N; idx++ {
-				bson.Marshal(docBsonRawD)
+				_, _ = bson.Marshal(docBsonRawD)
 			}
 		case documentBuilder:
 			for idx := 0; idx < benchmark.N; idx++ {
 				bsonBytes := make([]byte, docBuilder.RequiredBytes())
-				docBuilder.WriteDocument(bsonBytes)
+				_, _ = docBuilder.WriteDocument(bsonBytes)
 			}
 		}
 	}
 }
 
 func benchmarkDecodingGen(filename string, out outType) (func(b *testing.B), error) {
-	docBuilder, err := loadDocBuilderFromJsonFile(filename)
+	docBuilder, err := loadDocBuilderFromJSONFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("Error parsing file. Filename: %v Err: %v", filename, err)
 	}
@@ -168,15 +168,15 @@ func benchmarkDecodingGen(filename string, out outType) (func(b *testing.B), err
 				switch out {
 				case bsonM:
 					doc := make(bson.M)
-					bson.Unmarshal(bsonBytes, &doc)
+					_ = bson.Unmarshal(bsonBytes, &doc)
 				case bsonD:
 					doc := make(bson.D, 0, 8)
-					bson.Unmarshal(bsonBytes, &doc)
+					_ = bson.Unmarshal(bsonBytes, &doc)
 				case bsonRawD:
 					doc := make(bson.RawD, 0, 8)
-					bson.Unmarshal(bsonBytes, &doc)
-				case extJson:
-					extjson.BsonToExtJson(true, bsonBytes)
+					_ = bson.Unmarshal(bsonBytes, &doc)
+				case extJSON:
+					extjson.BsonToExtJSON(true, bsonBytes)
 				}
 			}
 		},
@@ -184,7 +184,7 @@ func benchmarkDecodingGen(filename string, out outType) (func(b *testing.B), err
 }
 
 func benchmarkRoundtripGen(filename string, out outType) func(b *testing.B) {
-	jsonBytes, err := loadJsonBytesFromFile(filename)
+	jsonBytes, err := loadJSONBytesFromFile(filename)
 
 	return func(benchmark *testing.B) {
 		if err != nil {
@@ -205,7 +205,7 @@ func benchmarkRoundtripGen(filename string, out outType) func(b *testing.B) {
 					benchmark.Fatal(err)
 				}
 
-				_, err = extjson.BsonToExtJson(true, bsonBytes)
+				_, err = extjson.BsonToExtJSON(true, bsonBytes)
 				if err != nil {
 					benchmark.Fatal(err)
 				}
@@ -215,7 +215,7 @@ func benchmarkRoundtripGen(filename string, out outType) func(b *testing.B) {
 }
 
 func benchmarkFirstKeyGen(filename string, out outType) func(benchmark *testing.B) {
-	docBuilder, err := loadDocBuilderFromJsonFile(filename)
+	docBuilder, err := loadDocBuilderFromJSONFile(filename)
 	var bsonBytes []byte
 	if err == nil {
 		bsonBytes = make([]byte, docBuilder.RequiredBytes())
@@ -277,7 +277,7 @@ func benchmarkFirstKeyGen(filename string, out outType) func(benchmark *testing.
 }
 
 func benchmarkTopLevelKeysGen(filename string, out outType) func(benchmark *testing.B) {
-	docBuilder, err := loadDocBuilderFromJsonFile(filename)
+	docBuilder, err := loadDocBuilderFromJSONFile(filename)
 	var bsonBytes []byte
 	if err == nil {
 		bsonBytes = make([]byte, docBuilder.RequiredBytes())
@@ -343,7 +343,7 @@ func benchmarkTopLevelKeysGen(filename string, out outType) func(benchmark *test
 }
 
 func benchmarkAllNestedKeysGen(filename string, out outType) func(benchmark *testing.B) {
-	docBuilder, err := loadDocBuilderFromJsonFile(filename)
+	docBuilder, err := loadDocBuilderFromJSONFile(filename)
 	var bsonBytes []byte
 	if err == nil {
 		bsonBytes = make([]byte, docBuilder.RequiredBytes())
@@ -464,7 +464,7 @@ func benchmarkDecoding(benchmark *testing.B) {
 
 	for _, relFilename := range benchmarkDataFiles {
 		filename := perfBaseDir + relFilename
-		for _, ot := range []outType{bsonM, bsonD, bsonRawD, extJson} {
+		for _, ot := range []outType{bsonM, bsonD, bsonRawD, extJSON} {
 			b, err := benchmarkDecodingGen(filename, ot)
 			if err != nil {
 				benchmark.Fatal(err)
@@ -540,7 +540,7 @@ func TestTest(test *testing.T) {
 
 	for _, relFilename := range benchmarkDataFiles {
 		filename := perfBaseDir + relFilename
-		bsonM, bsonD, bsonRawD, docBuilder, err := loadFromJsonFile(filename)
+		bsonM, bsonD, bsonRawD, docBuilder, err := loadFromJSONFile(filename)
 		if err != nil {
 			test.Fatalf("Error parsing file. Filename: %v Err: %v", filename, err)
 		}

@@ -55,7 +55,7 @@ func TestPretty(t *testing.T) {
 	assert.Equal(t, "", string(pretty))
 	opts := *DefaultOptions
 	opts.SortKeys = true
-	pretty = PrettyOptions(Ugly(Pretty([]byte(example2))), &opts)
+	pretty = NewOptions(Ugly(Pretty([]byte(example2))), &opts)
 	assert.Equal(t, j(pretty), j(pretty))
 	assert.Equal(t, j(example2), j(pretty))
 }
@@ -356,7 +356,7 @@ func TestBig(t *testing.T) {
 
 	opts := *DefaultOptions
 	opts.SortKeys = true
-	jsonb := PrettyOptions(Ugly([]byte(json)), &opts)
+	jsonb := NewOptions(Ugly([]byte(json)), &opts)
 	assert.Equal(t, j(jsonb), j(json))
 }
 func BenchmarkPretty(t *testing.B) {
@@ -373,7 +373,7 @@ func BenchmarkPrettySortKeys(t *testing.B) {
 	t.ReportAllocs()
 	t.ResetTimer()
 	for i := 0; i < t.N; i++ {
-		PrettyOptions(example1, &opts)
+		NewOptions(example1, &opts)
 	}
 }
 func BenchmarkUgly(t *testing.B) {

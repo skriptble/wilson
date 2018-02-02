@@ -461,8 +461,13 @@ func reflectionEncoderTest(t *testing.T) {
 		},
 		{
 			"[]Reader",
+<<<<<<< Updated upstream
 			[]Reader{Reader{0x05, 0x00, 0x00, 0x00, 0x00}},
 			docToBytes(NewDocument(1).Append(
+=======
+			[]Reader{{0x05, 0x00, 0x00, 0x00, 0x00}},
+			docToBytes(NewDocument(
+>>>>>>> Stashed changes
 				C.SubDocumentFromElements("0"),
 			)),
 			nil,
@@ -501,8 +506,13 @@ func reflectionEncoderTest(t *testing.T) {
 		},
 		{
 			"map[string]Reader",
+<<<<<<< Updated upstream
 			map[string]Reader{"Z": Reader{0x05, 0x00, 0x00, 0x00, 0x00}},
 			docToBytes(NewDocument(1).Append(
+=======
+			map[string]Reader{"Z": {0x05, 0x00, 0x00, 0x00, 0x00}},
+			docToBytes(NewDocument(
+>>>>>>> Stashed changes
 				C.SubDocumentFromReader("Z", Reader{0x05, 0x00, 0x00, 0x00, 0x00}),
 			)),
 			nil,
@@ -698,10 +708,10 @@ func reflectionEncoderTest(t *testing.T) {
 				E: []uint64{101112},
 				F: []float64{3.14159},
 				G: []string{"Hello, world"},
-				H: []map[string]string{map[string]string{"foo": "bar"}},
-				I: [][]byte{[]byte{0x01, 0x02, 0x03}},
-				J: [1][4]byte{[4]byte{0x04, 0x05, 0x06, 0x07}},
-				K: [1][2]string{[2]string{"baz", "qux"}},
+				H: []map[string]string{{"foo": "bar"}},
+				I: [][]byte{{0x01, 0x02, 0x03}},
+				J: [1][4]byte{{0x04, 0x05, 0x06, 0x07}},
+				K: [1][2]string{{"baz", "qux"}},
 				L: []struct {
 					M string
 				}{
@@ -709,10 +719,10 @@ func reflectionEncoderTest(t *testing.T) {
 						M: "foobar",
 					},
 				},
-				N: [][]string{[]string{"foo", "bar"}},
+				N: [][]string{{"foo", "bar"}},
 				O: []*Element{C.Null("N")},
-				P: []*Document{NewDocument(1).Append(C.Int64("countdown", 9876543210))},
-				Q: []Reader{Reader{0x05, 0x00, 0x00, 0x00, 0x00}},
+				P: []*Document{NewDocument(C.Int64("countdown", 9876543210))},
+				Q: []Reader{{0x05, 0x00, 0x00, 0x00, 0x00}},
 			},
 			docToBytes(NewDocument(12).Append(
 				C.ArrayFromElements("a", AC.Boolean(true)),

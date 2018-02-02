@@ -65,7 +65,7 @@ type ArrayElement struct {
 	Array *Document
 }
 
-// DataElement represents a BSON binary element.
+// BinaryElement represents a BSON binary element.
 type BinaryElement struct {
 	Name   *ElementKeyName
 	Binary *Binary
@@ -126,7 +126,7 @@ type SymbolElement struct {
 	String string
 }
 
-// JavaScriptScopeElement represents a BSON JavaScript with scope element.
+// CodeWithScopeElement represents a BSON JavaScript with scope element.
 type CodeWithScopeElement struct {
 	Name          *ElementKeyName
 	CodeWithScope *CodeWithScope

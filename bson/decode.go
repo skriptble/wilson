@@ -39,14 +39,17 @@ var tUint64 = reflect.TypeOf(uint64(0))
 
 var tEmpty = reflect.TypeOf((*interface{})(nil)).Elem()
 
+// Unmarshaler describes a type that can unmarshal itself from BSON bytes.
 type Unmarshaler interface {
 	UnmarshalBSON([]byte) error
 }
 
+// DocumentUnmarshaler describes a type that can unmarshal itself from a bson.Document.
 type DocumentUnmarshaler interface {
 	UnmarshalBSONDocument(*Document) error
 }
 
+// Decoder facilitates decoding a value from an io.Reader yielding a BSON document as bytes.
 type Decoder struct {
 	pReader    *peekLengthReader
 	bsonReader Reader
@@ -94,10 +97,12 @@ func (r *peekLengthReader) Read(b []byte) (int, error) {
 	return int(bytesToRead), nil
 }
 
+// NewDecoder constructs a new Decoder from the given io.Reader.
 func NewDecoder(r io.Reader) *Decoder {
 	return &Decoder{pReader: newPeekLengthReader(r)}
 }
 
+// Decode decodes the BSON document from the underlying io.Reader into the given value.
 func (d *Decoder) Decode(v interface{}) error {
 	switch t := v.(type) {
 	case Unmarshaler:
@@ -376,7 +381,7 @@ func (d *Decoder) getReflectValue(v *Value, containerType reflect.Type, outer re
 			return val, nil
 		}
 
-		val = reflect.ValueOf(v.Javascript())
+		val = reflect.ValueOf(v.JavaScript())
 	case 0xE:
 		if containerType != tSymbol && containerType != tString && containerType != tEmpty {
 			return val, nil
@@ -388,7 +393,7 @@ func (d *Decoder) getReflectValue(v *Value, containerType reflect.Type, outer re
 			return val, nil
 		}
 
-		code, scope := v.MutableJavascriptWithScope()
+		code, scope := v.MutableJavaScriptWithScope()
 		val = reflect.ValueOf(CodeWithScope{Code: code, Scope: scope})
 	case 0x10:
 		i := v.Int32()

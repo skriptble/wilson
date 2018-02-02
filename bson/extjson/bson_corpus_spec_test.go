@@ -1,4 +1,4 @@
-package extjson_test
+package extjson
 
 import (
 	"bytes"
@@ -11,7 +11,6 @@ import (
 	"testing"
 	"unicode"
 
-	"github.com/skriptble/wilson/bson/extjson"
 	"github.com/skriptble/wilson/bson/internal/jsonpretty"
 	"github.com/stretchr/testify/require"
 )
@@ -29,12 +28,12 @@ type testCase struct {
 type validityTestCase struct {
 	Description       string  `json:"description"`
 	CanonicalBson     string  `json:"canonical_bson"`
-	CanonicalExtJson  string  `json:"canonical_extjson"`
-	RelaxedExtJson    *string `json:"relaxed_extjson"`
-	DegenerateBson    *string `json:"degenerate_bson"`
-	DegenerateExtJson *string `json:"degenerate_extjson"`
-	ConvertedBson     *string `json:"converted_bson"`
-	ConvertedExtJson  *string `json:"converted_extjson"`
+	CanonicalExtJSON  string  `json:"canonical_extjson"`
+	RelaxedExtJSON    *string `json:"relaxed_extjson"`
+	DegenerateBSON    *string `json:"degenerate_bson"`
+	DegenerateExtJSON *string `json:"degenerate_extjson"`
+	ConvertedBSON     *string `json:"converted_bson"`
+	ConvertedExtJSON  *string `json:"converted_extjson"`
 	Lossy             *bool   `json:"lossy"`
 }
 
@@ -125,7 +124,7 @@ func normalizeCanonicalDouble(t *testing.T, key string, cEJ string) string {
 	expectedFloat, err := strconv.ParseFloat(expectedString, 64)
 
 	// Normalize the string
-	return fmt.Sprintf(`{ "%s": { "$numberDouble": "%s" } }`, key, extjson.FormatDouble(expectedFloat))
+	return fmt.Sprintf(`{ "%s": { "$numberDouble": "%s" } }`, key, formatDouble(expectedFloat))
 }
 
 func runTest(t *testing.T, file string) {
@@ -145,7 +144,7 @@ func runTest(t *testing.T, file string) {
 			cB, err := hex.DecodeString(v.CanonicalBson)
 			require.NoError(t, err)
 
-			cEJ := v.CanonicalExtJson
+			cEJ := v.CanonicalExtJSON
 
 			// Normalize float strings
 			if test.BsonType == "0x01" {
@@ -154,16 +153,16 @@ func runTest(t *testing.T, file string) {
 
 			// bson_to_canonical_extended_json(cB) = cEJ
 			cEJ = string(pretty.Ugly([]byte(cEJ)))
-			actualExtendedJson, err := extjson.BsonToExtJson(true, cB)
+			actualExtendedJSON, err := BsonToExtJSON(true, cB)
 			require.NoError(t, err)
 
-			actualCompactExtendedJson := string(pretty.Ugly([]byte(actualExtendedJson)))
-			escaped := escape(actualCompactExtendedJson, needsEscapedUnicode(test.BsonType))
+			actualCompactExtendedJSON := string(pretty.Ugly([]byte(actualExtendedJSON)))
+			escaped := escape(actualCompactExtendedJSON, needsEscapedUnicode(test.BsonType))
 			require.Equal(t, cEJ, escaped)
 
 			// json_to_bson(cEJ) = cB (unless lossy)
 			if v.Lossy == nil || !*v.Lossy {
-				doc, err := extjson.ParseObjectToBuilder(v.CanonicalExtJson)
+				doc, err := ParseObjectToBuilder(v.CanonicalExtJSON)
 				require.NoError(t, err)
 
 				actualBytes := make([]byte, doc.RequiredBytes())

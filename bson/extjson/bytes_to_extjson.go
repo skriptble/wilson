@@ -16,12 +16,14 @@ import (
 	"github.com/skriptble/wilson/bson/parser/ast"
 )
 
-type extJsonWriter struct {
+type extJSONWriter struct {
 	*bytes.Buffer
 	canonical bool
 }
 
-func BsonToExtJson(canonical bool, bson []byte) (string, error) {
+// BsonToExtJSON converts a BSON byte slice into an extended JSON string. If canonical is true, it
+// will output canonical extended JSON. Otherwise, it will output relaxed extended JSON.
+func BsonToExtJSON(canonical bool, bson []byte) (string, error) {
 	p, err := parser.NewBSONParser(bytes.NewReader(bson))
 	if err != nil {
 		return "", err
@@ -32,7 +34,7 @@ func BsonToExtJson(canonical bool, bson []byte) (string, error) {
 		return "", err
 	}
 
-	w := &extJsonWriter{bytes.NewBuffer([]byte{}), canonical}
+	w := &extJSONWriter{bytes.NewBuffer([]byte{}), canonical}
 	err = w.writeDocument(doc)
 	if err != nil {
 		return "", err
@@ -41,14 +43,14 @@ func BsonToExtJson(canonical bool, bson []byte) (string, error) {
 	return w.String(), nil
 }
 
-func (w *extJsonWriter) writeStringLiteral(s string) error {
+func (w *extJSONWriter) writeStringLiteral(s string) error {
 	s = `"` + s + `"`
 	_, err := w.Write([]byte(s))
 
 	return err
 }
 
-func (w *extJsonWriter) writeNonExtDocument(d *ast.Document) error {
+func (w *extJSONWriter) writeNonExtDocument(d *ast.Document) error {
 	canonical := w.canonical
 	w.canonical = false
 
@@ -58,7 +60,7 @@ func (w *extJsonWriter) writeNonExtDocument(d *ast.Document) error {
 	return err
 }
 
-func (w *extJsonWriter) writeDocument(d *ast.Document) error {
+func (w *extJSONWriter) writeDocument(d *ast.Document) error {
 	_, err := w.WriteRune('{')
 	if err != nil {
 		return err
@@ -87,7 +89,7 @@ func (w *extJsonWriter) writeDocument(d *ast.Document) error {
 		case *ast.UndefinedElement:
 			err = w.writeUndefinedElement(e)
 		case *ast.ObjectIDElement:
-			err = w.writeObjectIdElement(e)
+			err = w.writeObjectIDElement(e)
 		case *ast.BoolElement:
 			err = w.writeBoolElement(e)
 		case *ast.DateTimeElement:
@@ -129,7 +131,7 @@ func (w *extJsonWriter) writeDocument(d *ast.Document) error {
 	return err
 }
 
-func (w *extJsonWriter) writeArray(d *ast.Document) error {
+func (w *extJSONWriter) writeArray(d *ast.Document) error {
 	_, err := w.WriteRune('[')
 	if err != nil {
 		return err
@@ -158,7 +160,7 @@ func (w *extJsonWriter) writeArray(d *ast.Document) error {
 		case *ast.UndefinedElement:
 			err = w.writeUndefinedValue()
 		case *ast.ObjectIDElement:
-			err = w.writeObjectIdValue(e.ID)
+			err = w.writeObjectIDValue(e.ID)
 		case *ast.BoolElement:
 			err = w.writeBoolValue(e.Bool)
 		case *ast.DateTimeElement:
@@ -200,7 +202,7 @@ func (w *extJsonWriter) writeArray(d *ast.Document) error {
 	return err
 }
 
-func (w *extJsonWriter) writeKey(s string) error {
+func (w *extJSONWriter) writeKey(s string) error {
 	err := w.writeStringLiteral(s)
 	if err != nil {
 		return err
@@ -210,8 +212,8 @@ func (w *extJsonWriter) writeKey(s string) error {
 	return err
 }
 
-func (w *extJsonWriter) writeFloatValue(f float64) error {
-	s := FormatDouble(f)
+func (w *extJSONWriter) writeFloatValue(f float64) error {
+	s := formatDouble(f)
 
 	var err error
 
@@ -225,7 +227,7 @@ func (w *extJsonWriter) writeFloatValue(f float64) error {
 	return err
 }
 
-func FormatDouble(f float64) string {
+func formatDouble(f float64) string {
 	var s string
 	if math.IsInf(f, 1) {
 		s = "Infinity"
@@ -234,7 +236,7 @@ func FormatDouble(f float64) string {
 	} else if math.IsNaN(f) {
 		s = "NaN"
 	} else {
-		// Print exactly one decimal place for integers; otherwise, print as many are necessary to
+		// Print exactly one decimalType place for integers; otherwise, print as many are necessary to
 		// perfectly represent it.
 		s = strconv.FormatFloat(f, 'G', -1, 64)
 		if !strings.ContainsRune(s, '.') {
@@ -245,11 +247,11 @@ func FormatDouble(f float64) string {
 	return s
 }
 
-func (w *extJsonWriter) writeStringValue(s string) error {
+func (w *extJSONWriter) writeStringValue(s string) error {
 	return w.writeStringLiteral(s)
 }
 
-func (w *extJsonWriter) writeBinaryValue(b []byte, t ast.BinarySubtype) error {
+func (w *extJSONWriter) writeBinaryValue(b []byte, t ast.BinarySubtype) error {
 	b64 := base64.StdEncoding.EncodeToString(b)
 	subType := fmt.Sprintf("%02x", byte(t))
 
@@ -263,23 +265,23 @@ func (w *extJsonWriter) writeBinaryValue(b []byte, t ast.BinarySubtype) error {
 	return w.writeDocument(d)
 }
 
-func (w *extJsonWriter) writeUndefinedValue() error {
+func (w *extJSONWriter) writeUndefinedValue() error {
 	return w.writeDocument(newDoc(newBoolElement("$undefined", true)))
 }
 
-func (w *extJsonWriter) writeObjectIdValue(oid [12]byte) error {
+func (w *extJSONWriter) writeObjectIDValue(oid [12]byte) error {
 	s := hex.EncodeToString(oid[:])
 	d := newDoc(newStringElement("$oid", s))
 
 	return w.writeDocument(d)
 }
 
-func (w *extJsonWriter) writeBoolValue(b bool) error {
+func (w *extJSONWriter) writeBoolValue(b bool) error {
 	_, err := w.WriteString(fmt.Sprintf("%v", b))
 	return err
 }
 
-func (w *extJsonWriter) writeDatetimeValue(d int64) error {
+func (w *extJSONWriter) writeDatetimeValue(d int64) error {
 	if w.canonical {
 		return w.writeDocument(newDateDoc(d))
 	}
@@ -290,17 +292,17 @@ func (w *extJsonWriter) writeDatetimeValue(d int64) error {
 		return w.writeDocument(newDateDoc(d))
 	}
 
-	doc := newDoc(newStringElement("$date", t.Format(RFC3339Milli)))
+	doc := newDoc(newStringElement("$date", t.Format(rfc3339Milli)))
 
 	return w.writeDocument(doc)
 }
 
-func (w *extJsonWriter) writeNullValue() error {
+func (w *extJSONWriter) writeNullValue() error {
 	_, err := w.WriteString("null")
 	return err
 }
 
-func (w *extJsonWriter) writeRegexValue(pattern string, options string) error {
+func (w *extJSONWriter) writeRegexValue(pattern string, options string) error {
 	d := newDoc(
 		newDocElement("$regularExpression",
 			newStringElement("pattern", pattern),
@@ -311,30 +313,30 @@ func (w *extJsonWriter) writeRegexValue(pattern string, options string) error {
 	return w.writeDocument(d)
 }
 
-func (w *extJsonWriter) writeDBPointerValue(ns string, oid [12]byte) error {
+func (w *extJSONWriter) writeDBPointerValue(ns string, oid [12]byte) error {
 	d := newDoc(
 		newDocElement("$dbPointer",
 			newStringElement("$ref", ns),
-			newObjectIdElement("$id", oid),
+			newObjectIDElement("$id", oid),
 		),
 	)
 
 	return w.writeDocument(d)
 }
 
-func (w *extJsonWriter) writeJavaScriptValue(code string) error {
+func (w *extJSONWriter) writeJavaScriptValue(code string) error {
 	d := newDoc(newStringElement("$code", code))
 
 	return w.writeDocument(d)
 }
 
-func (w *extJsonWriter) writeSymbolValue(symbol string) error {
+func (w *extJSONWriter) writeSymbolValue(symbol string) error {
 	d := newDoc(newStringElement("$symbol", symbol))
 
 	return w.writeDocument(d)
 }
 
-func (w *extJsonWriter) writeCodeWithScopeValue(code string, scope *ast.Document) error {
+func (w *extJSONWriter) writeCodeWithScopeValue(code string, scope *ast.Document) error {
 	d := newDoc(
 		newStringElement("$code", code),
 		newDocElement("$scope", scope.EList...),
@@ -343,7 +345,7 @@ func (w *extJsonWriter) writeCodeWithScopeValue(code string, scope *ast.Document
 	return w.writeDocument(d)
 }
 
-func (w *extJsonWriter) writeInt32Value(i int32) error {
+func (w *extJSONWriter) writeInt32Value(i int32) error {
 	var err error
 	numberString := strconv.FormatInt(int64(i), 10)
 
@@ -357,7 +359,7 @@ func (w *extJsonWriter) writeInt32Value(i int32) error {
 	return err
 }
 
-func (w *extJsonWriter) writeTimestampValue(ts uint64) error {
+func (w *extJSONWriter) writeTimestampValue(ts uint64) error {
 	t := ts >> 32
 	i := ts & 0xFFFFFFFF
 
@@ -371,7 +373,7 @@ func (w *extJsonWriter) writeTimestampValue(ts uint64) error {
 	return w.writeNonExtDocument(d)
 }
 
-func (w *extJsonWriter) writeInt64Value(i int64) error {
+func (w *extJSONWriter) writeInt64Value(i int64) error {
 	var err error
 	numberString := strconv.FormatInt(i, 10)
 
@@ -385,25 +387,25 @@ func (w *extJsonWriter) writeInt64Value(i int64) error {
 	return err
 }
 
-func (w *extJsonWriter) writeMinKeyValue() error {
+func (w *extJSONWriter) writeMinKeyValue() error {
 	d := newDoc(newInt32Element("$minKey", 1))
 
 	return w.writeNonExtDocument(d)
 }
 
-func (w *extJsonWriter) writeMaxKeyValue() error {
+func (w *extJSONWriter) writeMaxKeyValue() error {
 	d := newDoc(newInt32Element("$maxKey", 1))
 
 	return w.writeNonExtDocument(d)
 }
 
-func (w *extJsonWriter) writeDecimalValue(dec decimal.Decimal128) error {
+func (w *extJSONWriter) writeDecimalValue(dec decimal.Decimal128) error {
 	d := newDoc(newStringElement("$numberDecimal", dec.String()))
 
 	return w.writeDocument(d)
 }
 
-func (w *extJsonWriter) writeFloatElement(e *ast.FloatElement) error {
+func (w *extJSONWriter) writeFloatElement(e *ast.FloatElement) error {
 	err := w.writeKey(e.Name.Key)
 	if err != nil {
 		return err
@@ -412,7 +414,7 @@ func (w *extJsonWriter) writeFloatElement(e *ast.FloatElement) error {
 	return w.writeFloatValue(e.Double)
 }
 
-func (w *extJsonWriter) writeStringElement(e *ast.StringElement) error {
+func (w *extJSONWriter) writeStringElement(e *ast.StringElement) error {
 	err := w.writeKey(e.Name.Key)
 	if err != nil {
 		return err
@@ -421,7 +423,7 @@ func (w *extJsonWriter) writeStringElement(e *ast.StringElement) error {
 	return w.writeStringLiteral(e.String)
 }
 
-func (w *extJsonWriter) writeDocumentElement(e *ast.DocumentElement) error {
+func (w *extJSONWriter) writeDocumentElement(e *ast.DocumentElement) error {
 	err := w.writeKey(e.Name.Key)
 	if err != nil {
 		return err
@@ -430,7 +432,7 @@ func (w *extJsonWriter) writeDocumentElement(e *ast.DocumentElement) error {
 	return w.writeDocument(e.Document)
 }
 
-func (w *extJsonWriter) writeArrayElement(e *ast.ArrayElement) error {
+func (w *extJSONWriter) writeArrayElement(e *ast.ArrayElement) error {
 	err := w.writeKey(e.Name.Key)
 	if err != nil {
 		return err
@@ -439,7 +441,7 @@ func (w *extJsonWriter) writeArrayElement(e *ast.ArrayElement) error {
 	return w.writeArray(e.Array)
 }
 
-func (w *extJsonWriter) writeBinaryElement(e *ast.BinaryElement) error {
+func (w *extJSONWriter) writeBinaryElement(e *ast.BinaryElement) error {
 	err := w.writeKey(e.Name.Key)
 	if err != nil {
 		return err
@@ -448,7 +450,7 @@ func (w *extJsonWriter) writeBinaryElement(e *ast.BinaryElement) error {
 	return w.writeBinaryValue(e.Binary.Data, e.Binary.Subtype)
 }
 
-func (w *extJsonWriter) writeUndefinedElement(e *ast.UndefinedElement) error {
+func (w *extJSONWriter) writeUndefinedElement(e *ast.UndefinedElement) error {
 	err := w.writeKey(e.Name.Key)
 	if err != nil {
 		return err
@@ -457,16 +459,16 @@ func (w *extJsonWriter) writeUndefinedElement(e *ast.UndefinedElement) error {
 	return w.writeUndefinedValue()
 }
 
-func (w *extJsonWriter) writeObjectIdElement(e *ast.ObjectIDElement) error {
+func (w *extJSONWriter) writeObjectIDElement(e *ast.ObjectIDElement) error {
 	err := w.writeKey(e.Name.Key)
 	if err != nil {
 		return err
 	}
 
-	return w.writeObjectIdValue(e.ID)
+	return w.writeObjectIDValue(e.ID)
 }
 
-func (w *extJsonWriter) writeBoolElement(e *ast.BoolElement) error {
+func (w *extJSONWriter) writeBoolElement(e *ast.BoolElement) error {
 	err := w.writeKey(e.Name.Key)
 	if err != nil {
 		return err
@@ -475,7 +477,7 @@ func (w *extJsonWriter) writeBoolElement(e *ast.BoolElement) error {
 	return w.writeBoolValue(e.Bool)
 }
 
-func (w *extJsonWriter) writeDatetimeElement(e *ast.DateTimeElement) error {
+func (w *extJSONWriter) writeDatetimeElement(e *ast.DateTimeElement) error {
 	err := w.writeKey(e.Name.Key)
 	if err != nil {
 		return err
@@ -484,7 +486,7 @@ func (w *extJsonWriter) writeDatetimeElement(e *ast.DateTimeElement) error {
 	return w.writeDatetimeValue(e.DateTime)
 }
 
-func (w *extJsonWriter) writeNullElement(e *ast.NullElement) error {
+func (w *extJSONWriter) writeNullElement(e *ast.NullElement) error {
 	err := w.writeKey(e.Name.Key)
 	if err != nil {
 		return err
@@ -493,7 +495,7 @@ func (w *extJsonWriter) writeNullElement(e *ast.NullElement) error {
 	return w.writeNullValue()
 }
 
-func (w *extJsonWriter) writeRegexElement(e *ast.RegexElement) error {
+func (w *extJSONWriter) writeRegexElement(e *ast.RegexElement) error {
 	err := w.writeKey(e.Name.Key)
 	if err != nil {
 		return err
@@ -502,7 +504,7 @@ func (w *extJsonWriter) writeRegexElement(e *ast.RegexElement) error {
 	return w.writeRegexValue(e.RegexPattern.String, e.RegexOptions.String)
 }
 
-func (w *extJsonWriter) writeDBPointerElement(e *ast.DBPointerElement) error {
+func (w *extJSONWriter) writeDBPointerElement(e *ast.DBPointerElement) error {
 	err := w.writeKey(e.Name.Key)
 	if err != nil {
 		return err
@@ -511,7 +513,7 @@ func (w *extJsonWriter) writeDBPointerElement(e *ast.DBPointerElement) error {
 	return w.writeDBPointerValue(e.String, e.Pointer)
 }
 
-func (w *extJsonWriter) writeJavaScriptElement(e *ast.JavaScriptElement) error {
+func (w *extJSONWriter) writeJavaScriptElement(e *ast.JavaScriptElement) error {
 	err := w.writeKey(e.Name.Key)
 	if err != nil {
 		return err
@@ -520,7 +522,7 @@ func (w *extJsonWriter) writeJavaScriptElement(e *ast.JavaScriptElement) error {
 	return w.writeJavaScriptValue(e.String)
 }
 
-func (w *extJsonWriter) writeSymbolElement(e *ast.SymbolElement) error {
+func (w *extJSONWriter) writeSymbolElement(e *ast.SymbolElement) error {
 	err := w.writeKey(e.Name.Key)
 	if err != nil {
 		return err
@@ -529,7 +531,7 @@ func (w *extJsonWriter) writeSymbolElement(e *ast.SymbolElement) error {
 	return w.writeSymbolValue(e.String)
 }
 
-func (w *extJsonWriter) writeCodeWithScopeElement(e *ast.CodeWithScopeElement) error {
+func (w *extJSONWriter) writeCodeWithScopeElement(e *ast.CodeWithScopeElement) error {
 	err := w.writeKey(e.Name.Key)
 	if err != nil {
 		return err
@@ -538,7 +540,7 @@ func (w *extJsonWriter) writeCodeWithScopeElement(e *ast.CodeWithScopeElement) e
 	return w.writeCodeWithScopeValue(e.CodeWithScope.String, e.CodeWithScope.Document)
 }
 
-func (w *extJsonWriter) writeInt32Element(e *ast.Int32Element) error {
+func (w *extJSONWriter) writeInt32Element(e *ast.Int32Element) error {
 	err := w.writeKey(e.Name.Key)
 	if err != nil {
 		return err
@@ -547,7 +549,7 @@ func (w *extJsonWriter) writeInt32Element(e *ast.Int32Element) error {
 	return w.writeInt32Value(e.Int32)
 }
 
-func (w *extJsonWriter) writeTimestampElement(e *ast.TimestampElement) error {
+func (w *extJSONWriter) writeTimestampElement(e *ast.TimestampElement) error {
 	err := w.writeKey(e.Name.Key)
 	if err != nil {
 		return err
@@ -556,7 +558,7 @@ func (w *extJsonWriter) writeTimestampElement(e *ast.TimestampElement) error {
 	return w.writeTimestampValue(e.Timestamp)
 }
 
-func (w *extJsonWriter) writeInt64Element(e *ast.Int64Element) error {
+func (w *extJSONWriter) writeInt64Element(e *ast.Int64Element) error {
 	err := w.writeKey(e.Name.Key)
 	if err != nil {
 		return err
@@ -565,7 +567,7 @@ func (w *extJsonWriter) writeInt64Element(e *ast.Int64Element) error {
 	return w.writeInt64Value(e.Int64)
 }
 
-func (w *extJsonWriter) writeDecimalElement(e *ast.DecimalElement) error {
+func (w *extJSONWriter) writeDecimalElement(e *ast.DecimalElement) error {
 	err := w.writeKey(e.Name.Key)
 	if err != nil {
 		return err
@@ -574,7 +576,7 @@ func (w *extJsonWriter) writeDecimalElement(e *ast.DecimalElement) error {
 	return w.writeDecimalValue(e.Decimal128)
 }
 
-func (w *extJsonWriter) writeMinKeyElement(e *ast.MinKeyElement) error {
+func (w *extJSONWriter) writeMinKeyElement(e *ast.MinKeyElement) error {
 	err := w.writeKey(e.Name.Key)
 	if err != nil {
 		return err
@@ -583,7 +585,7 @@ func (w *extJsonWriter) writeMinKeyElement(e *ast.MinKeyElement) error {
 	return w.writeMinKeyValue()
 }
 
-func (w *extJsonWriter) writeMaxKeyElement(e *ast.MaxKeyElement) error {
+func (w *extJSONWriter) writeMaxKeyElement(e *ast.MaxKeyElement) error {
 	err := w.writeKey(e.Name.Key)
 	if err != nil {
 		return err
@@ -623,6 +625,6 @@ func newInt64Element(key string, i int64) *ast.Int64Element {
 	return &ast.Int64Element{Name: &ast.ElementKeyName{Key: key}, Int64: i}
 }
 
-func newObjectIdElement(key string, oid [12]byte) *ast.ObjectIDElement {
+func newObjectIDElement(key string, oid [12]byte) *ast.ObjectIDElement {
 	return &ast.ObjectIDElement{Name: &ast.ElementKeyName{Key: key}, ID: oid}
 }

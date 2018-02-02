@@ -587,7 +587,7 @@ func TestDocumentBuilder(t *testing.T) {
 			}
 		})
 
-		t.Run("ObjectId", func(t *testing.T) {
+		t.Run("ObjectID", func(t *testing.T) {
 			testCases := []struct {
 				name    string
 				key     string
@@ -612,7 +612,7 @@ func TestDocumentBuilder(t *testing.T) {
 
 			for _, tc := range testCases {
 				t.Run(tc.name, func(t *testing.T) {
-					sizer, f := (Constructor{}).ObjectId(tc.key, tc.oid)()
+					sizer, f := (Constructor{}).ObjectID(tc.key, tc.oid)()
 					if sizer() != tc.size {
 						t.Errorf("Element sizes do not match. got %d; want %d", sizer(), tc.size)
 					}
@@ -1443,57 +1443,6 @@ func TestDocumentBuilder(t *testing.T) {
 			}
 		})
 	})
-}
-
-func ExampleDocumentBuilder_ClientDoc() {
-	internalVersion := "1234567"
-
-	/*
-		func createClientDoc(appName string) bson.M {
-			clientDoc := bson.M{
-				"driver": bson.M{
-					"name":    "mongo-go-driver",
-					"version": internal.Version,
-				},
-				"os": bson.M{
-					"type":         runtime.GOOS,
-					"architecture": runtime.GOARCH,
-				},
-				"platform": runtime.Version(),
-			}
-			if appName != "" {
-				clientDoc["application"] = bson.M{"name": appName}
-			}
-
-			return clientDoc
-		}
-	*/
-
-	f := func(appName string) *DocumentBuilder {
-		docbuilder := new(DocumentBuilder)
-		docbuilder.Init()
-		docbuilder.Append(
-			C.SubDocumentWithElements("driver",
-				C.String("name", "mongo-go-driver"),
-				C.String("version", internalVersion),
-			),
-			C.SubDocumentWithElements("os",
-				C.String("type", runtime.GOOS),
-				C.String("architecture", runtime.GOARCH),
-			),
-			C.String("platform", runtime.Version()),
-		)
-		if appName != "" {
-			docbuilder.Append(C.SubDocumentWithElements("application", C.String("name", appName)))
-		}
-
-		return docbuilder
-	}
-	d := f("hello-world")
-	buf := make([]byte, d.RequiredBytes())
-	d.WriteDocument(buf)
-	fmt.Println(buf)
-
 }
 
 func BenchmarkDocumentBuilder(b *testing.B) {

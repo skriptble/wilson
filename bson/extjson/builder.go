@@ -14,6 +14,7 @@ import (
 type docElementParser func([]byte, []byte, jsonparser.ValueType, int) error
 type arrayElementParser func(int, []byte, jsonparser.ValueType, int) error
 
+// ParseObjectToBuilder parses a JSON object string into a *builder.DocumentBuilder.
 func ParseObjectToBuilder(s string) (*builder.DocumentBuilder, error) {
 	b := builder.NewDocumentBuilder()
 	err := parseObjectToBuilder(b, s, nil, true)
@@ -24,6 +25,7 @@ func ParseObjectToBuilder(s string) (*builder.DocumentBuilder, error) {
 	return b, nil
 }
 
+// ParseArrayToBuilder parses a JSON array string into a *builder.ArrayBuilder.
 func ParseArrayToBuilder(s string) (*builder.ArrayBuilder, error) {
 	return parseArrayToBuilder(s, true)
 }
@@ -60,7 +62,7 @@ func parseObjectToBuilder(b *builder.DocumentBuilder, s string, containingKey *s
 
 	if st != nil {
 		switch st.wtype {
-		case Code:
+		case code:
 			if st.code == nil {
 				return errors.New("extjson object with $scope must also have $code")
 			}
@@ -76,13 +78,13 @@ func parseObjectToBuilder(b *builder.DocumentBuilder, s string, containingKey *s
 
 				b.Append(builder.C.CodeWithScope(*containingKey, *st.code, scope))
 			}
-		case DBRef:
+		case dbRef:
 			if !st.refFound || !st.idFound {
-				return errors.New("extjson DBRef must have both $ref and $i")
+				return errors.New("extjson dbRef must have both $ref and $i")
 			}
 
 			fallthrough
-		case None:
+		case none:
 			if containingKey == nil {
 				*b = *st.subdocBuilder
 			} else {

@@ -11,23 +11,41 @@ const validateMaxDepthDefault = 2048
 
 // ErrUninitializedElement is returned whenever any method is invoked on an uninitialized Element.
 var ErrUninitializedElement = errors.New("wilson/ast/compact: Method call on uninitialized Element")
-var ErrTooSmall = errors.New("too small")
-var ErrInvalidWriter = errors.New("bson: invalid writer provided")
-var ErrInvalidString = errors.New("Invalid string value")
-var ErrInvalidBinarySubtype = errors.New("Invalid BSON Binary Subtype")
-var ErrInvalidBooleanType = errors.New("Invalid value for BSON Boolean Type")
-var ErrStringLargerThanContainer = errors.New("String size is larger than the Code With Scope container")
-var ErrInvalidElement = errors.New("Invalid Element")
 
+// ErrTooSmall indicates that a slice provided to write into is not large enough to fit the data.
+var ErrTooSmall = errors.New("too small")
+
+// ErrInvalidWriter indicates that a type that can't be written into was passed to a writer method.
+var ErrInvalidWriter = errors.New("bson: invalid writer provided")
+
+// ErrInvalidString indicates that a BSON string value had an incorrect length.
+var ErrInvalidString = errors.New("invalid string value")
+
+// ErrInvalidBinarySubtype indicates that a BSON binary value had an undefined subtype.
+var ErrInvalidBinarySubtype = errors.New("invalid BSON binary Subtype")
+
+// ErrInvalidBooleanType indicates that a BSON boolean value had an incorrect byte.
+var ErrInvalidBooleanType = errors.New("invalid value for BSON Boolean Type")
+
+// ErrStringLargerThanContainer indicates that the code portion of a BSON JavaScript code with scope
+// value is larger than the specified length of the entire value.
+var ErrStringLargerThanContainer = errors.New("string size is larger than the JavaScript code with scope container")
+
+// ErrInvalidElement indicates that a bson.Element had invalid underlying BSON.
+var ErrInvalidElement = errors.New("invalid Element")
+
+// ElementTypeError specifies that a method to obtain a BSON value an incorrect type was called on a bson.Value.
 type ElementTypeError struct {
 	Method string
-	Type   BSONType
+	Type   Type
 }
 
+// Error implements the error interface.
 func (ete ElementTypeError) Error() string {
 	return "Call of " + ete.Method + " on " + ete.Type.String() + " type"
 }
 
+// Element represents a BSON element, i.e. key-value pair of a BSON document.
 type Element struct {
 	value *Value
 }
@@ -36,6 +54,7 @@ func newElement(start uint32, offset uint32) *Element {
 	return &Element{&Value{start: start, offset: offset}}
 }
 
+// Clone creates a shallow copy of the element/
 func (e *Element) Clone() *Element {
 	return &Element{
 		value: &Value{
@@ -47,11 +66,12 @@ func (e *Element) Clone() *Element {
 	}
 }
 
+// Value returns the value associated with the BSON element.
 func (e *Element) Value() *Value {
 	return e.value
 }
 
-// Validates the element and returns its total size.
+// Validate validates the element and returns its total size.
 func (e *Element) Validate() (uint32, error) {
 	if e == nil {
 		return 0, ErrNilElement
@@ -88,7 +108,7 @@ func (e *Element) validateKey() (uint32, error) {
 	}
 
 	pos, end := e.value.start+1, e.value.offset
-	var total uint32 = 0
+	var total uint32
 	if end > uint32(len(e.value.data)) {
 		end = uint32(len(e.value.data))
 	}

@@ -38,7 +38,7 @@ func requireValuesEqual(t *testing.T, expected *Value, actual *Value) {
 
 func TestConstructor(t *testing.T) {
 	t.Run("Document", func(t *testing.T) {
-		t.Run("Double", func(t *testing.T) {
+		t.Run("double", func(t *testing.T) {
 			buf := []byte{
 				// type
 				0x1,
@@ -162,7 +162,7 @@ func TestConstructor(t *testing.T) {
 			requireElementsEqual(t, expected, actual)
 		})
 
-		t.Run("Binary", func(t *testing.T) {
+		t.Run("binary", func(t *testing.T) {
 			buf := []byte{
 				// type
 				0x5,
@@ -204,7 +204,7 @@ func TestConstructor(t *testing.T) {
 			requireElementsEqual(t, expected, actual)
 		})
 
-		t.Run("Undefined", func(t *testing.T) {
+		t.Run("undefined", func(t *testing.T) {
 			buf := []byte{
 				// type
 				0x6,
@@ -218,7 +218,7 @@ func TestConstructor(t *testing.T) {
 			requireElementsEqual(t, expected, actual)
 		})
 
-		t.Run("ObjectId", func(t *testing.T) {
+		t.Run("objectID", func(t *testing.T) {
 			buf := []byte{
 				// type
 				0x7,
@@ -253,7 +253,7 @@ func TestConstructor(t *testing.T) {
 			requireElementsEqual(t, expected, actual)
 		})
 
-		t.Run("DateTime", func(t *testing.T) {
+		t.Run("dateTime", func(t *testing.T) {
 			buf := []byte{
 				// type
 				0x9,
@@ -283,7 +283,7 @@ func TestConstructor(t *testing.T) {
 			requireElementsEqual(t, expected, actual)
 		})
 
-		t.Run("Regex", func(t *testing.T) {
+		t.Run("regex", func(t *testing.T) {
 			buf := []byte{
 				// type
 				0xb,
@@ -301,7 +301,7 @@ func TestConstructor(t *testing.T) {
 			requireElementsEqual(t, expected, actual)
 		})
 
-		t.Run("DBPointer", func(t *testing.T) {
+		t.Run("dbPointer", func(t *testing.T) {
 			buf := []byte{
 				// type
 				0xc,
@@ -338,12 +338,12 @@ func TestConstructor(t *testing.T) {
 			}
 
 			expected := &Element{&Value{start: 0, offset: 5, data: buf, d: nil}}
-			actual := C.Javascript("foo", "var bar = 3;")
+			actual := C.JavaScript("foo", "var bar = 3;")
 
 			requireElementsEqual(t, expected, actual)
 		})
 
-		t.Run("Symbol", func(t *testing.T) {
+		t.Run("symbol", func(t *testing.T) {
 			buf := []byte{
 				// type
 				0xe,
@@ -382,7 +382,7 @@ func TestConstructor(t *testing.T) {
 			requireElementsEqual(t, expected, actual)
 		})
 
-		t.Run("Int32", func(t *testing.T) {
+		t.Run("int32", func(t *testing.T) {
 			buf := []byte{
 				// type
 				0x10,
@@ -398,7 +398,7 @@ func TestConstructor(t *testing.T) {
 			requireElementsEqual(t, expected, actual)
 		})
 
-		t.Run("Timestamp", func(t *testing.T) {
+		t.Run("timestamp", func(t *testing.T) {
 			buf := []byte{
 				// type
 				0x11,
@@ -414,7 +414,7 @@ func TestConstructor(t *testing.T) {
 			requireElementsEqual(t, expected, actual)
 		})
 
-		t.Run("Int64", func(t *testing.T) {
+		t.Run("int64Type", func(t *testing.T) {
 			buf := []byte{
 				// type
 				0x12,
@@ -448,7 +448,7 @@ func TestConstructor(t *testing.T) {
 			requireElementsEqual(t, expected, actual)
 		})
 
-		t.Run("MinKey", func(t *testing.T) {
+		t.Run("minKey", func(t *testing.T) {
 			buf := []byte{
 				// type
 				0xff,
@@ -462,7 +462,7 @@ func TestConstructor(t *testing.T) {
 			requireElementsEqual(t, expected, actual)
 		})
 
-		t.Run("MaxKey", func(t *testing.T) {
+		t.Run("maxKey", func(t *testing.T) {
 			buf := []byte{
 				// type
 				0x7f,
@@ -478,7 +478,7 @@ func TestConstructor(t *testing.T) {
 	})
 
 	t.Run("Array", func(t *testing.T) {
-		t.Run("Double", func(t *testing.T) {
+		t.Run("double", func(t *testing.T) {
 			buf := []byte{
 				// type
 				0x1,
@@ -606,7 +606,7 @@ func TestConstructor(t *testing.T) {
 			requireValuesEqual(t, expected, actual)
 		})
 
-		t.Run("Binary", func(t *testing.T) {
+		t.Run("binary", func(t *testing.T) {
 			buf := []byte{
 				// type
 				0x5,
@@ -648,7 +648,7 @@ func TestConstructor(t *testing.T) {
 			requireValuesEqual(t, expected, actual)
 		})
 
-		t.Run("Undefined", func(t *testing.T) {
+		t.Run("undefined", func(t *testing.T) {
 			buf := []byte{
 				// type
 				0x6,
@@ -662,7 +662,7 @@ func TestConstructor(t *testing.T) {
 			requireValuesEqual(t, expected, actual)
 		})
 
-		t.Run("ObjectId", func(t *testing.T) {
+		t.Run("objectID", func(t *testing.T) {
 			buf := []byte{
 				// type
 				0x7,
@@ -697,7 +697,7 @@ func TestConstructor(t *testing.T) {
 			requireValuesEqual(t, expected, actual)
 		})
 
-		t.Run("DateTime", func(t *testing.T) {
+		t.Run("dateTime", func(t *testing.T) {
 			buf := []byte{
 				// type
 				0x9,
@@ -727,7 +727,7 @@ func TestConstructor(t *testing.T) {
 			requireValuesEqual(t, expected, actual)
 		})
 
-		t.Run("Regex", func(t *testing.T) {
+		t.Run("regex", func(t *testing.T) {
 			buf := []byte{
 				// type
 				0xb,
@@ -745,7 +745,7 @@ func TestConstructor(t *testing.T) {
 			requireValuesEqual(t, expected, actual)
 		})
 
-		t.Run("DBPointer", func(t *testing.T) {
+		t.Run("dbPointer", func(t *testing.T) {
 			buf := []byte{
 				// type
 				0xc,
@@ -782,12 +782,12 @@ func TestConstructor(t *testing.T) {
 			}
 
 			expected := &Value{start: 0, offset: 2, data: buf, d: nil}
-			actual := AC.Javascript("var bar = 3;")
+			actual := AC.JavaScript("var bar = 3;")
 
 			requireValuesEqual(t, expected, actual)
 		})
 
-		t.Run("Symbol", func(t *testing.T) {
+		t.Run("symbol", func(t *testing.T) {
 			buf := []byte{
 				// type
 				0xe,
@@ -826,7 +826,7 @@ func TestConstructor(t *testing.T) {
 			requireValuesEqual(t, expected, actual)
 		})
 
-		t.Run("Int32", func(t *testing.T) {
+		t.Run("int32", func(t *testing.T) {
 			buf := []byte{
 				// type
 				0x10,
@@ -842,7 +842,7 @@ func TestConstructor(t *testing.T) {
 			requireValuesEqual(t, expected, actual)
 		})
 
-		t.Run("Timestamp", func(t *testing.T) {
+		t.Run("timestamp", func(t *testing.T) {
 			buf := []byte{
 				// type
 				0x11,
@@ -858,7 +858,7 @@ func TestConstructor(t *testing.T) {
 			requireValuesEqual(t, expected, actual)
 		})
 
-		t.Run("Int64", func(t *testing.T) {
+		t.Run("int64Type", func(t *testing.T) {
 			buf := []byte{
 				// type
 				0x12,
@@ -892,7 +892,7 @@ func TestConstructor(t *testing.T) {
 			requireValuesEqual(t, expected, actual)
 		})
 
-		t.Run("MinKey", func(t *testing.T) {
+		t.Run("minKey", func(t *testing.T) {
 			buf := []byte{
 				// type
 				0xff,
@@ -906,7 +906,7 @@ func TestConstructor(t *testing.T) {
 			requireValuesEqual(t, expected, actual)
 		})
 
-		t.Run("MaxKey", func(t *testing.T) {
+		t.Run("maxKey", func(t *testing.T) {
 			buf := []byte{
 				// type
 				0x7f,

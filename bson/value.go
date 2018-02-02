@@ -9,6 +9,8 @@ import (
 	"github.com/skriptble/wilson/bson/objectid"
 )
 
+// Value represents a BSON value. It can be obtained as part of a bson.Element or created for use
+// in a bson.Array with the bson.AC constructors.
 type Value struct {
 	// NOTE: For subdocuments, arrays, and code with scope, the data slice of
 	// bytes may contain just the key, or the key and the code in the case of
@@ -34,7 +36,7 @@ func (v *Value) validate(sizeOnly bool) (uint32, error) {
 		return 0, ErrUninitializedElement
 	}
 
-	var total uint32 = 0
+	var total uint32
 
 	switch v.data[v.start] {
 	case '\x06', '\x0A', '\xFF', '\x7F':
@@ -142,7 +144,7 @@ func (v *Value) validate(sizeOnly bool) (uint32, error) {
 		if int(v.offset+1) > len(v.data) {
 			return total, ErrTooSmall
 		}
-		total += 1
+		total++
 		if v.data[v.offset] != '\x00' && v.data[v.offset] != '\x01' {
 			return total, ErrInvalidBooleanType
 		}
@@ -271,21 +273,21 @@ func (v *Value) valueSize() (uint32, error) {
 
 // Type returns the identifying element byte for this element.
 // It panics if e is uninitialized.
-func (v *Value) Type() BSONType {
+func (v *Value) Type() Type {
 	if v == nil || v.offset == 0 || v.data == nil {
 		panic(ErrUninitializedElement)
 	}
-	return BSONType(v.data[v.start])
+	return Type(v.data[v.start])
 }
 
 // Double returns the float64 value for this element.
-// It panics if e's BSON type is not Double ('\x01') or if e is uninitialized.
+// It panics if e's BSON type is not double ('\x01') or if e is uninitialized.
 func (v *Value) Double() float64 {
 	if v == nil || v.offset == 0 || v.data == nil {
 		panic(ErrUninitializedElement)
 	}
 	if v.data[v.start] != '\x01' {
-		panic(ElementTypeError{"compact.Element.Double", BSONType(v.data[v.start])})
+		panic(ElementTypeError{"compact.Element.double", Type(v.data[v.start])})
 	}
 	bits := binary.LittleEndian.Uint64(v.data[v.offset : v.offset+8])
 	return math.Float64frombits(bits)
@@ -301,19 +303,21 @@ func (v *Value) StringValue() string {
 		panic(ErrUninitializedElement)
 	}
 	if v.data[v.start] != '\x02' {
-		panic(ElementTypeError{"compact.Element.String", BSONType(v.data[v.start])})
+		panic(ElementTypeError{"compact.Element.String", Type(v.data[v.start])})
 	}
 	l := readi32(v.data[v.offset : v.offset+4])
 	return string(v.data[v.offset+4 : int32(v.offset)+4+l-1])
 }
 
+// ReaderDocument returns the BSON document the Value represents as a bson.Reader. It panics if the
+// value is a BSON type other than document.
 func (v *Value) ReaderDocument() Reader {
 	if v == nil || v.offset == 0 || v.data == nil {
 		panic(ErrUninitializedElement)
 	}
 
 	if v.data[v.start] != '\x03' {
-		panic(ElementTypeError{"compact.Element.Document", BSONType(v.data[v.start])})
+		panic(ElementTypeError{"compact.Element.Document", Type(v.data[v.start])})
 	}
 
 	var r Reader
@@ -338,7 +342,7 @@ func (v *Value) MutableDocument() *Document {
 		panic(ErrUninitializedElement)
 	}
 	if v.data[v.start] != '\x03' {
-		panic(ElementTypeError{"compact.Element.Document", BSONType(v.data[v.start])})
+		panic(ElementTypeError{"compact.Element.Document", Type(v.data[v.start])})
 	}
 	if v.d == nil {
 		var err error
@@ -351,13 +355,15 @@ func (v *Value) MutableDocument() *Document {
 	return v.d
 }
 
+// ReaderArray returns the BSON document the Value represents as a bson.Reader. It panics if the
+// value is a BSON type other than array.
 func (v *Value) ReaderArray() Reader {
 	if v == nil || v.offset == 0 || v.data == nil {
 		panic(ErrUninitializedElement)
 	}
 
 	if v.data[v.start] != '\x04' {
-		panic(ElementTypeError{"compact.Element.Array", BSONType(v.data[v.start])})
+		panic(ElementTypeError{"compact.Element.Array", Type(v.data[v.start])})
 	}
 
 	var r Reader
@@ -382,7 +388,7 @@ func (v *Value) MutableArray() *Array {
 		panic(ErrUninitializedElement)
 	}
 	if v.data[v.start] != '\x04' {
-		panic(ElementTypeError{"compact.Element.Array", BSONType(v.data[v.start])})
+		panic(ElementTypeError{"compact.Element.Array", Type(v.data[v.start])})
 	}
 	if v.d == nil {
 		var err error
@@ -395,12 +401,14 @@ func (v *Value) MutableArray() *Array {
 	return &Array{v.d}
 }
 
+// Binary returns the BSON binary value the Value represents. It panics if the value is a BSON type
+// other than binary.
 func (v *Value) Binary() (subtype byte, data []byte) {
 	if v == nil || v.offset == 0 || v.data == nil {
 		panic(ErrUninitializedElement)
 	}
 	if v.data[v.start] != '\x05' {
-		panic(ElementTypeError{"compact.Element.Binary", BSONType(v.data[v.start])})
+		panic(ElementTypeError{"compact.Element.binary", Type(v.data[v.start])})
 	}
 	l := readi32(v.data[v.offset : v.offset+4])
 	st := v.data[v.offset+4]
@@ -409,45 +417,53 @@ func (v *Value) Binary() (subtype byte, data []byte) {
 	return st, b
 }
 
+// ObjectID returns the BSON objectid value the Value represents. It panics if the value is a BSON
+// type other than objectid.
 func (v *Value) ObjectID() objectid.ObjectID {
 	if v == nil || v.offset == 0 || v.data == nil {
 		panic(ErrUninitializedElement)
 	}
 	if v.data[v.start] != '\x07' {
-		panic(ElementTypeError{"compact.Element.ObejctID", BSONType(v.data[v.start])})
+		panic(ElementTypeError{"compact.Element.ObejctID", Type(v.data[v.start])})
 	}
 	var arr [12]byte
 	copy(arr[:], v.data[v.offset:v.offset+12])
 	return arr
 }
 
+// Boolean returns the boolean value the Value represents. It panics if the
+// value is a BSON type other than boolean.
 func (v *Value) Boolean() bool {
 	if v == nil || v.offset == 0 || v.data == nil {
 		panic(ErrUninitializedElement)
 	}
 	if v.data[v.start] != '\x08' {
-		panic(ElementTypeError{"compact.Element.Boolean", BSONType(v.data[v.start])})
+		panic(ElementTypeError{"compact.Element.Boolean", Type(v.data[v.start])})
 	}
 	return v.data[v.offset] == '\x01'
 }
 
+// DateTime returns the BSON datetime value the Value represents. It panics if the value is a BSON
+// type other than datetime.
 func (v *Value) DateTime() time.Time {
 	if v == nil || v.offset == 0 || v.data == nil {
 		panic(ErrUninitializedElement)
 	}
 	if v.data[v.start] != '\x09' {
-		panic(ElementTypeError{"compact.Element.DateTime", BSONType(v.data[v.start])})
+		panic(ElementTypeError{"compact.Element.dateTime", Type(v.data[v.start])})
 	}
 	i := binary.LittleEndian.Uint64(v.data[v.offset : v.offset+8])
 	return time.Unix(int64(i)/1000, int64(i)%1000*1000000)
 }
 
+// Regex returns the BSON regex value the Value represents. It panics if the value is a BSON
+// type other than regex.
 func (v *Value) Regex() (pattern, options string) {
 	if v == nil || v.offset == 0 || v.data == nil {
 		panic(ErrUninitializedElement)
 	}
 	if v.data[v.start] != '\x0B' {
-		panic(ElementTypeError{"compact.Element.Regex", BSONType(v.data[v.start])})
+		panic(ElementTypeError{"compact.Element.regex", Type(v.data[v.start])})
 	}
 	// TODO(skriptble): Use the elements package here.
 	var pstart, pend, ostart, oend uint32
@@ -465,12 +481,14 @@ func (v *Value) Regex() (pattern, options string) {
 	return string(v.data[pstart:pend]), string(v.data[ostart:oend])
 }
 
+// DBPointer returns the BSON dbpointer value the Value represents. It panics if the value is a BSON
+// type other than DBPointer.
 func (v *Value) DBPointer() (string, objectid.ObjectID) {
 	if v == nil || v.offset == 0 || v.data == nil {
 		panic(ErrUninitializedElement)
 	}
 	if v.data[v.start] != '\x0C' {
-		panic(ElementTypeError{"compact.Element.DBPointer", BSONType(v.data[v.start])})
+		panic(ElementTypeError{"compact.Element.dbPointer", Type(v.data[v.start])})
 	}
 	l := readi32(v.data[v.offset : v.offset+4])
 	var p [12]byte
@@ -478,35 +496,42 @@ func (v *Value) DBPointer() (string, objectid.ObjectID) {
 	return string(v.data[v.offset+4 : int32(v.offset)+4+l-1]), p
 }
 
-func (v *Value) Javascript() string {
+// JavaScript returns the BSON JavaScript code value the Value represents. It panics if the value is
+// a BSON type other than JavaScript code.
+func (v *Value) JavaScript() string {
 	if v == nil || v.offset == 0 || v.data == nil {
 		panic(ErrUninitializedElement)
 	}
 	if v.data[v.start] != '\x0D' {
-		panic(ElementTypeError{"compact.Element.Javascript", BSONType(v.data[v.start])})
+		panic(ElementTypeError{"compact.Element.JavaScript", Type(v.data[v.start])})
 	}
 	l := readi32(v.data[v.offset : v.offset+4])
 	return string(v.data[v.offset+4 : int32(v.offset)+4+l-1])
 }
 
+// Symbol returns the BSON symbol value the Value represents. It panics if the value is a BSON
+// type other than symbol.
 func (v *Value) Symbol() string {
 	if v == nil || v.offset == 0 || v.data == nil {
 		panic(ErrUninitializedElement)
 	}
 	if v.data[v.start] != '\x0E' {
-		panic(ElementTypeError{"compact.Element.Symbol", BSONType(v.data[v.start])})
+		panic(ElementTypeError{"compact.Element.symbol", Type(v.data[v.start])})
 	}
 	l := readi32(v.data[v.offset : v.offset+4])
 	return string(v.data[v.offset+4 : int32(v.offset)+4+l-1])
 }
 
-func (v *Value) ReaderJavascriptWithScope() (string, Reader) {
+// ReaderJavaScriptWithScope returns the BSON JavaScript code with scope the Value represents, with
+// the scope being returned as a bson.Reader. It panics if the value is a BSON type other than
+// JavaScript code with scope.
+func (v *Value) ReaderJavaScriptWithScope() (string, Reader) {
 	if v == nil || v.offset == 0 || v.data == nil {
 		panic(ErrUninitializedElement)
 	}
 
 	if v.data[v.start] != '\x0F' {
-		panic(ElementTypeError{"compact.Element.JavascriptWithScope", BSONType(v.data[v.start])})
+		panic(ElementTypeError{"compact.Element.JavaScriptWithScope", Type(v.data[v.start])})
 	}
 
 	sLength := readi32(v.data[v.offset+4 : v.offset+8])
@@ -531,14 +556,14 @@ func (v *Value) ReaderJavascriptWithScope() (string, Reader) {
 	return str, r
 }
 
-// MutableJavascriptWithScope returns the javascript code and the scope document for
-// this element
-func (v *Value) MutableJavascriptWithScope() (code string, d *Document) {
+// MutableJavaScriptWithScope returns the javascript code and the scope document for
+// this element.
+func (v *Value) MutableJavaScriptWithScope() (code string, d *Document) {
 	if v == nil || v.offset == 0 {
 		panic(ErrUninitializedElement)
 	}
 	if v.data[v.start] != '\x0F' {
-		panic(ElementTypeError{"compact.Element.JavascriptWithScope", BSONType(v.data[v.start])})
+		panic(ElementTypeError{"compact.Element.JavaScriptWithScope", Type(v.data[v.start])})
 	}
 	// TODO(skriptble): This is wrong and could cause a panic.
 	l := int32(binary.LittleEndian.Uint32(v.data[v.offset : v.offset+4]))
@@ -558,42 +583,50 @@ func (v *Value) MutableJavascriptWithScope() (code string, d *Document) {
 	return str, v.d
 }
 
+// Int32 returns the int32 the Value represents. It panics if the value is a BSON type other than
+// int32.
 func (v *Value) Int32() int32 {
 	if v == nil || v.offset == 0 || v.data == nil {
 		panic(ErrUninitializedElement)
 	}
 	if v.data[v.start] != '\x10' {
-		panic(ElementTypeError{"compact.Element.Int32", BSONType(v.data[v.start])})
+		panic(ElementTypeError{"compact.Element.int32", Type(v.data[v.start])})
 	}
 	return readi32(v.data[v.offset : v.offset+4])
 }
 
+// Timestamp returns the BSON timestamp value the Value represents. It panics if the value is a
+// BSON type other than timestamp.
 func (v *Value) Timestamp() (uint32, uint32) {
 	if v == nil || v.offset == 0 || v.data == nil {
 		panic(ErrUninitializedElement)
 	}
 	if v.data[v.start] != '\x11' {
-		panic(ElementTypeError{"compact.Element.Timestamp", BSONType(v.data[v.start])})
+		panic(ElementTypeError{"compact.Element.timestamp", Type(v.data[v.start])})
 	}
 	return binary.LittleEndian.Uint32(v.data[v.offset : v.offset+4]), binary.LittleEndian.Uint32(v.data[v.offset+4 : v.offset+8])
 }
 
+// Int64 returns the int64 the Value represents. It panics if the value is a BSON type other than
+// int64.
 func (v *Value) Int64() int64 {
 	if v == nil || v.offset == 0 || v.data == nil {
 		panic(ErrUninitializedElement)
 	}
 	if v.data[v.start] != '\x12' {
-		panic(ElementTypeError{"compact.Element.Int64", BSONType(v.data[v.start])})
+		panic(ElementTypeError{"compact.Element.int64Type", Type(v.data[v.start])})
 	}
 	return int64(binary.LittleEndian.Uint64(v.data[v.offset : v.offset+8]))
 }
 
+// Decimal128 returns the decimal the Value represents. It panics if the value is a BSON type other than
+// decimal.
 func (v *Value) Decimal128() decimal.Decimal128 {
 	if v == nil || v.offset == 0 || v.data == nil {
 		panic(ErrUninitializedElement)
 	}
 	if v.data[v.start] != '\x13' {
-		panic(ElementTypeError{"compact.Element.Decimal128", BSONType(v.data[v.start])})
+		panic(ElementTypeError{"compact.Element.Decimal128", Type(v.data[v.start])})
 	}
 	l := binary.LittleEndian.Uint64(v.data[v.offset : v.offset+8])
 	h := binary.LittleEndian.Uint64(v.data[v.offset+8 : v.offset+16])

@@ -34,8 +34,8 @@ func newParseState(b *builder.DocumentBuilder, containingKey *string) *parseStat
 func (s *parseState) parseElement(key []byte, value []byte, dataType jsonparser.ValueType, offset int) error {
 	wtype := wrapperKeyType(key)
 
-	// DBRef can have regular elements after $id and $db appear
-	if s.wtype == DBRef && s.idFound && s.dbFound && wtype == None {
+	// dbRef can have regular elements after $id and $db appear
+	if s.wtype == dbRef && s.idFound && s.dbFound && wtype == none {
 		return parseDocElement(s.subdocBuilder, true)(key, value, dataType, offset)
 	}
 
@@ -50,72 +50,72 @@ func (s *parseState) parseElement(key []byte, value []byte, dataType jsonparser.
 
 	s.wtype = wtype
 
-	// The only wrapper types that allow more than one top-level key are Code/CodeWithScope and DBRef
-	if s.wtype != None && s.wtype != Code && s.wtype != DBRef && !s.firstKey {
+	// The only wrapper types that allow more than one top-level key are code/CodeWithScope and dbRef
+	if s.wtype != none && s.wtype != code && s.wtype != dbRef && !s.firstKey {
 		return errors.New("%s wrapper object cannot have more than one key")
 	}
 
 	s.firstKey = true
 
-	if s.wtype == None {
+	if s.wtype == none {
 		return parseDocElement(s.subdocBuilder, true)(key, value, dataType, offset)
 	}
 
-	if s.containingKey == nil && s.wtype != DBRef {
+	if s.containingKey == nil && s.wtype != dbRef {
 		return errors.New("cannot parse wrapper type at top-level")
 	}
 
 	switch s.wtype {
-	case ObjectId:
-		oid, err := parseObjectId(value, dataType)
+	case objectID:
+		oid, err := parseObjectID(value, dataType)
 		if err != nil {
 			return err
 		}
 
-		s.docBuilder.Append(builder.C.ObjectId(*s.containingKey, oid))
-	case Symbol:
+		s.docBuilder.Append(builder.C.ObjectID(*s.containingKey, oid))
+	case symbol:
 		str, err := parseSymbol(value, dataType)
 		if err != nil {
 			return err
 		}
 
 		s.docBuilder.Append(builder.C.Symbol(*s.containingKey, str))
-	case Int32:
+	case int32Type:
 		i, err := parseInt32(value, dataType)
 		if err != nil {
 			return err
 		}
 
 		s.docBuilder.Append(builder.C.Int32(*s.containingKey, i))
-	case Int64:
+	case int64Type:
 		i, err := parseInt64(value, dataType)
 		if err != nil {
 			return err
 		}
 
 		s.docBuilder.Append(builder.C.Int64(*s.containingKey, i))
-	case Double:
+	case double:
 		f, err := parseDouble(value, dataType)
 		if err != nil {
 			return err
 		}
 
 		s.docBuilder.Append(builder.C.Double(*s.containingKey, f))
-	case Decimal:
+	case decimalType:
 		d, err := parseDecimal(value, dataType)
 		if err != nil {
 			return err
 		}
 
 		s.docBuilder.Append(builder.C.Decimal(*s.containingKey, d))
-	case Binary:
+	case binary:
 		b, t, err := parseBinary(value, dataType)
 		if err != nil {
 			return err
 		}
 
 		s.docBuilder.Append(builder.C.BinaryWithSubtype(*s.containingKey, b, t))
-	case Code:
+	case code:
 		switch string(key) {
 		case "$code":
 			if s.code != nil {
@@ -141,35 +141,35 @@ func (s *parseState) parseElement(key []byte, value []byte, dataType jsonparser.
 
 			s.scope = b
 		}
-	case Timestamp:
+	case timestamp:
 		t, i, err := parseTimestamp(value, dataType)
 		if err != nil {
 			return err
 		}
 
 		s.docBuilder.Append(builder.C.Timestamp(*s.containingKey, t, i))
-	case Regex:
+	case regex:
 		p, o, err := parseRegex(value, dataType)
 		if err != nil {
 			return err
 		}
 
 		s.docBuilder.Append(builder.C.Regex(*s.containingKey, p, o))
-	case DBPointer:
+	case dbPointer:
 		ns, oid, err := parseDBPointer(value, dataType)
 		if err != nil {
 			return err
 		}
 
 		s.docBuilder.Append(builder.C.DBPointer(*s.containingKey, ns, oid))
-	case DateTime:
+	case dateTime:
 		d, err := parseDatetime(value, dataType)
 		if err != nil {
 			return err
 		}
 
 		s.docBuilder.Append(builder.C.DateTime(*s.containingKey, d))
-	case DBRef:
+	case dbRef:
 		switch string(key) {
 		case "$ref":
 			if s.refFound {
@@ -207,19 +207,19 @@ func (s *parseState) parseElement(key []byte, value []byte, dataType jsonparser.
 			s.subdocBuilder.Append(builder.C.String("$db", db))
 			s.dbFound = true
 		}
-	case MinKey:
+	case minKey:
 		if err := parseMinKey(value, dataType); err != nil {
 			return err
 		}
 
 		s.docBuilder.Append(builder.C.MinKey(*s.containingKey))
-	case MaxKey:
+	case maxKey:
 		if err := parseMaxKey(value, dataType); err != nil {
 			return err
 		}
 
 		s.docBuilder.Append(builder.C.MaxKey(*s.containingKey))
-	case Undefined:
+	case undefined:
 		if err := parseUndefined(value, dataType); err != nil {
 			return err
 		}
