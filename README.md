@@ -1,4 +1,10 @@
 # wilson
+This repository was used when designing and prototyping the BSON library for the [MongoDB Go
+Driver](https://github.com/mongodb/mongo-go-driver). It is here for historical purposes and as a
+method to track the design process for the library. This is an archived and unmaintained repository
+and the BSON library in the MongoDB Go driver should be used instead. If you have a need for a
+standalone BSON library, please inquire with the MongoDB Go driver team.
+
 wilson is a BSON library for Go. It aims to provide types for reading, writing, and manipulating
 BSON with low performance and allocation costs. The three main types of this library aim to provide
 enough functionality to build more complex logic on top of while also providing benefits of their
