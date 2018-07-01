@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/buger/jsonparser"
 	"github.com/skriptble/wilson/bson/builder"
-	"github.com/skriptble/wilson/bson/internal/jsonparser"
 )
 
 type parseState struct {
