@@ -11,8 +11,8 @@ import (
 	"testing"
 	"unicode"
 
-	"github.com/skriptble/wilson/bson/internal/jsonpretty"
 	"github.com/stretchr/testify/require"
+	"github.com/tidwall/pretty"
 )
 
 type testCase struct {
